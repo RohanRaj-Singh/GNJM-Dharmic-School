@@ -8,7 +8,9 @@ import { createRoot } from 'react-dom/client';
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    title: (title) =>
+    title ? `${title} - Guru Nanak Ji Mission Dharmic School` : "Guru Nanak Ji Mission Dharmic School",
+
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.jsx`,

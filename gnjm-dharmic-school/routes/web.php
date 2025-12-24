@@ -24,4 +24,41 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+Route::get('/attendance', function()
+{
+    return Inertia::render('Attendance/MarkAttendance');
+});
+
+Route::get('/admin/dashboard', function () {
+    return Inertia::render('Admin/Dashboard');
+});
+Route::prefix('accountant')->group(function () {
+    Route::get('/', fn () => Inertia::render('Accountant/Dashboard'));
+    Route::get('/add-student', fn () => Inertia::render('Accountant/AddStudent'));
+    Route::get('/receive-fee', fn () => Inertia::render('Accountant/ReceiveFee'));
+    Route::get('/students', fn () => Inertia::render('Accountant/Students'));
+    Route::get('/attendance', fn () => Inertia::render('Accountant/Attendance'));
+    Route::get('/late-fees', fn () => Inertia::render('Accountant/LateFees'));
+    Route::get('/reports', fn () => Inertia::render('Accountant/Reports'));
+});
+Route::get('/admin/utilities', function () {
+    return Inertia::render('Admin/Utilities');
+});
+
+Route::get('/', fn () => Inertia::render('Splash'));
+Route::get('/demo-login', fn () => Inertia::render('DemoLogin'));
+
+Route::get('/students', function () {
+    return Inertia::render('Students/Index');
+});
+
+Route::get('/students/create', function () {
+    return Inertia::render('Students/Create');
+});
+
+Route::get('/students/show', function () {
+    return Inertia::render('Students/Show');
+});
+
+
 require __DIR__.'/auth.php';
