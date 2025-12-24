@@ -1,39 +1,24 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
 import { useState } from "react";
 
-const demoStudents = [
-  {
-    id: 1,
-    name: "Aman Singh",
-    father: "Harjit Singh",
-    class: "Gurmukhi",
-    section: "Section A",
-    type: "Paid",
-  },
-  {
-    id: 2,
-    name: "Simran Kaur",
-    father: "Gurpreet Singh",
-    class: "Kirtan",
-    section: "Tabla",
-    type: "Free",
-  },
-  {
-    id: 3,
-    name: "Arjun Singh",
-    father: "Manpreet Singh",
-    class: "Gurmukhi",
-    section: "Section B",
-    type: "Paid",
-  },
-];
 
-export default function StudentsIndex() {
+export default function StudentsIndex({ students }) {
   const [search, setSearch] = useState("");
+const flattened = students.flatMap(student =>
+  student.enrollments.map(enrollment => ({
+    id: enrollment.id,
+    name: student.name,
+    father: student.father_name,
+    class: enrollment.school_class.name,
+    section: enrollment.section.name,
+    type: enrollment.student_type === 'paid' ? 'Paid' : 'Free',
+  }))
+);
+const filteredStudents = flattened.filter(s =>
+  s.name.toLowerCase().includes(search.toLowerCase())
+);
 
-  const filteredStudents = demoStudents.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase())
-  );
+  
 
   return (
     <SimpleLayout title="Students">

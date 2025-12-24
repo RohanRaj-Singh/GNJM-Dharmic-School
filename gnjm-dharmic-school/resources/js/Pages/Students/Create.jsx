@@ -1,21 +1,38 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
-import { useState } from "react";
+import { useForm } from "@inertiajs/react";
+import { useEffect } from "react";
 
-export default function CreateStudent() {
-  const classFees = {
-  Gurmukhi: 600,
-  Kirtan: 0, // Kirtan has no monthly fee
-};
-  
-    const [type, setType] = useState("Paid");
-    const [selectedClass, setSelectedClass] = useState("Gurmukhi");
-const [monthlyFee, setMonthlyFee] = useState(classFees["Gurmukhi"]);
-    
+export default function CreateStudent({ classes }) {
 
+  const { data, setData, post, processing } = useForm({
+    name: "",
+    father_name: "",
+    class_id: classes[0]?.id ?? "",
+    section_id: "",
+    student_type: "paid",
+    monthly_fee: 0,
+  });
+
+  const selectedClass = classes.find(
+    (c) => c.id === data.class_id
+  );
+
+  const defaultFee = selectedClass?.default_monthly_fee ?? 0;
+
+  // auto-sync fee from class
+  useEffect(() => {
+    setData("monthly_fee", defaultFee);
+  }, [defaultFee]);
 
   return (
     <SimpleLayout title="Add Student">
-      <form className="space-y-4">
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          post("/students");
+        }}
+      >
 
         {/* Student Name */}
         <div>
@@ -24,8 +41,9 @@ const [monthlyFee, setMonthlyFee] = useState(classFees["Gurmukhi"]);
           </label>
           <input
             type="text"
-            placeholder="Enter student name"
-            className="w-full mt-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring"
+            value={data.name}
+            onChange={(e) => setData("name", e.target.value)}
+            className="w-full mt-1 border rounded-lg px-3 py-2"
           />
         </div>
 
@@ -36,8 +54,9 @@ const [monthlyFee, setMonthlyFee] = useState(classFees["Gurmukhi"]);
           </label>
           <input
             type="text"
-            placeholder="Enter father name"
-            className="w-full mt-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring"
+            value={data.father_name}
+            onChange={(e) => setData("father_name", e.target.value)}
+            className="w-full mt-1 border rounded-lg px-3 py-2"
           />
         </div>
 
@@ -47,18 +66,19 @@ const [monthlyFee, setMonthlyFee] = useState(classFees["Gurmukhi"]);
             Class
           </label>
           <select
-  className="w-full mt-1 border rounded-lg px-3 py-2"
-  value={selectedClass}
-  onChange={(e) => {
-    const cls = e.target.value;
-    setSelectedClass(cls);
-    setMonthlyFee(classFees[cls] ?? 0);
-  }}
->
-  <option value="Gurmukhi">Gurmukhi</option>
-  <option value="Kirtan">Kirtan</option>
-</select>
-
+            className="w-full mt-1 border rounded-lg px-3 py-2"
+            value={data.class_id}
+            onChange={(e) => {
+              setData("class_id", Number(e.target.value));
+              setData("section_id", "");
+            }}
+          >
+            {classes.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Section */}
@@ -66,11 +86,19 @@ const [monthlyFee, setMonthlyFee] = useState(classFees["Gurmukhi"]);
           <label className="text-sm text-gray-600">
             Section
           </label>
-          <select className="w-full mt-1 border rounded-lg px-3 py-2">
-            <option>Section A</option>
-            <option>Section B</option>
-            <option>Tabla</option>
-            <option>Dil Rubab</option>
+          <select
+            className="w-full mt-1 border rounded-lg px-3 py-2"
+            value={data.section_id}
+            onChange={(e) =>
+              setData("section_id", Number(e.target.value))
+            }
+          >
+            <option value="">Select Section</option>
+            {selectedClass?.sections.map((sec) => (
+              <option key={sec.id} value={sec.id}>
+                {sec.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -82,43 +110,42 @@ const [monthlyFee, setMonthlyFee] = useState(classFees["Gurmukhi"]);
           <div className="flex gap-4 mt-2">
             <TypeButton
               label="Paid"
-              active={type === "Paid"}
-              onClick={() => setType("Paid")}
+              active={data.student_type === "paid"}
+              onClick={() => setData("student_type", "paid")}
             />
             <TypeButton
               label="Free"
-              active={type === "Free"}
-              onClick={() => setType("Free")}
+              active={data.student_type === "free"}
+              onClick={() => setData("student_type", "free")}
             />
           </div>
         </div>
 
-        {/* Monthly Fee (Paid Only) */}
-        {type === "Paid" && monthlyFee > 0 && (
-  <div>
-    <label className="text-sm text-gray-600">
-      Monthly Fee
-    </label>
-    <input
-      type="number"
-      value={monthlyFee}
-      onChange={(e) => setMonthlyFee(e.target.value)}
-      className="w-full mt-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring"
-    />
-    <p className="text-xs text-gray-400 mt-1">
-      Default fee from class (can be changed)
-    </p>
-  </div>
-)}
-
+        {/* Monthly Fee */}
+        {data.student_type === "paid" && defaultFee > 0 && (
+          <div>
+            <label className="text-sm text-gray-600">
+              Monthly Fee
+            </label>
+            <input
+              type="number"
+              value={defaultFee}
+              disabled
+              className="w-full mt-1 border rounded-lg px-3 py-2 bg-gray-100"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Default fee from class
+            </p>
+          </div>
+        )}
 
         {/* Submit */}
         <button
-          type="button"
-          disabled
-          className="w-full bg-blue-600 text-white py-3 rounded-lg opacity-60"
+          type="submit"
+          disabled={processing}
+          className="w-full bg-blue-600 text-white py-3 rounded-lg"
         >
-          Save Student (Demo)
+          {processing ? "Saving..." : "Save Student"}
         </button>
 
       </form>

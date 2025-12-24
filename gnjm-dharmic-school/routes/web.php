@@ -4,6 +4,9 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Models\SchoolClass;
+use App\Models\Student;
+use App\Http\Controllers\StudentController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -49,16 +52,30 @@ Route::get('/', fn () => Inertia::render('Splash'));
 Route::get('/demo-login', fn () => Inertia::render('DemoLogin'));
 
 Route::get('/students', function () {
-    return Inertia::render('Students/Index');
-});
+    $students = Student::with([
+        'enrollments.schoolClass',
+        'enrollments.section',
+    ])->get();
 
-Route::get('/students/create', function () {
-    return Inertia::render('Students/Create');
+    return Inertia::render('Students/Index', [
+        'students' => $students,
+    ]);
 });
+Route::post('/students', [StudentController::class, 'store']);
 
 Route::get('/students/show', function () {
     return Inertia::render('Students/Show');
 });
+
+Route::get('/students/create', function () {
+    return Inertia::render('Students/Create', [
+        'classes' => SchoolClass::with('sections')->get(),
+    ]);
+});
+
+use App\Http\Controllers\AttendanceController;
+
+Route::post('/attendance', [AttendanceController::class, 'store']);
 
 
 require __DIR__.'/auth.php';
