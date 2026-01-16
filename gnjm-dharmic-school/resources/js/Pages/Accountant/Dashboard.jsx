@@ -6,19 +6,12 @@ export default function Dashboard() {
     <SimpleLayout title="Accountant">
       <div className="space-y-4">
 
-        <ActionCard
-          href="/accountant/add-student"
+        {/* <ActionCard
+          href="/accountant/students/create"
           emoji="🧑‍🎓"
           title="Add Student"
           description="Register a new student"
-        />
-
-        <ActionCard
-          href="/accountant/receive-fee"
-          emoji="💰"
-          title="Receive Fee"
-          description="Mark student fee payment"
-        />
+        /> */}
 
         <ActionCard
           href="/accountant/students"
@@ -42,12 +35,13 @@ export default function Dashboard() {
           highlight
         />
 
-        <ActionCard
-          href="/accountant/reports"
-          emoji="📊"
-          title="Reports"
-          description="Monthly summaries"
-        />
+        {/* <ActionCard
+  href="/accountant/mark-attendance"
+  emoji="📝"
+  title="Mark Attendance"
+  description="Mark daily attendance by section"
+/> */}
+
 
       </div>
     </SimpleLayout>

@@ -4,21 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Attendance extends Model
+class Fee extends Model
 {
-    protected $table = 'attendance';
-
     protected $fillable = [
-    'student_section_id',
-    'date',
-    'status',
-    'lesson_learned',
-];
-
+        'student_section_id',
+        'type',
+        'title',
+        'amount',
+        'month',
+    ];
 
     public function enrollment(): BelongsTo
     {
         return $this->belongsTo(StudentSection::class, 'student_section_id');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 }

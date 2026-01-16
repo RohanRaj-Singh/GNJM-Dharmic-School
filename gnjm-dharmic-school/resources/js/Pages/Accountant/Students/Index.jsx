@@ -1,36 +1,39 @@
-import SimpleLayout from "@/Layouts/SimpleLayout";
+import AccountantLayout from "@/Layouts/SimpleLayout";
 import { useState } from "react";
-
+import { Link } from "@inertiajs/react";
 
 export default function StudentsIndex({ students }) {
   const [search, setSearch] = useState("");
-const flattened = students.flatMap(student =>
-  student.enrollments.map(enrollment => ({
-    id: enrollment.id,
-    name: student.name,
-    father: student.father_name,
-    class: enrollment.school_class.name,
-    section: enrollment.section.name,
-    type: enrollment.student_type === 'paid' ? 'Paid' : 'Free',
-  }))
-);
-const filteredStudents = flattened.filter(s =>
-  s.name.toLowerCase().includes(search.toLowerCase())
-);
 
-  
+  const flattened = students.flatMap(student =>
+    student.enrollments.map(enrollment => ({
+      student_id: student.id,          // ✅ FIX
+      enrollment_id: enrollment.id,
+      name: student.name,
+      father: student.father_name,
+      class: enrollment.school_class.name,
+      section: enrollment.section.name,
+      type: enrollment.student_type === "paid" ? "Paid" : "Free",
+    }))
+  );
+
+  const filteredStudents = flattened.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <SimpleLayout title="Students">
-    
+    <AccountantLayout title="Students">
       <div className="space-y-4">
-        <a
-  href="/students/create"
-  className="block w-full bg-blue-600 text-white text-center py-3 rounded-lg"
->
-  ➕ Add Student
-</a>
-
+        {/* Add Student Button full width*/}
+        <div className="flex justify-end">
+          <Link
+            href="/accountant/students/create"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg
+                    hover:bg-blue-700 active:scale-95 transition w-full text-center"
+          >
+            + Add Student
+          </Link>
+        </div>
         {/* Search */}
         <input
           type="text"
@@ -41,24 +44,32 @@ const filteredStudents = flattened.filter(s =>
         />
 
         {/* List */}
-        {filteredStudents.map((student) => (
-          <StudentCard key={student.id} student={student} />
-        ))}
+        {[...filteredStudents]
+  .reverse()
+  .map((student) => (
+    <StudentCard key={student.id} student={student} />
+  ))}
+
+
 
         {filteredStudents.length === 0 && (
           <p className="text-center text-gray-500 text-sm">
             No students found
           </p>
         )}
-
       </div>
-    </SimpleLayout>
+    </AccountantLayout>
   );
 }
 
 function StudentCard({ student }) {
   return (
-    <div className="bg-white rounded-xl shadow p-4">
+    <Link
+      href={`/accountant/students/${student.student_id}`}
+      className="block bg-white rounded-xl shadow p-4
+                 active:scale-[0.98] transition
+                 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
       <div className="flex justify-between items-start">
         <div>
           <h3 className="text-lg font-semibold text-gray-800">
@@ -88,6 +99,6 @@ function StudentCard({ student }) {
           {student.section}
         </span>
       </div>
-    </div>
+    </Link>
   );
 }

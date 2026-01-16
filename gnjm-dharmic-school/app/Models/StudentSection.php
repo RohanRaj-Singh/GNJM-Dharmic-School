@@ -29,4 +29,13 @@ class StudentSection extends Model
     {
         return $this->belongsTo(Section::class);
     }
+    public function fees()
+{
+    return $this->hasMany(Fee::class);
+}
+public function attendance()
+{
+    return $this->hasMany(Attendance::class);
+}
+
 }

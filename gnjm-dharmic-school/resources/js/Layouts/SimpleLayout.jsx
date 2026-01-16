@@ -1,7 +1,9 @@
 import { Head } from "@inertiajs/react";
+import {usePage} from "@inertiajs/react";
 
 export default function SimpleLayout({title, children})
 {
+  const {flash} = usePage().props;
     return (
         <div className="min-h-screen bg-gray-100">
             <Head title={title}></Head>
@@ -31,6 +33,11 @@ export default function SimpleLayout({title, children})
             
             {/*Main Content*/}
             <main className="max-w-md mx-auto px-4 py-4 pb-24">
+              {flash?.success && (
+  <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm">
+    {flash.success}
+  </div>
+)}
   {children}
 </main>
 {/* Bottom Navigation */}

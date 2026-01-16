@@ -33,5 +33,6 @@ class SchoolSetupSeeder extends Seeder
             ['class_id' => $kirtan->id, 'name' => 'Tabla'],
             ['class_id' => $kirtan->id, 'name' => 'Dil Rubab'],
         ]);
+        
     }
 }

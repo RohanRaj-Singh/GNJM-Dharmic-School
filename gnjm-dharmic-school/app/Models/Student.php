@@ -8,10 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Student extends Model
 {
     protected $fillable = [
-        'name',
-        'father_name',
-        'status',
-    ];
+    'name',
+    'father_name',
+    'father_phone',
+    'mother_phone',
+    'status',
+];
 
     public function enrollments(): HasMany
     {
