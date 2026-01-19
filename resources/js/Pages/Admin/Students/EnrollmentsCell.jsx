@@ -11,7 +11,7 @@ export default function EnrollmentsCell({
   const enrollments = row.original.enrollments ?? [];
 
   /* ----------------------------------------
-   | Preload sections
+   | Preload sections when class exists
    ---------------------------------------- */
   useEffect(() => {
     enrollments.forEach((e) => {
@@ -22,11 +22,13 @@ export default function EnrollmentsCell({
   /* ----------------------------------------
    | Selected class ids (STRING SAFE)
    ---------------------------------------- */
-  const selectedClassIds = useMemo(() => {
-    return enrollments
-      .map((e) => String(e.class_id))
-      .filter(Boolean);
-  }, [enrollments]);
+  const selectedClassIds = useMemo(
+    () =>
+      enrollments
+        .map((e) => String(e.class_id))
+        .filter(Boolean),
+    [enrollments]
+  );
 
   /* ----------------------------------------
    | Helpers
@@ -90,29 +92,39 @@ export default function EnrollmentsCell({
   return (
     <div className="flex flex-col gap-2 min-w-[260px]">
       {enrollments.map((e) => {
+        const classesReady = classes.length > 0;
+
         const classOptions = classes.filter(
           (cls) =>
             !selectedClassIds.includes(String(cls.id)) ||
             String(cls.id) === String(e.class_id)
         );
 
+        const sectionsReady =
+          !!e.class_id &&
+          Array.isArray(sectionsByClass[String(e.class_id)]);
+
         const sectionOptions =
           sectionsByClass[String(e.class_id)] || [];
 
         return (
           <div key={e.id} className="flex gap-2 items-center">
-            {/* Class */}
+            {/* ---------- Class ---------- */}
             <select
-              value={String(e.class_id ?? "")}
+              key={`class-${e.id}-${classes.length}`}
+              disabled={!classesReady}
+              value={classesReady ? String(e.class_id ?? "") : ""}
               onChange={(ev) => {
                 const classId = ev.target.value;
                 updateEnrollment(e.id, "class_id", classId);
                 updateEnrollment(e.id, "section_id", "");
                 loadSections(classId);
               }}
-              className="border px-2 py-1 rounded text-sm"
+              className="border px-2 py-1 rounded text-sm disabled:bg-gray-100"
             >
-              <option value="">Class</option>
+              <option value="">
+                {classesReady ? "Class" : "Loading…"}
+              </option>
               {classOptions.map((cls) => (
                 <option key={cls.id} value={String(cls.id)}>
                   {cls.name}
@@ -120,15 +132,23 @@ export default function EnrollmentsCell({
               ))}
             </select>
 
-            {/* Section */}
+            {/* ---------- Section ---------- */}
             <select
-              value={String(e.section_id ?? "")}
+              key={`section-${e.id}-${sectionsReady ? "ready" : "wait"}`}
+              disabled={!sectionsReady}
+              value={sectionsReady ? String(e.section_id ?? "") : ""}
               onChange={(ev) =>
-                updateEnrollment(e.id, "section_id", ev.target.value)
+                updateEnrollment(
+                  e.id,
+                  "section_id",
+                  ev.target.value
+                )
               }
-              className="border px-2 py-1 rounded text-sm"
+              className="border px-2 py-1 rounded text-sm disabled:bg-gray-100"
             >
-              <option value="">Section</option>
+              <option value="">
+                {sectionsReady ? "Section" : "Loading…"}
+              </option>
               {sectionOptions.map((s) => (
                 <option key={s.id} value={String(s.id)}>
                   {s.name}
@@ -136,7 +156,7 @@ export default function EnrollmentsCell({
               ))}
             </select>
 
-            {/* Remove */}
+            {/* ---------- Remove ---------- */}
             <button
               type="button"
               onClick={() => removeEnrollment(e.id)}
@@ -148,6 +168,7 @@ export default function EnrollmentsCell({
         );
       })}
 
+      {/* ---------- Add ---------- */}
       <button
         type="button"
         onClick={addEnrollment}
