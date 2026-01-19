@@ -141,29 +141,6 @@ export default function Index() {
   /* ---------------- Columns ---------------- */
   const columns = useMemo(
     () => [
-         {
-      id: "row_number",
-      header: "#",
-      cell: ({ row }) => (
-        <span className="text-gray-500 text-sm">
-          {row.index + 1}
-        </span>
-      ),
-      size: 40,
-    },
-
-    /* -------- Student ID -------- */
-    {
-      accessorKey: "id",
-      header: "ID",
-      cell: ({ row }) => (
-        <span className="text-gray-500 text-sm">
-          {row.original.id ?? "—"}
-        </span>
-      ),
-      size: 60,
-    },
-
       {
         accessorKey: "name",
         header: "Name",
