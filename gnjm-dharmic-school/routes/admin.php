@@ -8,6 +8,7 @@ use App\Models\SchoolClass;
 use App\Models\StudentSection;
 use App\Models\Section;
 use App\Http\Controllers\Admin\AdminAttendanceController;
+use Illuminate\Support\Facades\DB;
 /*
 |--------------------------------------------------------------------------|
 | Admin Area
@@ -55,32 +56,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::get('/students/data', function () {
+    return Student::with([
+        'enrollments.section.schoolClass' // eager load safely
+    ])
+        ->orderBy('name')
+        ->get()
+        ->map(function ($student) {
 
-        return Student::with([
-            'enrollments' => function ($q) {
-                $q->latest()->limit(1); // take latest enrollment
-            }
-        ])
-            ->orderBy('name')
-            ->get()
-            ->map(function ($student) {
+            return [
+                'id' => $student->id,
+                'name' => $student->name,
+                'father_name' => $student->father_name,
+                'father_phone' => $student->father_phone,
+                'mother_phone' => $student->mother_phone,
+                'status' => $student->status,
 
-                $enrollment = $student->enrollments->first();
+                // ✅ CORRECT SHAPE
+                'enrollments' => $student->enrollments->map(fn ($e) => [
+                    'class_id'   => (string) $e->class_id,   // STRING for React
+                    'section_id' => (string) $e->section_id // STRING for React
+                ])->values(),
+            ];
+        });
+})->name('admin.students.data');
 
-                return [
-                    'id' => $student->id,
-                    'name' => $student->name,
-                    'father_name' => $student->father_name,
-                    'father_phone' => $student->father_phone,
-                    'mother_phone' => $student->mother_phone,
-                    'status' => $student->status,
-
-                    // 🔥 IMPORTANT PART
-                    'class_id' => $enrollment?->class_id,
-                    'section_id' => $enrollment?->section_id,
-                ];
-            });
-    })->name('admin.students.data');
 
     Route::get('/classes/options', function () {
         return SchoolClass::select('id', 'name')
@@ -109,47 +108,72 @@ Route::prefix('admin')->name('admin.')->group(function () {
     */
     Route::post('/students/bulk-update', function (Request $request) {
 
+    DB::transaction(function () use ($request) {
+
         foreach ($request->students as $row) {
 
-            // 1️⃣ CREATE OR UPDATE STUDENT
+            /* ----------------------------
+             | 1️⃣ CREATE / UPDATE STUDENT
+             ---------------------------- */
             if (empty($row['id'])) {
                 $student = Student::create([
-                    'name' => $row['name'],
-                    'father_name' => $row['father_name'] ?? null,
-                    'father_phone' => $row['father_phone'] ?? null,
-                    'mother_phone' => $row['mother_phone'] ?? null,
-                    'status' => $row['status'] ?? 'active',
+                    'name'          => $row['name'],
+                    'father_name'   => $row['father_name'] ?? null,
+                    'father_phone'  => $row['father_phone'] ?? null,
+                    'mother_phone'  => $row['mother_phone'] ?? null,
+                    'status'        => $row['status'] ?? 'active',
                 ]);
             } else {
                 $student = Student::findOrFail($row['id']);
 
                 $student->update([
-                    'name' => $row['name'],
-                    'father_name' => $row['father_name'] ?? null,
-                    'father_phone' => $row['father_phone'] ?? null,
-                    'mother_phone' => $row['mother_phone'] ?? null,
-                    'status' => $row['status'] ?? 'active',
+                    'name'          => $row['name'],
+                    'father_name'   => $row['father_name'] ?? null,
+                    'father_phone'  => $row['father_phone'] ?? null,
+                    'mother_phone'  => $row['mother_phone'] ?? null,
+                    'status'        => $row['status'] ?? 'active',
                 ]);
             }
 
-            // 2️⃣ HANDLE ENROLLMENT (ONLY IF CLASS + SECTION PROVIDED)
-            if (!empty($row['class_id']) && !empty($row['section_id'])) {
+            /* ----------------------------
+             | 2️⃣ SYNC ENROLLMENTS
+             ---------------------------- */
+            $incoming = collect($row['enrollments'] ?? [])
+                ->filter(fn ($e) => !empty($e['class_id']) && !empty($e['section_id']))
+                ->map(fn ($e) => [
+                    'class_id'     => (int) $e['class_id'],
+                    'section_id'   => (int) $e['section_id'],
+                    'student_type'=> $e['student_type'] ?? 'paid',
+                ])
+                ->unique(fn ($e) => $e['class_id'].'-'.$e['section_id'])
+                ->values();
 
+            // Delete removed enrollments
+            StudentSection::where('student_id', $student->id)
+                ->whereNotIn(
+                    DB::raw("CONCAT(class_id, '-', section_id)"),
+                    $incoming->map(fn ($e) => $e['class_id'].'-'.$e['section_id'])
+                )
+                ->delete();
+
+            // Upsert enrollments
+            foreach ($incoming as $enrollment) {
                 StudentSection::updateOrCreate(
                     [
                         'student_id' => $student->id,
+                        'class_id'   => $enrollment['class_id'],
+                        'section_id' => $enrollment['section_id'],
                     ],
                     [
-                        'class_id'     => $row['class_id'],
-                        'section_id'   => $row['section_id'],
-                        'student_type' => $row['student_type'] ?? 'paid',
+                        'student_type' => $enrollment['student_type'],
                     ]
                 );
             }
         }
-
-        return redirect()->back()->with('success', 'Students updated successfully');
     });
+
+    return back()->with('success', 'Students updated successfully');
+});
     /* ===============================
      | Classes – Index Page
      =============================== */
