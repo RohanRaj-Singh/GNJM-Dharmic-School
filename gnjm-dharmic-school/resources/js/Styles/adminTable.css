@@ -1,0 +1,44 @@
+/* Admin Table – Calm, readable, reusable */
+
+.admin-table {
+  @apply w-full border border-gray-200 rounded-lg overflow-hidden bg-white;
+}
+
+.admin-table thead {
+  @apply bg-gray-50 border-b;
+}
+
+.admin-table th {
+  @apply text-left text-sm font-semibold text-gray-700 px-3 py-2;
+}
+
+.admin-table td {
+  @apply text-sm text-gray-800 px-3 py-2 border-t;
+}
+
+.admin-table tr:hover {
+  @apply bg-gray-50;
+}
+
+/* Editable cell */
+.admin-input {
+  @apply w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+         focus:outline-none focus:ring-1 focus:ring-blue-500;
+}
+
+/* Action buttons */
+.admin-btn {
+  @apply px-3 py-1.5 rounded-md text-sm font-medium;
+}
+
+.admin-btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.admin-btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+.admin-btn-muted {
+  @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+}

@@ -58,4 +58,5 @@ class StudentController extends Controller
         // ✅ Redirect to correct accountant students page
         return redirect()->route('accountant.students.index');
     }
+
 }
