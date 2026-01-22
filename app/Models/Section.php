@@ -11,6 +11,7 @@ class Section extends Model
     protected $fillable = [
         'class_id',
         'name',
+        'monthly_fee',
     ];
 
     public function schoolClass(): BelongsTo

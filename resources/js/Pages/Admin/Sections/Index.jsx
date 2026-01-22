@@ -56,11 +56,25 @@ export default function Index() {
         defaultValue={row.original[column.id] ?? ""}
         className="w-full px-2 py-1 border rounded text-sm"
         onBlur={(e) =>
-          updateCell(row.index, column.id, e.target.value)
+          updateCell(row.index, column.id, e.target.value.trim())
         }
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
         }}
+      />
+    );
+  }
+
+  function NumberCell({ row, column }) {
+    return (
+      <input
+        type="number"
+        min="0"
+        className="w-full px-2 py-1 border rounded text-sm"
+        defaultValue={row.original[column.id] ?? 0}
+        onBlur={(e) =>
+          updateCell(row.index, column.id, Number(e.target.value) || 0)
+        }
       />
     );
   }
@@ -83,7 +97,6 @@ export default function Index() {
       </select>
     );
   }
-
 
   /* -----------------------------------------
    | Columns
@@ -109,26 +122,44 @@ export default function Index() {
       },
 
       {
-        accessorKey: "students_count",
+        accessorKey: "monthly_fee",
+        header: "Section Fee",
+        cell: ({ row, column }) => (
+          <NumberCell row={row} column={column} />
+        ),
+      },
+
+      {
+        accessorKey: "student_sections_count",
         header: "Students",
         cell: ({ row }) => (
           <span className="text-gray-600 text-sm">
-            {row.original.students_count ?? 0}
+            {row.original.student_sections_count ?? 0}
           </span>
         ),
       },
-      {
-  header: "Action",
-  cell: ({ row }) => (
-    <button
-      onClick={() => deleteSection(row.original.id)}
-      className="text-red-600 text-sm hover:underline"
-    >
-      Delete
-    </button>
-  ),
-}
 
+      {
+        header: "Action",
+        cell: ({ row }) => {
+          if ((row.original.student_sections_count ?? 0) > 0) {
+            return (
+              <span className="text-gray-400 text-sm">
+                In use
+              </span>
+            );
+          }
+
+          return (
+            <button
+              onClick={() => deleteSection(row.original.id)}
+              className="text-red-600 text-sm hover:underline"
+            >
+              Delete
+            </button>
+          );
+        },
+      },
     ],
     [classes]
   );
@@ -154,9 +185,52 @@ export default function Index() {
   });
 
   /* -----------------------------------------
+   | Validation
+   ----------------------------------------- */
+  function validate() {
+    const errors = [];
+
+    data.forEach((row, i) => {
+      if (!row.name?.trim())
+        errors.push(`Row ${i + 1}: Section name required`);
+
+      if (!row.class_id)
+        errors.push(`Row ${i + 1}: Class required`);
+
+      if (row.monthly_fee < 0)
+        errors.push(`Row ${i + 1}: Fee cannot be negative`);
+    });
+
+    // duplicate section name within same class
+    const seen = new Set();
+    data.forEach((row, i) => {
+      const key = `${row.class_id}-${row.name?.toLowerCase()}`;
+      if (seen.has(key))
+        errors.push(`Row ${i + 1}: Duplicate section in same class`);
+      seen.add(key);
+    });
+
+    return errors;
+  }
+
+  /* -----------------------------------------
    | Actions
    ----------------------------------------- */
   function saveChanges() {
+    const errors = validate();
+
+    if (errors.length) {
+      toast.error(
+        <ul className="list-disc ml-4">
+          {errors.slice(0, 5).map((e, i) => (
+            <li key={i}>{e}</li>
+          ))}
+        </ul>,
+        { duration: 5000 }
+      );
+      return;
+    }
+
     router.post(
       "/admin/sections/save",
       { sections: data },
@@ -171,29 +245,34 @@ export default function Index() {
   }
 
   function deleteSection(id) {
-  if (!confirm("Delete this section? This cannot be undone.")) return;
+    if (!confirm("Delete this section? This cannot be undone.")) return;
 
-  router.delete(`/admin/sections/${id}`, {
-    onSuccess: () => {
-      toast.success("Section deleted");
-      reloadData();
-    },
-    onError: (err) => {
-      toast.error(
-        err?.response?.data?.message ||
-        "Cannot delete section"
-      );
-    },
-  });
-}
-
+    router.delete(`/admin/sections/${id}`, {
+      onSuccess: () => {
+        toast.success("Section deleted");
+        reloadData();
+      },
+      onError: (err) => {
+        toast.error(
+          err?.response?.data?.message ||
+            "Cannot delete section"
+        );
+      },
+    });
+  }
 
   function addEmptyRow() {
+    if (data.some((r) => r.__isNew && !r.name)) {
+      toast.error("Finish the current new section first");
+      return;
+    }
+
     const newRow = {
       id: null,
       __tempId: crypto.randomUUID(),
       name: "",
       class_id: "",
+      monthly_fee: 0,
       __isNew: true,
     };
 

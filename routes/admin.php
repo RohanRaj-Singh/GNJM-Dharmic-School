@@ -3,330 +3,458 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
 use App\Models\Student;
 use App\Models\SchoolClass;
 use App\Models\StudentSection;
 use App\Models\Section;
+use App\Models\Fee;
+
 use App\Http\Controllers\Admin\AdminAttendanceController;
-use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Admin\FeesController;
+use App\Http\Controllers\Admin\ReportController;
+
 /*
-|--------------------------------------------------------------------------|
+|--------------------------------------------------------------------------
 | Admin Area
-|--------------------------------------------------------------------------|
+|--------------------------------------------------------------------------
 */
 
 Route::prefix('admin')->name('admin.')->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard
-    |--------------------------------------------------------------------------
-    */
+    /* =========================================================
+     | Dashboard
+     ========================================================= */
     Route::get(
         '/dashboard',
         fn() =>
         Inertia::render('Admin/Dashboard')
     )->name('dashboard');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Utilities
-    |--------------------------------------------------------------------------
-    */
+    /* =========================================================
+     | Utilities
+     ========================================================= */
     Route::get(
         '/utilities',
         fn() =>
         Inertia::render('Admin/Utilities')
     )->name('utilities');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Students – UI Page
-    |--------------------------------------------------------------------------
-    */
-    Route::get(
-        '/students',
-        fn() =>
-        Inertia::render('Admin/Students/Index')
-    )->name('students.index');
+    /* =========================================================
+     | Students
+     ========================================================= */
+    Route::prefix('students')->name('students.')->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Students – Data (JSON for table)
-    |--------------------------------------------------------------------------
-    */
-    Route::get('/students/data', function () {
-    return Student::with([
-        'enrollments.section.schoolClass' // eager load safely
-    ])
+        Route::get(
+            '/',
+            fn() =>
+            Inertia::render('Admin/Students/Index')
+        )->name('index');
+
+        Route::get('/data', function () {
+            return Student::with(['enrollments.section.schoolClass'])
+                ->orderBy('name')
+                ->get()
+                ->map(fn($student) => [
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'father_name' => $student->father_name,
+                    'father_phone' => $student->father_phone,
+                    'mother_phone' => $student->mother_phone,
+                    'status' => $student->status,
+                    'enrollments' => $student->enrollments->map(fn($e) => [
+                        'class_id' => (string) $e->class_id,
+                        'section_id' => (string) $e->section_id,
+                        'student_type' => $e->student_type,
+                    ])->values(),
+                ]);
+        })->name('data');
+
+        Route::post('/bulk-update', function (Request $request) {
+            DB::transaction(function () use ($request) {
+
+                foreach ($request->students as $row) {
+
+                    $student = empty($row['id'])
+                        ? Student::create([
+                            'name' => $row['name'],
+                            'father_name' => $row['father_name'] ?? null,
+                            'father_phone' => $row['father_phone'] ?? null,
+                            'mother_phone' => $row['mother_phone'] ?? null,
+                            'status' => $row['status'] ?? 'active',
+                        ])
+                        : tap(Student::findOrFail($row['id']))->update([
+                            'name' => $row['name'],
+                            'father_name' => $row['father_name'] ?? null,
+                            'father_phone' => $row['father_phone'] ?? null,
+                            'mother_phone' => $row['mother_phone'] ?? null,
+                            'status' => $row['status'] ?? 'active',
+                        ]);
+
+                    /*
+     | Normalize incoming enrollments
+     | Section is the SOURCE OF TRUTH
+     */
+                    $incoming = collect($row['enrollments'] ?? [])
+                        ->filter(fn($e) => !empty($e['section_id']))
+                        ->unique('section_id');
+
+                    /*
+     | Remove enrollments that no longer exist
+     */
+                    StudentSection::where('student_id', $student->id)
+                        ->whereNotIn('section_id', $incoming->pluck('section_id'))
+                        ->delete();
+
+                    foreach ($incoming as $e) {
+
+                        $studentType = $e['student_type'] ?? 'paid';
+
+                        /*
+         | Resolve section → class (SOURCE OF TRUTH)
+         */
+                        $section = Section::find($e['section_id']);
+                        if (!$section) {
+                            continue;
+                        }
+
+                        $classId = $section->class_id;
+
+                        /*
+         | Create or fetch enrollment
+         */
+                        $enrollment = StudentSection::firstOrCreate(
+                            [
+                                'student_id' => $student->id,
+                                'class_id'   => $classId,
+                                'section_id' => $section->id,
+                            ],
+                            [
+                                'student_type' => $studentType,
+                            ]
+                        );
+
+                        /*
+         | RULE 1: Free students never get monthly fees
+         */
+                        if ($studentType === 'free') {
+                            continue;
+                        }
+
+                        /*
+         | Resolve monthly fee
+         | Priority:
+         | 1. student_sections.monthly_fee
+         | 2. classes.default_monthly_fee
+         */
+                        $class = SchoolClass::find($classId);
+                        if (!$class) {
+                            continue;
+                        }
+
+                        $resolvedFee =
+                            $enrollment->monthly_fee > 0
+                            ? $enrollment->monthly_fee
+                            : ($section->monthly_fee > 0
+                                ? $section->monthly_fee
+                                : $class->default_monthly_fee);
+
+
+                        /*
+         | RULE 2: If no fee exists → do NOT generate
+         */
+                        if ($resolvedFee <= 0) {
+                            continue;
+                        }
+
+                        /*
+         | Generate CURRENT month fee (idempotent)
+         */
+                        Fee::firstOrCreate(
+                            [
+                                'student_section_id' => $enrollment->id,
+                                'type'  => 'monthly',
+                                'month' => now()->format('Y-m'),
+                            ],
+                            [
+                                'source' => 'monthly',
+                                'title'  => null,
+                                'amount' => $resolvedFee,
+                            ]
+                        );
+                    }
+                }
+            });
+
+            return back()->with('success', 'Students updated');
+        })->name('bulk');
+
+        Route::delete(
+            '/{student}',
+            fn(Student $student) =>
+            tap($student)->delete() && back()
+        )->name('delete');
+
+
+Route::get('/options', function (Request $request) {
+
+    abort_if(
+        !$request->filled('class_ids'),
+        400,
+        'class_ids[] required'
+    );
+
+    $classIds = (array) $request->input('class_ids');
+    $sectionIds = (array) $request->input('section_ids', []);
+
+    $query = Student::query()
+        ->join('student_sections', 'students.id', '=', 'student_sections.student_id')
+        ->whereIn('student_sections.class_id', $classIds);
+
+    if (!empty($sectionIds)) {
+        $query->whereIn('student_sections.section_id', $sectionIds);
+    }
+
+    return $query
+        ->select('students.id', 'students.name')
+        ->distinct()
+        ->orderBy('students.name')
+        ->get();
+
+})->name('options');
+
+
+    });
+
+    /* =========================================================
+     | Classes
+     ========================================================= */
+    Route::prefix('classes')->name('classes.')->group(function () {
+
+        Route::get(
+            '/',
+            fn() =>
+            Inertia::render('Admin/Classes/Index')
+        )->name('index');
+
+        Route::get(
+            '/data',
+            fn() =>
+            SchoolClass::withCount('sections')
+                ->orderBy('name')
+                ->get(['id', 'name', 'default_monthly_fee', 'status', 'created_at'])
+        )->name('data');
+
+        Route::post('/save', function (Request $request) {
+            foreach ($request->classes as $row) {
+                empty($row['id'])
+                    ? SchoolClass::create([
+                        'name' => $row['name'],
+                        'type' => $row['type'],
+                        'default_monthly_fee' => $row['default_monthly_fee'] ?? 0,
+                    ])
+                    : SchoolClass::where('id', $row['id'])->update([
+                        'name' => $row['name'],
+                        'type' => $row['type'],
+                        'default_monthly_fee' => $row['default_monthly_fee'] ?? 0,
+                    ]);
+            }
+            return back();
+        })->name('save');
+
+        // Route::get(
+        //     '/options',
+        //     fn() =>
+        //     SchoolClass::select('id', 'name')->orderBy('name')->get()
+        // )->name('options');
+
+        Route::get('/options', function () {
+    return SchoolClass::query()
+        ->select('id', 'name')
         ->orderBy('name')
-        ->get()
-        ->map(function ($student) {
-
-            return [
-                'id' => $student->id,
-                'name' => $student->name,
-                'father_name' => $student->father_name,
-                'father_phone' => $student->father_phone,
-                'mother_phone' => $student->mother_phone,
-                'status' => $student->status,
-
-                // ✅ CORRECT SHAPE
-                'enrollments' => $student->enrollments->map(fn ($e) => [
-                    'class_id'   => (string) $e->class_id,   // STRING for React
-                    'section_id' => (string) $e->section_id // STRING for React
-                ])->values(),
-            ];
-        });
-})->name('admin.students.data');
+        ->get();
+})->name('options');
 
 
-    Route::get('/classes/options', function () {
-        return SchoolClass::select('id', 'name')
-            ->orderBy('name')
-            ->get();
-    })->name('admin.classes.options');
-
-    Route::get('/sections/options', function (Request $request) {
-        $classId = $request->query('class_id');
-
-        abort_if(!$classId, 400, 'class_id required');
-
-        return Section::where('class_id', $classId) // ✅ FIXED
-            ->select('id', 'name')
-            ->orderBy('name')
-            ->get();
     });
 
+    /* =========================================================
+     | Sections
+     ========================================================= */
+    Route::prefix('sections')->name('sections.')->group(function () {
 
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Students – Bulk Create / Update
-    |--------------------------------------------------------------------------
-    */
-    Route::post('/students/bulk-update', function (Request $request) {
-
-    DB::transaction(function () use ($request) {
-
-        foreach ($request->students as $row) {
-
-            /* ----------------------------
-             | 1️⃣ CREATE / UPDATE STUDENT
-             ---------------------------- */
-            if (empty($row['id'])) {
-                $student = Student::create([
-                    'name'          => $row['name'],
-                    'father_name'   => $row['father_name'] ?? null,
-                    'father_phone'  => $row['father_phone'] ?? null,
-                    'mother_phone'  => $row['mother_phone'] ?? null,
-                    'status'        => $row['status'] ?? 'active',
-                ]);
-            } else {
-                $student = Student::findOrFail($row['id']);
-
-                $student->update([
-                    'name'          => $row['name'],
-                    'father_name'   => $row['father_name'] ?? null,
-                    'father_phone'  => $row['father_phone'] ?? null,
-                    'mother_phone'  => $row['mother_phone'] ?? null,
-                    'status'        => $row['status'] ?? 'active',
-                ]);
-            }
-
-            /* ----------------------------
-             | 2️⃣ SYNC ENROLLMENTS
-             ---------------------------- */
-            $incoming = collect($row['enrollments'] ?? [])
-                ->filter(fn ($e) => !empty($e['class_id']) && !empty($e['section_id']))
-                ->map(fn ($e) => [
-                    'class_id'     => (int) $e['class_id'],
-                    'section_id'   => (int) $e['section_id'],
-                    'student_type'=> $e['student_type'] ?? 'paid',
-                ])
-                ->unique(fn ($e) => $e['class_id'].'-'.$e['section_id'])
-                ->values();
-
-            // Delete removed enrollments
-            StudentSection::where('student_id', $student->id)
-                ->whereNotIn(
-                    DB::raw("CONCAT(class_id, '-', section_id)"),
-                    $incoming->map(fn ($e) => $e['class_id'].'-'.$e['section_id'])
-                )
-                ->delete();
-
-            // Upsert enrollments
-            foreach ($incoming as $enrollment) {
-                StudentSection::updateOrCreate(
-                    [
-                        'student_id' => $student->id,
-                        'class_id'   => $enrollment['class_id'],
-                        'section_id' => $enrollment['section_id'],
-                    ],
-                    [
-                        'student_type' => $enrollment['student_type'],
-                    ]
-                );
-            }
-        }
-    });
-
-    return back()->with('success', 'Students updated successfully');
-});
-    /* ===============================
-     | Classes – Index Page
-     =============================== */
-    Route::get('/classes', function () {
-        return Inertia::render('Admin/Classes/Index');
-    })->name('admin.classes.index');
-
-    /* ===============================
-     | Classes – Data (JSON)
-     =============================== */
-    Route::get('/classes/data', function () {
-        return SchoolClass::withCount('sections')
-            ->orderBy('name')
-            ->get([
-                'id',
-                'name',
-                'default_monthly_fee',
-                'status',
-                'created_at',
-            ]);
-    })->name('admin.classes.data');
-
-    /* ===============================
-     | Classes – Store / Update
-     =============================== */
-    Route::post('/classes/save', function (Request $request) {
-
-        foreach ($request->classes as $row) {
-
-            // CREATE
-            if (empty($row['id'])) {
-                \App\Models\SchoolClass::create([
-                    'name' => $row['name'],
-                    'type' => $row['type'],
-                    'default_monthly_fee' => $row['default_monthly_fee'] ?? 0,
-                ]);
-                continue;
-            }
-
-            // UPDATE (ONLY VALID COLUMNS)
-            \App\Models\SchoolClass::where('id', $row['id'])->update([
-                'name' => $row['name'],
-                'type' => $row['type'],
-                'default_monthly_fee' => $row['default_monthly_fee'] ?? 0,
-            ]);
-        }
-
-        return redirect()->back();
-    })->name('admin.classes.save');
-
-    /*
-    |--------------------------------------------------------------------------
-    | Students – Delete
-    |--------------------------------------------------------------------------
-    */
-    Route::delete('/students/{student}', function (Student $student) {
-        $student->delete();
-
-        return redirect()->back()->with('success', 'Student deleted');
-    })->name('students.delete');
-
-     Route::prefix('sections')->group(function () {
-
-        /*
-    | Sections – Page
-    */
+        // UI
         Route::get(
             '/',
             fn() =>
             Inertia::render('Admin/Sections/Index')
-        )->name('admin.sections.index');
+        )->name('index');
 
-        /*
-    | Sections – Data (for table)
-    */
-        Route::get('/data', function () {
-            return Section::with('schoolClass')
+        // Table data
+        Route::get(
+            '/data',
+            fn() =>
+            Section::query()
+                ->with('schoolClass')
                 ->withCount('studentSections')
                 ->orderBy('name')
                 ->get()
-                ->map(fn($section) => [
-                    'id' => $section->id,
-                    'name' => $section->name,
-                    'class_id' => $section->schoolClass?->id,
-                    'class_name' => $section->schoolClass?->name,
-                    'status' => $section->status ?? 'active',
-                    'students_count' => $section->student_sections_count,
-                ]);
-        })->name('admin.sections.data');
+        )->name('data');
 
-        /*
-    | Sections – Save (Bulk Create / Update)
-    */
+        // Save (create + update)
         Route::post('/save', function (Request $request) {
+            $request->validate([
+                'sections' => 'required|array',
+                'sections.*.name' => 'required|string|max:255',
+                'sections.*.class_id' => 'required|exists:classes,id',
+                'sections.*.monthly_fee' => 'nullable|integer|min:0',
+            ]);
 
             foreach ($request->sections as $row) {
-
-                // CREATE
-                if (empty($row['id'])) {
-                    Section::create([
-                        'name'       => $row['name'],
-                        'class_id'   => $row['class_id'],
-                    ]);
-                    continue;
-                }
-
-                // UPDATE
-                Section::where('id', $row['id'])->update([
-                    'name'       => $row['name'],
-                    'class_id'   => $row['class_id'],
-                ]);
+                Section::updateOrCreate(
+                    ['id' => $row['id'] ?? null],
+                    [
+                        'name' => $row['name'],
+                        'class_id' => $row['class_id'],
+                        'monthly_fee' => $row['monthly_fee'] ?? 0,
+                    ]
+                );
             }
 
-            return redirect()->back()->with('success', 'Sections saved successfully');
-        })->name('admin.sections.save');
+            return back()->with('success', 'Sections saved');
+        })->name('save');
 
+        // Delete
         Route::delete('/{section}', function (Section $section) {
 
-            $hasStudents = StudentSection::where('section_id', $section->id)->exists();
-
-            if ($hasStudents) {
-                return redirect()->back()->withErrors([
-                    'error' => 'Cannot delete section with enrolled students.',
-                ]);
+            if ($section->studentSections()->exists()) {
+                return response()->json([
+                    'message' => 'Cannot delete section with students'
+                ], 422);
             }
 
             $section->delete();
 
-            return redirect()->back()->with([
-                'success' => 'Section deleted successfully.',
-            ]);
-        })->name('admin.sections.delete');
+            return response()->noContent();
+        })->name('delete');
 
-        return redirect()->back()->with('success','Attendance saved');
+        // Select options
+        // Route::get('/options', function (Request $request) {
+        //     abort_if(!$request->class_id, 400);
+
+        //     return Section::where('class_id', $request->class_id)
+        //         ->select('id', 'name')
+        //         ->orderBy('name')
+        //         ->get();
+        // })->name('options');
+
+        Route::get('/options', function (Request $request) {
+
+    // Accept both formats (BACKWARD SAFE)
+    $classIds = [];
+
+    if ($request->filled('class_ids')) {
+        $classIds = (array) $request->input('class_ids');
+    } elseif ($request->filled('class_id')) {
+        $classIds = [$request->input('class_id')];
+    }
+
+    abort_if(empty($classIds), 400, 'class_ids[] or class_id required');
+
+    return Section::query()
+        ->whereIn('class_id', $classIds)
+        ->select('id', 'name', 'class_id')
+        ->orderBy('name')
+        ->get();
+
+})->name('options');
     });
 
 
-      /* ================= Attendance (Admin) ================= */
+    /* =========================================================
+     | Attendance
+     ========================================================= */
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('/', [AdminAttendanceController::class, 'index'])->name('index');
+        Route::get('/grid', [AdminAttendanceController::class, 'grid'])->name('grid');
+        Route::post('/save', [AdminAttendanceController::class, 'save'])->name('save');
+    });
 
-    // PAGE (Inertia)
+    /* =========================================================
+     | Fees (FINAL, CLEAN)
+     ========================================================= */
+    Route::prefix('fees')->name('fees.')->group(function () {
 
-Route::get('/attendance',
-    [AdminAttendanceController::class, 'index']
-)->name('attendance.index');
+        // Fees Index
+        Route::get('/', [FeesController::class, 'index'])
+            ->name('index');
 
-    // DATA (JSON)
-    Route::get('/attendance/grid',
-        [AdminAttendanceController::class, 'grid']
-    )->name('attendance.grid');
+        // Collect / De-collect
+        Route::post('/{fee}/collect', [FeesController::class, 'collect'])
+            ->name('collect');
 
-    // SAVE (JSON)
-    Route::post('/attendance/save',
-        [AdminAttendanceController::class, 'save']
-    )->name('attendance.save');
+        Route::post('/{fee}/de-collect', [FeesController::class, 'deCollect'])
+            ->name('deCollect');
+
+        /* ------------------ Custom Fees ------------------ */
+        Route::prefix('custom')->name('custom.')->group(function () {
+
+            Route::get('/', [FeesController::class, 'customIndex'])
+                ->name('index');
+
+            Route::post('/', [FeesController::class, 'storeCustomFee'])
+                ->name('store');
+
+            Route::put('/', [FeesController::class, 'updateCustomFee'])
+                ->name('update');
+
+            Route::delete('/student/{fee}', [FeesController::class, 'destroyCustomFeeForStudent'])
+                ->name('destroy.student');
+
+            Route::delete('/section', [FeesController::class, 'destroyCustomFeeForSection'])
+                ->name('destroy.section');
+        });
+    });
+
+    Route::prefix('reports')
+    ->middleware(['web'])
+    ->group(function () {
+
+        Route::get(
+            '/',
+            fn() =>
+            Inertia::render('Admin/Reports/Index')
+        )->name('index');
+
+        Route::post('/build', [ReportController::class, 'build'])
+            ->name('build');
+
+        Route::post('/export/csv', [ReportController::class, 'exportCsv'])
+            ->name('export.csv');
+
+        Route::post('/export/pdf', [ReportController::class, 'exportPdf'])
+            ->name('export.pdf');
+
+        Route::get('/presets', [ReportController::class, 'presets'])
+                ->name('presets');
+
+            Route::post('/presets', [ReportController::class, 'storePreset'])
+                ->name('presets.store');
+
+            Route::delete('/presets/{preset}', [ReportController::class, 'destroyPreset'])
+                ->name('presets.destroy');
+
+
+    Route::get('/attendance', fn () =>
+        Inertia::render('Admin/Reports/Attendance')
+    )->name('attendance');
+
+
+    });
+
+    // Route::prefix('reports')->name('reports.')->group(function () {
+
+
+    // });
 });
-

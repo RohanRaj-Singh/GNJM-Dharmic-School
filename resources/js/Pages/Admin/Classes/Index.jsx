@@ -52,22 +52,19 @@ export default function Index() {
   }
 
   function NumberCell({ row, column }) {
-    return (
-      <input
-        type="number"
-        min={0}
-        defaultValue={row.original[column.id] ?? 0}
-        className="w-full px-2 py-1 border rounded text-sm"
-        onBlur={(e) =>
-          updateCell(
-            row.index,
-            column.id,
-            Number(e.target.value || 0)
-          )
-        }
-      />
-    );
-  }
+  return (
+    <input
+      type="number"
+      min="0"
+      className="w-full px-2 py-1 border rounded text-sm"
+      defaultValue={row.original[column.id] ?? 0}
+      onBlur={(e) =>
+        updateCell(row.index, column.id, Number(e.target.value))
+      }
+    />
+  );
+}
+
 
   function StatusCell({ row, column }) {
     return (
@@ -115,12 +112,20 @@ export default function Index() {
         ),
       },
       {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row, column }) => (
-          <StatusCell row={row} column={column} />
-        ),
-      },
+  accessorKey: "monthly_fee",
+  header: "Section Fee",
+  cell: ({ row, column }) => (
+    <NumberCell row={row} column={column} />
+  ),
+},
+
+    //   {
+    //     accessorKey: "status",
+    //     header: "Status",
+    //     cell: ({ row, column }) => (
+    //       <StatusCell row={row} column={column} />
+    //     ),
+    //   },
     ],
     []
   );

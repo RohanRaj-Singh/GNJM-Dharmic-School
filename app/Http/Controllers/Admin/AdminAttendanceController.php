@@ -20,6 +20,7 @@ class AdminAttendanceController extends Controller
                 ->get(),
         ]);
     }
+
     /* ---------------------------------------------
      | Build attendance grid
      --------------------------------------------- */
@@ -32,20 +33,21 @@ class AdminAttendanceController extends Controller
         ]);
 
         $section = Section::with([
+            'schoolClass',
             'studentSections.student',
         ])->findOrFail($request->section_id);
+
+        $isKirtan = $section->schoolClass->type === 'kirtan';
 
         $start = Carbon::create($request->year, $request->month, 1);
         $end   = $start->copy()->endOfMonth();
 
-        /* ---------- Build days ---------- */
+        /* ---------- Days ---------- */
         $days = [];
         for ($d = $start->copy(); $d <= $end; $d->addDay()) {
             $isSunday = $d->isSunday();
 
-            // Business rule
-            $enabled =
-                $section->schoolClass->type === 'kirtan'
+            $enabled = $isKirtan
                 ? $isSunday
                 : !$isSunday;
 
@@ -56,66 +58,78 @@ class AdminAttendanceController extends Controller
             ];
         }
 
-        /* ---------- Build students ---------- */
+        /* ---------- Students ---------- */
         $students = [];
-        foreach ($section->studentSections as $enrollment) {
-            $student = $enrollment->student;
 
+        foreach ($section->studentSections as $enrollment) {
             $records = Attendance::where('student_section_id', $enrollment->id)
                 ->whereBetween('date', [$start, $end])
                 ->get()
-                ->keyBy(fn($r) => $enrollment->id . '-' . $r->date);
-
+                ->keyBy(fn ($r) => $enrollment->id . '-' . $r->date);
 
             $students[] = [
                 'id'      => $enrollment->id,
-                'name'    => $student->name,
-                'records' => $records->map(fn($r) => [
-                    'status' => $r->status,
+                'name'    => $enrollment->student->name,
+                'records' => $records->map(fn ($r) => [
+                    'status'         => $r->status,
+                    'lesson_learned' => $r->lesson_learned,
                 ]),
             ];
         }
 
         return response()->json([
-            'days'     => $days,
-            'students' => $students,
+            'is_kirtan' => $isKirtan,
+            'days'      => $days,
+            'students'  => $students,
         ]);
     }
 
     /* ---------------------------------------------
      | Save attendance
      --------------------------------------------- */
-    public function save(Request $request)
-    {
+public function save(Request $request)
+{
+    $request->validate([
+        'section_id' => 'required|exists:sections,id',
+        'year'       => 'required|integer',
+        'month'      => 'required|integer',
+        'records'    => 'array',
+    ]);
 
-        $request->validate([
-            'section_id' => 'required|exists:sections,id',
-            'year'       => 'required|integer',
-            'month'      => 'required|integer',
-            'records'    => 'array',
-        ]);
+    $section = Section::with('studentSections')->findOrFail($request->section_id);
 
-        $section = Section::findOrFail($request->section_id);
+    // Build lookup set
+    $validIds = $section->studentSections
+        ->pluck('id')
+        ->map(fn ($id) => (string) $id)
+        ->flip(); // FAST lookup
 
-        foreach ($request->records as $key => $status) {
-            if (!$status) continue;
-
-            [$studentSectionId, $date] = explode('-', $key);
-            $section->studentSections()
-    ->where('id', $studentSectionId)
-    ->exists() || abort(403);
-
-            Attendance::updateOrCreate(
-                [
-                    'student_section_id' => $studentSectionId,
-                    'date' => $date,
-                ],
-                [
-                    'status' => $status,
-                ]
-            );
+    foreach ($request->records as $key => $payload) {
+        if (!is_array($payload) || empty($payload['status'])) {
+            continue;
         }
 
-        return response()->json(['success' => true]);
+        // 🔥 Correct split
+        [$studentSectionId, $date] = explode('-', $key, 2);
+
+        // 🔐 HARD SAFETY
+        if (!isset($validIds[$studentSectionId])) {
+            continue; // ⛔ ignore instead of 403
+        }
+
+        Attendance::updateOrCreate(
+            [
+                'student_section_id' => $studentSectionId,
+                'date'               => $date,
+            ],
+            [
+                'status'         => $payload['status'],
+                'lesson_learned' => $payload['lesson_learned'] ?? null,
+            ]
+        );
     }
+
+    return response()->json(['success' => true]);
+}
+
 }

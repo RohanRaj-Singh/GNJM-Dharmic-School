@@ -1,15 +1,15 @@
 import AdminLayout from "@/Layouts/AdminLayout";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+
 /*
 |--------------------------------------------------------------------------
 | Attendance – Admin
 |--------------------------------------------------------------------------
-| UX principles applied:
-| - Never blank screen
-| - Grid always visible
-| - Disabled overlay instead of hiding UI
-| - Safe defaults
+| Rules:
+| - Lesson Learned ONLY for Kirtan
+| - Never break grid
+| - Visual clarity
 | - Defensive rendering
 */
 
@@ -32,33 +32,34 @@ export default function Index({ classes = [] }) {
 
   const [grid, setGrid] = useState(null);
   const [draft, setDraft] = useState({});
+  const [draftLesson, setDraftLesson] = useState({});
   const [loading, setLoading] = useState(false);
+
+  const selectedClass = classes.find(c => c.id == classId);
+  const isKirtan = selectedClass?.type === "kirtan";
 
   /* ---------------------------------------
    | Load sections when class changes
    --------------------------------------- */
-   useEffect(() => {
-  if (!classId) {
-    setSections([]);
-    setSectionId("");
-    setGrid(null);
-    return;
-  }
-
-  fetch(`/admin/sections/options?class_id=${classId}`)
-    .then(r => {
-      if (!r.ok) throw new Error("Failed to load sections");
-      return r.json();
-    })
-    .then(data => {
-      setSections(data);
-      setSectionId(data.length ? String(data[0].id) : "");
-    })
-    .catch(() => {
+  useEffect(() => {
+    if (!classId) {
       setSections([]);
       setSectionId("");
-    });
-}, [classId]);
+      setGrid(null);
+      return;
+    }
+
+    fetch(`/admin/sections/options?class_id=${classId}`)
+      .then(r => r.json())
+      .then(data => {
+        setSections(data);
+        setSectionId(data.length ? String(data[0].id) : "");
+      })
+      .catch(() => {
+        setSections([]);
+        setSectionId("");
+      });
+  }, [classId]);
 
   /* ---------------------------------------
    | Load attendance grid
@@ -82,7 +83,7 @@ export default function Index({ classes = [] }) {
   }, [sectionId, year, month]);
 
   /* ---------------------------------------
-   | Toggle attendance cell
+   | Toggle attendance status
    --------------------------------------- */
   function toggleCell(studentId, date, enabled) {
     if (!enabled) return;
@@ -109,50 +110,71 @@ export default function Index({ classes = [] }) {
   }
 
   /* ---------------------------------------
+   | Toggle lesson learned (Kirtan only)
+   --------------------------------------- */
+  function toggleLessonLearned(studentId, date, checked) {
+    const key = `${studentId}-${date}`;
+
+    setDraftLesson(prev => ({
+      ...prev,
+      [key]: checked,
+    }));
+  }
+
+  /* ---------------------------------------
    | Save attendance
    --------------------------------------- */
   function saveAttendance() {
-  setLoading(true);
+    setLoading(true);
 
-  fetch("/admin/attendance/save", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": document
-        .querySelector('meta[name="csrf-token"]')
-        .getAttribute("content"),
-    },
-    body: JSON.stringify({
-      section_id: sectionId,
-      year,
-      month: parseInt(month),
-      records: draft,
-    }),
-  })
-    .then(r => {
-      if (!r.ok) throw new Error();
-      return r.json();
-    })
-    .then(() => {
-      setDraft({});
-      toast.success("Attendance saved"); // hot toast ✅
+    const payload = Object.fromEntries(
+      Object.entries(draft).map(([key, status]) => [
+        key,
+        {
+          status,
+          lesson_learned: isKirtan
+            ? draftLesson[key] ?? null
+            : null,
+        },
+      ])
+    );
 
-      // 🔥 FORCE GRID RELOAD
-      fetch(
-        `/admin/attendance/grid?section_id=${sectionId}&year=${year}&month=${parseInt(month)}`
-      )
-        .then(r => r.json())
-        .then(setGrid);
+    fetch("/admin/attendance/save", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-TOKEN": document
+          .querySelector('meta[name="csrf-token"]')
+          .getAttribute("content"),
+      },
+      body: JSON.stringify({
+        section_id: sectionId,
+        year,
+        month: parseInt(month),
+        records: payload,
+      }),
     })
-    .catch(() => {
-      toast.error("Failed to save attendance");
-    })
-    .finally(() => setLoading(false));
-}
-
+      .then(r => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then(() => {
+        toast.success("Attendance saved");
+        setDraft({});
+        setDraftLesson({});
+        return fetch(
+          `/admin/attendance/grid?section_id=${sectionId}&year=${year}&month=${parseInt(
+            month
+          )}`
+        ).then(r => r.json());
+      })
+      .then(setGrid)
+      .catch(() => toast.error("Failed to save attendance"))
+      .finally(() => setLoading(false));
+  }
 
   /* ---------------------------------------
-   | Derived safe values
+   | Derived values
    --------------------------------------- */
   const days = grid?.days ?? [];
   const students = grid?.students ?? [];
@@ -212,19 +234,15 @@ export default function Index({ classes = [] }) {
 
       {/* ================= Attendance Grid ================= */}
       <div className="relative bg-white border rounded overflow-x-auto">
-        {/* Overlay */}
-        {(!grid || loading) && (
+        {(loading || !grid) && (
           <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-30">
             <p className="text-sm text-gray-500">
-              {loading
-                ? "Loading attendance..."
-                : "Attendance will appear here"}
+              {loading ? "Loading attendance..." : "Attendance will appear here"}
             </p>
           </div>
         )}
 
         <table className="min-w-max text-sm border-collapse">
-          {/* ---------- Header ---------- */}
           <thead className="bg-gray-50 sticky top-0 z-20">
             <tr>
               <th className="px-3 py-2 sticky left-0 bg-gray-50 z-30 text-left">
@@ -244,7 +262,6 @@ export default function Index({ classes = [] }) {
             </tr>
           </thead>
 
-          {/* ---------- Body ---------- */}
           <tbody>
             {students.map(student => (
               <tr key={student.id} className="border-b">
@@ -254,10 +271,25 @@ export default function Index({ classes = [] }) {
 
                 {days.map(d => {
                   const key = `${student.id}-${d.date}`;
+
                   const value =
                     draft[key] ??
                     student.records?.[key]?.status ??
                     null;
+
+                  const lessonValue =
+                    draftLesson[key] ??
+                    student.records?.[key]?.lesson_learned ??
+                    false;
+
+                  const statusClass =
+                    value === "present"
+                      ? "bg-green-200 text-green-800"
+                      : value === "absent"
+                      ? "bg-red-200 text-red-800"
+                      : value === "leave"
+                      ? "bg-yellow-200 text-yellow-800"
+                      : "";
 
                   return (
                     <td
@@ -266,13 +298,32 @@ export default function Index({ classes = [] }) {
                         toggleCell(student.id, d.date, d.enabled)
                       }
                       className={`px-2 py-2 text-center select-none
+                        ${statusClass}
                         ${
                           !d.enabled
-                            ? "bg-gray-100 text-gray-300"
+                            ? "bg-gray-100 text-gray-300 cursor-not-allowed"
                             : "cursor-pointer hover:bg-gray-100"
                         }`}
                     >
                       {value ? value[0].toUpperCase() : "—"}
+
+                      {isKirtan && value === "present" && (
+                        <div className="mt-1 flex items-center justify-center gap-1">
+                          <input
+                            type="checkbox"
+                            checked={lessonValue}
+                            onClick={e => e.stopPropagation()}
+                            onChange={e =>
+                              toggleLessonLearned(
+                                student.id,
+                                d.date,
+                                e.target.checked
+                              )
+                            }
+                          />
+                          <span className="text-xs">Lesson</span>
+                        </div>
+                      )}
                     </td>
                   );
                 })}

@@ -1,8 +1,11 @@
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
 export default function AdminLayout({ title, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [feesOpen, setFeesOpen] = useState(false);
+
+  const { url } = usePage(); // for active state (optional)
 
   return (
     <div className="min-h-screen flex bg-gray-100">
@@ -44,7 +47,34 @@ export default function AdminLayout({ title, children }) {
           <SidebarLink href="/admin/classes" label="Classes" />
           <SidebarLink href="/admin/sections" label="Sections" />
           <SidebarLink href="/admin/attendance" label="Attendance" />
-          <SidebarLink href="/admin/fees" label="Fees" />
+
+          {/* ================= Fees Dropdown ================= */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setFeesOpen(!feesOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+            >
+              <span>Fees</span>
+              <span className="text-xs">
+                {feesOpen ? "▲" : "▼"}
+              </span>
+            </button>
+
+            {feesOpen && (
+              <div className="ml-3 mt-1 space-y-1">
+                <SidebarSubLink
+                  href="/admin/fees"
+                  label="Fees Index"
+                />
+                <SidebarSubLink
+                  href="/admin/custom-fee"
+                  label="Assign Custom Fee"
+                />
+              </div>
+            )}
+          </div>
+
           <SidebarLink href="/admin/reports" label="Reports" />
           <SidebarLink href="/admin/utilities" label="Utilities" />
         </nav>
@@ -73,7 +103,6 @@ export default function AdminLayout({ title, children }) {
             </h2>
           </div>
 
-          {/* Right side (future profile/logout) */}
           <div />
         </header>
 
@@ -86,13 +115,24 @@ export default function AdminLayout({ title, children }) {
   );
 }
 
-/* ---------------- Sidebar Link ---------------- */
+/* ---------------- Sidebar Links ---------------- */
 
 function SidebarLink({ href, label }) {
   return (
     <Link
       href={href}
       className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+    >
+      {label}
+    </Link>
+  );
+}
+
+function SidebarSubLink({ href, label }) {
+  return (
+    <Link
+      href={href}
+      className="block px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition"
     >
       {label}
     </Link>

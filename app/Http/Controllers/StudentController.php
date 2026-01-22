@@ -21,7 +21,7 @@ class StudentController extends Controller
             'student_type' => 'required|in:paid,free',
         ]);
 
-        // Create student
+        // 1️⃣ Create student
         $student = Student::create([
             'name' => $validated['name'],
             'father_name' => $validated['father_name'] ?? null,
@@ -30,10 +30,10 @@ class StudentController extends Controller
             'status' => 'active',
         ]);
 
-        // Get section + class
+        // 2️⃣ Get section + class
         $section = Section::with('schoolClass')->findOrFail($validated['section_id']);
 
-        // Create enrollment
+        // 3️⃣ Create enrollment
         $enrollment = StudentSection::create([
             'student_id'   => $student->id,
             'class_id'     => $section->schoolClass->id,
@@ -41,22 +41,30 @@ class StudentController extends Controller
             'student_type' => $validated['student_type'],
         ]);
 
-        // Create first monthly fee (only if PAID)
-        if (
-            $validated['student_type'] === 'paid' &&
-            $section->schoolClass->default_monthly_fee > 0
-        ) {
-            Fee::create([
-                'student_section_id' => $enrollment->id,
-                'title'  => 'Monthly Fee',
-                'type'   => 'monthly',
-                'month'  => now()->format('F Y'),
-                'amount' => $section->schoolClass->default_monthly_fee,
-            ]);
+        // 4️⃣ Auto-generate CURRENT month fee (PAID students only)
+        if ($validated['student_type'] === 'paid') {
+
+            $resolvedFee =
+                $enrollment->monthly_fee > 0
+                    ? $enrollment->monthly_fee
+                    : $section->schoolClass->default_monthly_fee;
+
+            if ($resolvedFee > 0) {
+                Fee::firstOrCreate(
+                    [
+                        'student_section_id' => $enrollment->id,
+                        'type' => 'monthly',
+                        'month' => now()->format('Y-m'),
+                    ],
+                    [
+                        'source' => 'monthly',
+                        'title' => null,
+                        'amount' => $resolvedFee,
+                    ]
+                );
+            }
         }
 
-        // ✅ Redirect to correct accountant students page
         return redirect()->route('accountant.students.index');
     }
-
 }
