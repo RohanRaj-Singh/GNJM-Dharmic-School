@@ -10,6 +10,18 @@ export default function EnrollmentsCell({
 }) {
   const enrollments = row.original.enrollments ?? [];
 
+
+  useEffect(() => {
+  console.log(
+    "ENROLLMENTS DEBUG",
+    enrollments.map(e => ({
+      id: e.id,
+      student_type: e.student_type,
+      ref: e
+    }))
+  );
+}, [enrollments]);
+
   /* ----------------------------------------
    | Preload sections when class exists
    ---------------------------------------- */
@@ -34,20 +46,23 @@ export default function EnrollmentsCell({
    | Helpers
    ---------------------------------------- */
   function updateEnrollment(enrollmentId, key, value) {
-    setData((prev) =>
-      prev.map((r, rIdx) =>
-        rIdx !== row.index
-          ? r
-          : {
-              ...r,
-              enrollments: r.enrollments.map((e) =>
-                e.id === enrollmentId ? { ...e, [key]: value } : e
-              ),
-            }
-      )
-    );
-    setIsDirty(true);
-  }
+  setData((prev) =>
+    prev.map((r, rIdx) =>
+      rIdx !== row.index
+        ? r
+        : {
+            ...r,
+            enrollments: r.enrollments.map((e) =>
+              String(e.id) === String(enrollmentId)
+                ? { ...e, [key]: value }
+                : e
+            ),
+          }
+    )
+  );
+  setIsDirty(true);
+}
+
 
   function addEnrollment() {
     setData((prev) =>
@@ -62,6 +77,7 @@ export default function EnrollmentsCell({
                   id: crypto.randomUUID(),
                   class_id: "",
                   section_id: "",
+                  student_type: "paid", // ✅ DEFAULT
                 },
               ],
             }
@@ -90,7 +106,7 @@ export default function EnrollmentsCell({
    | Render
    ---------------------------------------- */
   return (
-    <div className="flex flex-col gap-2 min-w-[260px]">
+    <div className="flex flex-col gap-2 min-w-[320px]">
       {enrollments.map((e) => {
         const classesReady = classes.length > 0;
 
@@ -107,11 +123,17 @@ export default function EnrollmentsCell({
         const sectionOptions =
           sectionsByClass[String(e.class_id)] || [];
 
+        const isFree = e.student_type === "free";
+
         return (
-          <div key={e.id} className="flex gap-2 items-center">
+          <div
+            key={e.id}
+            className={`flex gap-2 items-center p-2 rounded border
+              ${isFree ? "bg-green-50 border-green-200" : "bg-white"}
+            `}
+          >
             {/* ---------- Class ---------- */}
             <select
-              key={`class-${e.id}-${classes.length}`}
               disabled={!classesReady}
               value={classesReady ? String(e.class_id ?? "") : ""}
               onChange={(ev) => {
@@ -134,15 +156,10 @@ export default function EnrollmentsCell({
 
             {/* ---------- Section ---------- */}
             <select
-              key={`section-${e.id}-${sectionsReady ? "ready" : "wait"}`}
               disabled={!sectionsReady}
               value={sectionsReady ? String(e.section_id ?? "") : ""}
               onChange={(ev) =>
-                updateEnrollment(
-                  e.id,
-                  "section_id",
-                  ev.target.value
-                )
+                updateEnrollment(e.id, "section_id", ev.target.value)
               }
               className="border px-2 py-1 rounded text-sm disabled:bg-gray-100"
             >
@@ -156,11 +173,37 @@ export default function EnrollmentsCell({
               ))}
             </select>
 
+            {/* ---------- FREE CHECKBOX ---------- */}
+            <label className="flex items-center gap-1 text-xs cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isFree}
+                onChange={(e2) =>
+                  updateEnrollment(
+                    e.id,
+                    "student_type",
+                    e2.target.checked ? "free" : "paid"
+                  )
+                }
+                className="h-4 w-4 accent-green-600"
+              />
+              <span
+                className={
+                  isFree
+                    ? "text-green-700 font-medium"
+                    : "text-gray-600"
+                }
+              >
+                Free
+              </span>
+            </label>
+
             {/* ---------- Remove ---------- */}
             <button
               type="button"
               onClick={() => removeEnrollment(e.id)}
-              className="text-red-600 text-sm"
+              className="text-red-600 text-sm ml-auto"
+              title="Remove enrollment"
             >
               ✕
             </button>

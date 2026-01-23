@@ -197,34 +197,31 @@ Route::prefix('admin')->name('admin.')->group(function () {
         )->name('delete');
 
 
-Route::get('/options', function (Request $request) {
+        Route::get('/options', function (Request $request) {
 
-    abort_if(
-        !$request->filled('class_ids'),
-        400,
-        'class_ids[] required'
-    );
+            abort_if(
+                !$request->filled('class_ids'),
+                400,
+                'class_ids[] required'
+            );
 
-    $classIds = (array) $request->input('class_ids');
-    $sectionIds = (array) $request->input('section_ids', []);
+            $classIds = (array) $request->input('class_ids');
+            $sectionIds = (array) $request->input('section_ids', []);
 
-    $query = Student::query()
-        ->join('student_sections', 'students.id', '=', 'student_sections.student_id')
-        ->whereIn('student_sections.class_id', $classIds);
+            $query = Student::query()
+                ->join('student_sections', 'students.id', '=', 'student_sections.student_id')
+                ->whereIn('student_sections.class_id', $classIds);
 
-    if (!empty($sectionIds)) {
-        $query->whereIn('student_sections.section_id', $sectionIds);
-    }
+            if (!empty($sectionIds)) {
+                $query->whereIn('student_sections.section_id', $sectionIds);
+            }
 
-    return $query
-        ->select('students.id', 'students.name')
-        ->distinct()
-        ->orderBy('students.name')
-        ->get();
-
-})->name('options');
-
-
+            return $query
+                ->select('students.id', 'students.name')
+                ->distinct()
+                ->orderBy('students.name')
+                ->get();
+        })->name('options');
     });
 
     /* =========================================================
@@ -270,13 +267,11 @@ Route::get('/options', function (Request $request) {
         // )->name('options');
 
         Route::get('/options', function () {
-    return SchoolClass::query()
-        ->select('id', 'name')
-        ->orderBy('name')
-        ->get();
-})->name('options');
-
-
+            return SchoolClass::query()
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get();
+        })->name('options');
     });
 
     /* =========================================================
@@ -351,24 +346,23 @@ Route::get('/options', function (Request $request) {
 
         Route::get('/options', function (Request $request) {
 
-    // Accept both formats (BACKWARD SAFE)
-    $classIds = [];
+            // Accept both formats (BACKWARD SAFE)
+            $classIds = [];
 
-    if ($request->filled('class_ids')) {
-        $classIds = (array) $request->input('class_ids');
-    } elseif ($request->filled('class_id')) {
-        $classIds = [$request->input('class_id')];
-    }
+            if ($request->filled('class_ids')) {
+                $classIds = (array) $request->input('class_ids');
+            } elseif ($request->filled('class_id')) {
+                $classIds = [$request->input('class_id')];
+            }
 
-    abort_if(empty($classIds), 400, 'class_ids[] or class_id required');
+            abort_if(empty($classIds), 400, 'class_ids[] or class_id required');
 
-    return Section::query()
-        ->whereIn('class_id', $classIds)
-        ->select('id', 'name', 'class_id')
-        ->orderBy('name')
-        ->get();
-
-})->name('options');
+            return Section::query()
+                ->whereIn('class_id', $classIds)
+                ->select('id', 'name', 'class_id')
+                ->orderBy('name')
+                ->get();
+        })->name('options');
     });
 
 
@@ -418,25 +412,25 @@ Route::get('/options', function (Request $request) {
     });
 
     Route::prefix('reports')
-    ->middleware(['web'])
-    ->group(function () {
+        ->middleware(['web'])
+        ->group(function () {
 
-        Route::get(
-            '/',
-            fn() =>
-            Inertia::render('Admin/Reports/Index')
-        )->name('index');
+            Route::get(
+                '/',
+                fn() =>
+                Inertia::render('Admin/Reports/Index')
+            )->name('index');
 
-        Route::post('/build', [ReportController::class, 'build'])
-            ->name('build');
+            Route::post('/build', [ReportController::class, 'build'])
+                ->name('build');
 
-        Route::post('/export/csv', [ReportController::class, 'exportCsv'])
-            ->name('export.csv');
+            Route::post('/export/csv', [ReportController::class, 'exportCsv'])
+                ->name('export.csv');
 
-        Route::post('/export/pdf', [ReportController::class, 'exportPdf'])
-            ->name('export.pdf');
+            Route::post('/export/pdf', [ReportController::class, 'exportPdf'])
+                ->name('export.pdf');
 
-        Route::get('/presets', [ReportController::class, 'presets'])
+            Route::get('/presets', [ReportController::class, 'presets'])
                 ->name('presets');
 
             Route::post('/presets', [ReportController::class, 'storePreset'])
@@ -446,12 +440,24 @@ Route::get('/options', function (Request $request) {
                 ->name('presets.destroy');
 
 
-    Route::get('/attendance', fn () =>
-        Inertia::render('Admin/Reports/Attendance')
-    )->name('attendance');
+            Route::get(
+                '/attendance',
+                fn() =>
+                Inertia::render('Admin/Reports/Attendance')
+            )->name('attendance');
 
 
-    });
+            Route::get(
+                '/student',
+                fn() => Inertia::render('Admin/Reports/Student')
+            )->name('student');
+        });
+
+        Route::get('/students/list', function () {
+    return Student::orderBy('name')
+        ->get(['id', 'name', 'father_name']);
+});
+
 
     // Route::prefix('reports')->name('reports.')->group(function () {
 

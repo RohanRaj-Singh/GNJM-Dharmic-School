@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from "@inertiajs/react";
 import { useState } from "react";
+import SidebarGroup from "@/Components/SidebarGroup";
 
 export default function AdminLayout({ title, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -48,35 +49,33 @@ export default function AdminLayout({ title, children }) {
           <SidebarLink href="/admin/sections" label="Sections" />
           <SidebarLink href="/admin/attendance" label="Attendance" />
 
-          {/* ================= Fees Dropdown ================= */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setFeesOpen(!feesOpen)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
-            >
-              <span>Fees</span>
-              <span className="text-xs">
-                {feesOpen ? "▲" : "▼"}
-              </span>
-            </button>
 
-            {feesOpen && (
-              <div className="ml-3 mt-1 space-y-1">
+          <SidebarGroup label="Fees Management">
                 <SidebarSubLink
-                  href="/admin/fees"
-                  label="Fees Index"
+                  href="/admin/fees/"
+                  label="Manage Fees"
                 />
                 <SidebarSubLink
-                  href="/admin/custom-fee"
-                  label="Assign Custom Fee"
+                  href="/admin/fees/custom"
+                  label="Fee Categories"
                 />
-              </div>
-            )}
-          </div>
+              </SidebarGroup>
+          <SidebarGroup label="Reports">
+    <SidebarLink
+        href="/admin/reports/"
+        label="Fees Report"
+    />
+    <SidebarLink
+        href="/admin/reports/attendance"
+        label="Attendance Report"
+    />
+    <SidebarLink
+        href="/admin/reports/student"
+        label="Student Report"
+    />
+</SidebarGroup>
 
-          <SidebarLink href="/admin/reports" label="Reports" />
-          <SidebarLink href="/admin/utilities" label="Utilities" />
+                    <SidebarLink href="/admin/utilities" label="Utilities" />
         </nav>
 
         {/* Footer */}

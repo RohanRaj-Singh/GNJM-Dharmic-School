@@ -66,21 +66,6 @@ export default function Index() {
 }
 
 
-  function StatusCell({ row, column }) {
-    return (
-      <select
-        defaultValue={row.original[column.id] ?? "active"}
-        className="w-full px-2 py-1 border rounded text-sm"
-        onChange={(e) =>
-          updateCell(row.index, column.id, e.target.value)
-        }
-      >
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
-    );
-  }
-
   /* ---------------- Columns ---------------- */
   const columns = useMemo(
     () => [
@@ -111,13 +96,6 @@ export default function Index() {
           </span>
         ),
       },
-      {
-  accessorKey: "monthly_fee",
-  header: "Section Fee",
-  cell: ({ row, column }) => (
-    <NumberCell row={row} column={column} />
-  ),
-},
 
     //   {
     //     accessorKey: "status",

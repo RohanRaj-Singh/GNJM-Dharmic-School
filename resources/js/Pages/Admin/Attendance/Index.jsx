@@ -1,5 +1,5 @@
 import AdminLayout from "@/Layouts/AdminLayout";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 /*
@@ -8,22 +8,21 @@ import toast from "react-hot-toast";
 |--------------------------------------------------------------------------
 | Rules:
 | - Lesson Learned ONLY for Kirtan
-| - Never break grid
-| - Visual clarity
-| - Defensive rendering
+| - Grid must never break
+| - Defensive rendering everywhere
 */
 
-export default function Index({ classes = [] }) {
+export default function Index() {
   /* ---------------------------------------
    | State
    --------------------------------------- */
   const today = new Date();
 
-  const [classId, setClassId] = useState(
-    classes.length ? classes[0].id : ""
-  );
-  const [sectionId, setSectionId] = useState("");
+  const [classes, setClasses] = useState([]);
+  const [classId, setClassId] = useState("");
+
   const [sections, setSections] = useState([]);
+  const [sectionId, setSectionId] = useState("");
 
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(
@@ -35,8 +34,34 @@ export default function Index({ classes = [] }) {
   const [draftLesson, setDraftLesson] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const selectedClass = classes.find(c => c.id == classId);
+  /* ---------------------------------------
+   | Derived
+   --------------------------------------- */
+  const selectedClass = useMemo(
+    () => classes.find(c => String(c.id) === String(classId)),
+    [classes, classId]
+  );
+
   const isKirtan = selectedClass?.type === "kirtan";
+
+  /* ---------------------------------------
+   | Load classes (ONCE)
+   --------------------------------------- */
+  useEffect(() => {
+    fetch("/admin/classes/options")
+      .then(r => r.json())
+      .then(setClasses)
+      .catch(() => setClasses([]));
+  }, []);
+
+  /* ---------------------------------------
+   | Auto-select first class
+   --------------------------------------- */
+  useEffect(() => {
+    if (classes.length && !classId) {
+      setClassId(String(classes[0].id));
+    }
+  }, [classes]);
 
   /* ---------------------------------------
    | Load sections when class changes
@@ -83,7 +108,7 @@ export default function Index({ classes = [] }) {
   }, [sectionId, year, month]);
 
   /* ---------------------------------------
-   | Toggle attendance status
+   | Toggle attendance cell
    --------------------------------------- */
   function toggleCell(studentId, date, enabled) {
     if (!enabled) return;
@@ -114,11 +139,7 @@ export default function Index({ classes = [] }) {
    --------------------------------------- */
   function toggleLessonLearned(studentId, date, checked) {
     const key = `${studentId}-${date}`;
-
-    setDraftLesson(prev => ({
-      ...prev,
-      [key]: checked,
-    }));
+    setDraftLesson(prev => ({ ...prev, [key]: checked }));
   }
 
   /* ---------------------------------------
@@ -132,9 +153,7 @@ export default function Index({ classes = [] }) {
         key,
         {
           status,
-          lesson_learned: isKirtan
-            ? draftLesson[key] ?? null
-            : null,
+          lesson_learned: isKirtan ? draftLesson[key] ?? null : null,
         },
       ])
     );
@@ -174,7 +193,7 @@ export default function Index({ classes = [] }) {
   }
 
   /* ---------------------------------------
-   | Derived values
+   | Render helpers
    --------------------------------------- */
   const days = grid?.days ?? [];
   const students = grid?.students ?? [];
@@ -184,7 +203,7 @@ export default function Index({ classes = [] }) {
    --------------------------------------- */
   return (
     <AdminLayout title="Attendance">
-      {/* ================= Filters ================= */}
+      {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4 items-center">
         <select
           value={classId}
@@ -225,14 +244,15 @@ export default function Index({ classes = [] }) {
         {grid && (
           <button
             onClick={saveAttendance}
-            className="ml-auto px-4 py-2 bg-green-600 text-white rounded text-sm"
+            disabled={loading}
+            className="ml-auto px-4 py-2 bg-green-600 text-white rounded text-sm disabled:opacity-50"
           >
             Save Attendance
           </button>
         )}
       </div>
 
-      {/* ================= Attendance Grid ================= */}
+      {/* Grid */}
       <div className="relative bg-white border rounded overflow-x-auto">
         {(loading || !grid) && (
           <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-30">
@@ -248,7 +268,6 @@ export default function Index({ classes = [] }) {
               <th className="px-3 py-2 sticky left-0 bg-gray-50 z-30 text-left">
                 Student
               </th>
-
               {days.map(d => (
                 <th
                   key={d.date}
