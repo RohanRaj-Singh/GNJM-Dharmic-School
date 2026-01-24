@@ -72,123 +72,131 @@ Route::prefix('admin')->name('admin.')->group(function () {
         })->name('data');
 
         Route::post('/bulk-update', function (Request $request) {
-            DB::transaction(function () use ($request) {
+    DB::transaction(function () use ($request) {
 
-                foreach ($request->students as $row) {
+        foreach ($request->students as $row) {
 
-                    $student = empty($row['id'])
-                        ? Student::create([
-                            'name' => $row['name'],
-                            'father_name' => $row['father_name'] ?? null,
-                            'father_phone' => $row['father_phone'] ?? null,
-                            'mother_phone' => $row['mother_phone'] ?? null,
-                            'status' => $row['status'] ?? 'active',
-                        ])
-                        : tap(Student::findOrFail($row['id']))->update([
-                            'name' => $row['name'],
-                            'father_name' => $row['father_name'] ?? null,
-                            'father_phone' => $row['father_phone'] ?? null,
-                            'mother_phone' => $row['mother_phone'] ?? null,
-                            'status' => $row['status'] ?? 'active',
-                        ]);
+            /* ===============================
+               STUDENT
+            ================================ */
+            $student = empty($row['id'])
+                ? Student::create([
+                    'name' => $row['name'],
+                    'father_name' => $row['father_name'] ?? null,
+                    'father_phone' => $row['father_phone'] ?? null,
+                    'mother_phone' => $row['mother_phone'] ?? null,
+                    'status' => $row['status'] ?? 'active',
+                ])
+                : tap(Student::findOrFail($row['id']))->update([
+                    'name' => $row['name'],
+                    'father_name' => $row['father_name'] ?? null,
+                    'father_phone' => $row['father_phone'] ?? null,
+                    'mother_phone' => $row['mother_phone'] ?? null,
+                    'status' => $row['status'] ?? 'active',
+                ]);
 
-                    /*
-     | Normalize incoming enrollments
-     | Section is the SOURCE OF TRUTH
-     */
-                    $incoming = collect($row['enrollments'] ?? [])
-                        ->filter(fn($e) => !empty($e['section_id']))
-                        ->unique('section_id');
+            /* ===============================
+               NORMALIZE ENROLLMENTS
+               (section is source of truth)
+            ================================ */
+            $incoming = collect($row['enrollments'] ?? [])
+                ->filter(fn ($e) => !empty($e['section_id']))
+                ->unique('section_id');
 
-                    /*
-     | Remove enrollments that no longer exist
-     */
-                    StudentSection::where('student_id', $student->id)
-                        ->whereNotIn('section_id', $incoming->pluck('section_id'))
-                        ->delete();
+            /* ===============================
+               REMOVE DELETED ENROLLMENTS
+            ================================ */
+            StudentSection::where('student_id', $student->id)
+                ->whereNotIn('section_id', $incoming->pluck('section_id'))
+                ->delete();
 
-                    foreach ($incoming as $e) {
+            foreach ($incoming as $e) {
 
-                        $studentType = $e['student_type'] ?? 'paid';
+                $studentType = $e['student_type'] === 'free'
+                    ? 'free'
+                    : 'paid';
 
-                        /*
-         | Resolve section → class (SOURCE OF TRUTH)
-         */
-                        $section = Section::find($e['section_id']);
-                        if (!$section) {
-                            continue;
-                        }
+                /* ===============================
+                   RESOLVE SECTION → CLASS
+                ================================ */
+                $section = Section::find($e['section_id']);
+                if (!$section) continue;
 
-                        $classId = $section->class_id;
+                $classId = $section->class_id;
 
-                        /*
-         | Create or fetch enrollment
-         */
-                        $enrollment = StudentSection::firstOrCreate(
-                            [
-                                'student_id' => $student->id,
-                                'class_id'   => $classId,
-                                'section_id' => $section->id,
-                            ],
-                            [
-                                'student_type' => $studentType,
-                            ]
-                        );
+                /* ===============================
+                   CREATE OR FETCH ENROLLMENT
+                ================================ */
+                $enrollment = StudentSection::firstOrCreate(
+                    [
+                        'student_id' => $student->id,
+                        'class_id'   => $classId,
+                        'section_id' => $section->id,
+                    ],
+                    [
+                        'student_type' => $studentType,
+                    ]
+                );
 
-                        /*
-         | RULE 1: Free students never get monthly fees
-         */
-                        if ($studentType === 'free') {
-                            continue;
-                        }
-
-                        /*
-         | Resolve monthly fee
-         | Priority:
-         | 1. student_sections.monthly_fee
-         | 2. classes.default_monthly_fee
-         */
-                        $class = SchoolClass::find($classId);
-                        if (!$class) {
-                            continue;
-                        }
-
-                        $resolvedFee =
-                            $enrollment->monthly_fee > 0
-                            ? $enrollment->monthly_fee
-                            : ($section->monthly_fee > 0
-                                ? $section->monthly_fee
-                                : $class->default_monthly_fee);
-
-
-                        /*
-         | RULE 2: If no fee exists → do NOT generate
-         */
-                        if ($resolvedFee <= 0) {
-                            continue;
-                        }
-
-                        /*
-         | Generate CURRENT month fee (idempotent)
-         */
-                        Fee::firstOrCreate(
-                            [
-                                'student_section_id' => $enrollment->id,
-                                'type'  => 'monthly',
-                                'month' => now()->format('Y-m'),
-                            ],
-                            [
-                                'source' => 'monthly',
-                                'title'  => null,
-                                'amount' => $resolvedFee,
-                            ]
-                        );
-                    }
+                /* ===============================
+                   🔥 IMPORTANT FIX
+                   UPDATE student_type ALWAYS
+                ================================ */
+                if ($enrollment->student_type !== $studentType) {
+                    $enrollment->update([
+                        'student_type' => $studentType,
+                    ]);
                 }
-            });
 
-            return back()->with('success', 'Students updated');
-        })->name('bulk');
+                /* ===============================
+                   RULE 1: FREE → NO FEES
+                ================================ */
+                if ($studentType === 'free') {
+                    continue;
+                }
+
+                /* ===============================
+                   RESOLVE MONTHLY FEE
+                ================================ */
+                $class = SchoolClass::find($classId);
+                if (!$class) continue;
+
+                $resolvedFee =
+                    ($enrollment->monthly_fee > 0)
+                        ? $enrollment->monthly_fee
+                        : (
+                            $section->monthly_fee > 0
+                                ? $section->monthly_fee
+                                : $class->default_monthly_fee
+                        );
+
+                if ($resolvedFee <= 0) {
+                    continue;
+                }
+
+                /* ===============================
+                   GENERATE CURRENT MONTH FEE
+                   (idempotent)
+                ================================ */
+                Fee::firstOrCreate(
+                    [
+                        'student_section_id' => $enrollment->id,
+                        'type'  => 'monthly',
+                        'month' => now()->format('Y-m'),
+                    ],
+                    [
+                        'source' => 'monthly',
+                        'title'  => null,
+                        'amount' => $resolvedFee,
+                    ]
+                );
+            }
+        }
+    });
+
+    return back()->with('success', 'Students updated');
+})->name('bulk');
+
 
         Route::delete(
             '/{student}',

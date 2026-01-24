@@ -11,16 +11,16 @@ export default function EnrollmentsCell({
   const enrollments = row.original.enrollments ?? [];
 
 
-  useEffect(() => {
-  console.log(
-    "ENROLLMENTS DEBUG",
-    enrollments.map(e => ({
-      id: e.id,
-      student_type: e.student_type,
-      ref: e
-    }))
-  );
-}, [enrollments]);
+//   useEffect(() => {
+//   console.log(
+//     "ENROLLMENTS DEBUG",
+//     enrollments.map(e => ({
+//       id: e.id,
+//       student_type: e.student_type,
+//       ref: e
+//     }))
+//   );
+// }, [enrollments]);
 
   /* ----------------------------------------
    | Preload sections when class exists
@@ -45,7 +45,9 @@ export default function EnrollmentsCell({
   /* ----------------------------------------
    | Helpers
    ---------------------------------------- */
-  function updateEnrollment(enrollmentId, key, value) {
+ function updateEnrollment(enrollmentId, key, value) {
+  console.log("UPDATE ENROLLMENT", enrollmentId, key, value);
+
   setData((prev) =>
     prev.map((r, rIdx) =>
       rIdx !== row.index
@@ -60,8 +62,11 @@ export default function EnrollmentsCell({
           }
     )
   );
+
   setIsDirty(true);
 }
+
+
 
 
   function addEnrollment() {
@@ -114,6 +119,7 @@ export default function EnrollmentsCell({
           (cls) =>
             !selectedClassIds.includes(String(cls.id)) ||
             String(cls.id) === String(e.class_id)
+
         );
 
         const sectionsReady =
@@ -130,8 +136,10 @@ export default function EnrollmentsCell({
             key={e.id}
             className={`flex gap-2 items-center p-2 rounded border
               ${isFree ? "bg-green-50 border-green-200" : "bg-white"}
-            `}
+            ` }
+
           >
+
             {/* ---------- Class ---------- */}
             <select
               disabled={!classesReady}
@@ -177,14 +185,18 @@ export default function EnrollmentsCell({
             <label className="flex items-center gap-1 text-xs cursor-pointer select-none">
               <input
                 type="checkbox"
-                checked={isFree}
-                onChange={(e2) =>
+                checked={e.student_type === "free"}
+                onChange={(e2) =>{
+                    console.log("TOGGLE FREE", e.id, e2.target.checked);
                   updateEnrollment(
                     e.id,
                     "student_type",
                     e2.target.checked ? "free" : "paid"
+
                   )
                 }
+                }
+
                 className="h-4 w-4 accent-green-600"
               />
               <span
