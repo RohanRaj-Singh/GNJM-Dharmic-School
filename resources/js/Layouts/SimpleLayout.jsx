@@ -1,5 +1,6 @@
 import { Head } from "@inertiajs/react";
 import {usePage} from "@inertiajs/react";
+import {router} from "@inertiajs/react";
 
 export default function SimpleLayout({title, children})
 {
@@ -10,14 +11,14 @@ export default function SimpleLayout({title, children})
             {/*Top Bar*/}
             <header className="bg-white shadow-sm sticky top-0 z-10">
   <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
-    
-    {/* Back Button */}
+
+    {/* logout Button */}
     <button
-      onClick={() => router.visit(window.history.state?.back ?? "/")}
-      className="text-xl text-gray-600 active:scale-95"
+      onClick={() => router.post('/logout')}
+      className="bg-red-100 text-red-600 px-2 py-1 rounded-lg text-sm"
       aria-label="Go back"
     >
-      ←
+      Logout
     </button>
 
     {/* Title */}
@@ -30,7 +31,7 @@ export default function SimpleLayout({title, children})
   </div>
 </header>
 
-            
+
             {/*Main Content*/}
             <main className="max-w-md mx-auto px-4 py-4 pb-24">
               {flash?.success && (

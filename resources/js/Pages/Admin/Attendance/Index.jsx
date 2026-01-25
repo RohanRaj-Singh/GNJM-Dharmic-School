@@ -41,8 +41,10 @@ export default function Index() {
     () => classes.find(c => String(c.id) === String(classId)),
     [classes, classId]
   );
+  console.log("Selected class:", selectedClass);
 
-  const isKirtan = selectedClass?.type === "kirtan";
+const isKirtan =
+  selectedClass?.name?.toLowerCase().includes("kirtan");
 
   /* ---------------------------------------
    | Load classes (ONCE)

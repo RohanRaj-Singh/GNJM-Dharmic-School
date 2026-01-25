@@ -4,33 +4,31 @@ namespace App\Http;
 
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 
-/* -------- Core Laravel Middleware -------- */
+/* -------- Core -------- */
 use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Foundation\Http\Middleware\ValidatePostSize;
 use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
 
-/* -------- Web Middleware -------- */
+/* -------- Web -------- */
 use App\Http\Middleware\EncryptCookies;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use App\Http\Middleware\RedirectIfAuthenticated;
 
 /* -------- Auth -------- */
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\TrimStrings;
+//use App\Http\Middleware\DebugAuthMiddleware;
 
 /* -------- Custom -------- */
-use App\Http\Middleware\FakeAuthForReports;
+use App\Http\Middleware\RoleMiddleware;
+use Symfony\Component\ErrorHandler\Debug;
 
 class Kernel extends HttpKernel
 {
-    /*
-    |--------------------------------------------------------------------------
-    | Global HTTP middleware
-    |--------------------------------------------------------------------------
-    */
     protected $middleware = [
         HandleCors::class,
         ValidatePostSize::class,
@@ -38,11 +36,6 @@ class Kernel extends HttpKernel
         ConvertEmptyStringsToNull::class,
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Middleware Groups
-    |--------------------------------------------------------------------------
-    */
     protected $middlewareGroups = [
         'web' => [
             EncryptCookies::class,
@@ -51,6 +44,8 @@ class Kernel extends HttpKernel
             ShareErrorsFromSession::class,
             VerifyCsrfToken::class,
             SubstituteBindings::class,
+           // Authenticate::class,
+           DebugAuthMiddleware::class,
         ],
 
         'api' => [
@@ -58,15 +53,10 @@ class Kernel extends HttpKernel
         ],
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Route Middleware
-    |--------------------------------------------------------------------------
-    */
-    protected $routeMiddleware = [
-        'auth' => Authenticate::class,
-
-        // 🔥 TEMP — auto-login first user for reports testing
-        'fake.auth.reports' => FakeAuthForReports::class,
-    ];
+    protected $middlewareAliases = [
+    'auth' => \App\Http\Middleware\Authenticate::class,
+    'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+    'role' => \App\Http\Middleware\RoleMiddleware::class,
+];
 }
+

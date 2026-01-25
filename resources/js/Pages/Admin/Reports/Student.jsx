@@ -163,12 +163,13 @@ export default function StudentReport() {
                 <>
                     <StudentHeader student={report.student} />
                     <SummaryCards report={report} />
-                    <FeesSection title="Gurmukhi Fees" data={report.gurmukhi.fees} />
+                    <FeesSection title="Gurmukhi" fees={report.gurmukhi.fees} />
+                    {console.log(report.gurmukhi.fees)}
                     <AttendanceCalendar
     title="Gurmukhi"
     attendance={report.gurmukhi.attendance}
 />
-                    <FeesSection title="Kirtan Fees" data={report.kirtan.fees} />
+                    <FeesSection title="Kirtan Fees" fees={report.kirtan.fees} />
 
 
 <AttendanceCalendar
@@ -473,51 +474,85 @@ function FeesSection({ title, fees }) {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm border mt-2">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="p-2 text-left">Fee</th>
-                            <th className="p-2 text-left">Month</th>
-                            <th className="p-2 text-right">Amount</th>
-                            <th className="p-2 text-center">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.length === 0 && (
-                            <tr>
-                                <td
-                                    colSpan={4}
-                                    className="p-3 text-center text-gray-400"
-                                >
-                                    No fee records
-                                </td>
-                            </tr>
-                        )}
+            {/* Grouped Fees */}
+<div className="grid md:grid-cols-2 gap-6 text-sm">
+    {/* PAID */}
+    <div>
+        <h4 className="font-semibold text-green-700 mb-2">
+            ✔ Paid Fees
+        </h4>
 
-                        {rows.map((row, i) => (
-                            <tr key={i} className="border-t">
-                                <td className="p-2">{row.title}</td>
-                                <td className="p-2">
-                                    {row.month ?? "—"}
-                                </td>
-                                <td className="p-2 text-right">
-                                    Rs. {row.amount}
-                                </td>
-                                <td
-                                    className={`p-2 text-center font-semibold ${
-                                        row.is_paid
-                                            ? "text-green-600"
-                                            : "text-red-600"
-                                    }`}
-                                >
-                                    {row.is_paid ? "Paid" : "Unpaid"}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+        {rows.filter(r => r.is_paid).length === 0 ? (
+            <div className="text-gray-400">No paid fees</div>
+        ) : (
+            <ul className="space-y-2">
+                {rows
+                    .filter(r => r.is_paid)
+                    .map((row, i) => (
+                        <li
+                            key={`paid-${i}`}
+                            className="flex justify-between items-center border rounded px-3 py-2 bg-green-50"
+                        >
+                            <div>
+                                <div className="font-medium">
+                                    {row.type === "monthly"
+                                        ? `Monthly Fee`
+                                        : row.title}
+                                </div>
+                                {row.month && (
+                                    <div className="text-xs text-gray-500">
+                                        {row.month}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="font-semibold">
+                                Rs. {row.amount}
+                            </div>
+                        </li>
+                    ))}
+            </ul>
+        )}
+    </div>
+
+    {/* UNPAID */}
+    <div>
+        <h4 className="font-semibold text-red-700 mb-2">
+            ⏳ Unpaid Fees
+        </h4>
+
+        {rows.filter(r => !r.is_paid).length === 0 ? (
+            <div className="text-gray-400">No unpaid fees</div>
+        ) : (
+            <ul className="space-y-2">
+                {rows
+                    .filter(r => !r.is_paid)
+                    .map((row, i) => (
+                        <li
+                            key={`unpaid-${i}`}
+                            className="flex justify-between items-center border rounded px-3 py-2 bg-red-50"
+                        >
+                            <div>
+                                <div className="font-medium">
+                                    {row.type === "monthly"
+                                        ? `Monthly Fee`
+                                        : row.title}
+                                </div>
+                                {row.month && (
+                                    <div className="text-xs text-gray-500">
+                                        {row.month}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="font-semibold">
+                                Rs. {row.amount}
+                            </div>
+                        </li>
+                    ))}
+            </ul>
+        )}
+    </div>
+</div>
+
         </div>
     );
 }

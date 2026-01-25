@@ -11,44 +11,45 @@ export default function Mark({
   existingAttendance = [],
 }) {
   const isKirtan =
-    section.school_class.name.toLowerCase() === "kirtan";
+    section.school_class.type === "kirtan";
 
   /* -------------------------------------------------
-   | Normalize helpers (STATE LIVES HERE)
+   | Normalize helpers
    ------------------------------------------------- */
 
-  const normalizeRecord = (r) => ({
-  student_id: r.student_id,
-  name: r.name,
-  status: r.status,                // ✅ RESPECT DB
+  const normalizeExisting = (r) => ({
+  student_id: r.student_section?.student?.id,
+  name: r.student_section?.student?.name ?? "Unknown",
+  status: r.status ?? "present",
   lesson_learned: !!r.lesson_learned,
 });
 
+  const normalizeFresh = (ss) => ({
+    student_id: ss.student.id,
+    name: ss.student.name,
+    status: "present",
+    lesson_learned: false,
+  });
 
   const normalizeChange = (changes) => {
-    if (
-      changes.status === "absent" ||
-      changes.status === "leave"
-    ) {
+    if (changes.status === "absent" || changes.status === "leave") {
       return { ...changes, lesson_learned: false };
     }
     return changes;
   };
 
   /* -------------------------------------------------
-   | State
+   | State (SINGLE SOURCE OF TRUTH)
    ------------------------------------------------- */
 
   const [records, setRecords] = useState(() =>
-    hasAttendanceToday
-      ? existingAttendance.map(normalizeRecord)
-      : section.student_sections.map((ss) => ({
-          student_id: ss.student.id,
-          name: ss.student.name,
-          status: "present",       // ✅ default
-          lesson_learned: false,
-        }))
-  );
+  hasAttendanceToday
+    ? existingAttendance
+        .map(normalizeExisting)
+        .filter(r => r.student_id)   // 🛡 GUARANTEE UNIQUE ID
+    : section.student_sections.map(normalizeFresh)
+);
+
 
   const [mode, setMode] = useState(
     hasAttendanceToday ? "summary" : "mark"
@@ -85,17 +86,15 @@ export default function Mark({
    ------------------------------------------------- */
 
   const saveAttendance = () => {
-    console.log("SENDING ATTENDANCE", records);
     router.post(
       "/attendance",
       {
-
         section_id: section.id,
         attendance: records,
       },
       {
         onSuccess: () => {
-          router.visit("/attendance/sections"); // ✅ BACK TO LIST
+          router.visit("/attendance/sections");
         },
       }
     );
@@ -104,6 +103,7 @@ export default function Mark({
   /* -------------------------------------------------
    | Render
    ------------------------------------------------- */
+  console.log("RECORDS DEBUG", records);
 
   return (
     <SimpleLayout title="Mark Attendance">
@@ -111,8 +111,13 @@ export default function Mark({
         {section.school_class.name} · {section.name}
       </h2>
 
-      {/* ================= MARK MODE ================= */}
-      {mode === "mark" && (
+      {records.length === 0 && (
+        <p className="text-center text-gray-500">
+          No students found in this section
+        </p>
+      )}
+
+      {mode === "mark" && records.length > 0 && (
         <AttendanceMarkPage
           records={records}
           index={index}
@@ -123,8 +128,7 @@ export default function Mark({
         />
       )}
 
-      {/* ================= SUMMARY MODE ================= */}
-      {mode === "summary" && (
+      {mode === "summary" && records.length > 0 && (
         <AttendanceSummaryPage
           records={records}
           isKirtan={isKirtan}

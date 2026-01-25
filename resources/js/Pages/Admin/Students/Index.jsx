@@ -164,13 +164,16 @@ const sectionOptions = useMemo(() => {
    ---------------------------------------- */
   const columns = useMemo(
     () => [
-      { header: "#", cell: ({ row }) => row.index + 1 },
+      { header: "#",
 
-      {
-        accessorKey: "id",
-        header: "ID",
-        enableSorting: true,
-      },
+        cell: ({ row }) => row.index + 1
+    },
+
+    //   {
+    //     accessorKey: "id",
+    //     header: "ID",
+    //     enableSorting: true,
+    //   },
 
       {
         accessorKey: "name",
@@ -546,8 +549,6 @@ function TextCell({ row, column, autoFocus = false }) {
     </button>
   </div>
 </div>
-
-
       {/* Table */}
       {loading ? (
         <PageLoader text="Loading students…" />
@@ -578,10 +579,12 @@ function TextCell({ row, column, autoFocus = false }) {
             </thead>
 
             <tbody>
-              {table.getRowModel().rows.map((row) => (
+              {
+                table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className="border-b">
+
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-2">
+                    <td key={cell.id} className={`px-3 py-2 min-${cell.column.columnDef.header === "#" ? "w-auto" : "w-[150px]"} border-b align-top`}>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

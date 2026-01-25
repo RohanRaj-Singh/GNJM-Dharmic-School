@@ -61,6 +61,13 @@ class FeesController extends Controller
         ->when($request->search, fn ($q, $search) =>
             $q->where('students.name', 'like', "%{$search}%")
         )
+        ->when($request->status === 'paid', function ($q) {
+    $q->whereNotNull('payments.id');
+})
+
+->when($request->status === 'unpaid', function ($q) {
+    $q->whereNull('payments.id');
+})
 
         ->orderBy('fees.created_at', 'desc')
         ->get();
@@ -73,6 +80,7 @@ class FeesController extends Controller
             'class_id',
             'section_id',
             'search',
+            'status',
         ]),
     ]);
 }

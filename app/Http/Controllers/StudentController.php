@@ -65,6 +65,6 @@ class StudentController extends Controller
             }
         }
 
-        return redirect()->route('accountant.students.index');
+        return redirect()->route('students.index');
     }
 }

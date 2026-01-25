@@ -21,4 +21,8 @@ class Attendance extends Model
     {
         return $this->belongsTo(StudentSection::class, 'student_section_id');
     }
+    public function studentSection()
+    {
+        return $this->belongsTo(StudentSection::class);
+    }
 }

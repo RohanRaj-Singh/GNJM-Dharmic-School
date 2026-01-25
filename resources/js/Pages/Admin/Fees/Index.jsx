@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 export default function FeesIndex() {
   const { fees, filters } = usePage().props;
 
+
   /* -------------------------------------------------
    | Data (single source of truth)
    ------------------------------------------------- */
@@ -33,6 +34,13 @@ export default function FeesIndex() {
     { length: CURRENT_YEAR - START_YEAR + 1 },
     (_, i) => START_YEAR + i
   );
+
+  const statusPills = [
+  { label: "All", value: "" },
+  { label: "Paid", value: "paid" },
+  { label: "Unpaid", value: "unpaid" },
+];
+
 
   /* -------------------------------------------------
    | Load class & section options
@@ -230,6 +238,28 @@ export default function FeesIndex() {
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
+        {/* Paid / Unpaid pills */}
+<div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+  {statusPills.map((pill) => {
+    const active = (filters?.status ?? "") === pill.value;
+
+    return (
+      <button
+        key={pill.value || "all"}
+        onClick={() => applyFilter("status", pill.value)}
+        className={`px-3 py-1 text-sm rounded-md transition
+          ${
+            active
+              ? "bg-white shadow text-blue-600 font-medium"
+              : "text-gray-600 hover:text-black"
+          }`}
+      >
+        {pill.label}
+      </button>
+    );
+  })}
+</div>
+
 
         <input
           className="border px-3 py-2 rounded text-sm w-64"

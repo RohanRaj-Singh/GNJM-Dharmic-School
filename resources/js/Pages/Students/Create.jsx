@@ -22,7 +22,7 @@ export default function CreateStudent({ classes }) {
 
   const submit = (e) => {
     e.preventDefault();
-    post("/accountant/students"); // ✅ backend handles redirect
+    post("/students"); // ✅ backend handles redirect
   };
 
   return (

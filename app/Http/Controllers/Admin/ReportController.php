@@ -14,76 +14,76 @@ class ReportController extends Controller
     /* =========================================================
      | ENTRY POINT
      ========================================================= */
-public function build(Request $request)
-{
+    public function build(Request $request)
+    {
 
-    $request->headers->set('Accept', 'application/json');
+        $request->headers->set('Accept', 'application/json');
 
-    /* ===============================
+        /* ===============================
        BASE VALIDATION
     ================================ */
-    $request->validate([
-        'report' => 'required|string',
-    ]);
+        $request->validate([
+            'report' => 'required|string',
+        ]);
 
-    /* ===============================
+        /* ===============================
        REPORT-SPECIFIC VALIDATION
     ================================ */
-    if (in_array($request->report, ['fees', 'attendance'])) {
-        $request->validate([
-            'class_ids'   => 'required|array|min:1',
-            'section_ids' => 'array',
-            'student_ids' => 'array',
-            'paid_status' => 'array',
+        if (in_array($request->report, ['fees', 'attendance'])) {
+            $request->validate([
+                'class_ids'   => 'required|array|min:1',
+                'section_ids' => 'array',
+                'student_ids' => 'array',
+                'paid_status' => 'array',
 
-            // attendance specific
-            'status'      => 'array',
-            'month'       => 'nullable|string', // YYYY-MM
-            'year'        => 'nullable|integer',
-        ]);
-    }
+                // attendance specific
+                'status'      => 'array',
+                'month'       => 'nullable|string', // YYYY-MM
+                'year'        => 'nullable|integer',
+            ]);
+        }
 
-    if ($request->report === 'student') {
-        $request->validate([
-            'student_id' => 'required|integer|exists:students,id',
-            'year'       => 'required|integer',
-            'month_from' => 'nullable|date_format:Y-m',
-'month_to'   => 'nullable|date_format:Y-m',
+        if ($request->report === 'student') {
+            $request->validate([
+                'student_id' => 'required|integer|exists:students,id',
+                'year'       => 'required|integer',
+                'month_from' => 'nullable|date_format:Y-m',
+                'month_to'   => 'nullable|date_format:Y-m',
 
-        ]);
-    }
+            ]);
+        }
 
-    /* ===============================
+        /* ===============================
        DISPATCH REPORT
     ================================ */
-    return match ($request->report) {
+        return match ($request->report) {
 
-        /* ==============================
+            /* ==============================
            FEES REPORT
         =============================== */
-        'fees' => response()->json(
-            $this->buildFeesReport($request)
-        ),
+            'fees' => response()->json(
+                $this->buildFeesReport($request)
+            ),
 
-        /* ==============================
+            /* ==============================
            ATTENDANCE REPORT
         =============================== */
-        'attendance' => response()->json(
-            $request->view === 'calendar'
-                ? $this->buildAttendanceCalendar($request)
-                : $this->buildAttendanceReport($request)
-        ),
+            'attendance' => response()->json(
+                $request->view === 'calendar'
+                    ? $this->buildAttendanceCalendar($request)
+                    : $this->buildAttendanceReport($request)
+            ),
 
-        /* ==============================
+            /* ==============================
            STUDENT PERFORMA
         =============================== */
-        'student' => response()->json(
-            $this->buildStudentReport($request)
-        ),
+            'student' => response()->json(
+                $this->buildStudentReport($request)
+            ),
 
-        default => abort(400, 'Unsupported report type'),
-    };
-}
+            default => abort(400, 'Unsupported report type'),
+        };
+    }
 
 
 
@@ -104,30 +104,30 @@ public function build(Request $request)
             ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
             ->leftJoin('payments', function ($join) {
                 $join->on('payments.fee_id', '=', 'fees.id')
-                     ->whereNull('payments.deleted_at');
+                    ->whereNull('payments.deleted_at');
             })
             ->whereIn('student_sections.class_id', $request->class_ids);
-            // year filter
+        // year filter
 
-            if ($request->filled('year')) {
-    $baseQuery->where(function ($q) use ($request) {
-        $q->where(function ($q2) use ($request) {
-            $q2->where('fees.type', 'monthly')
-               ->where('fees.month', 'like', $request->year . '-%');
-        })->orWhere('fees.type', 'custom');
-    });
-}
+        if ($request->filled('year')) {
+            $baseQuery->where(function ($q) use ($request) {
+                $q->where(function ($q2) use ($request) {
+                    $q2->where('fees.type', 'monthly')
+                        ->where('fees.month', 'like', $request->year . '-%');
+                })->orWhere('fees.type', 'custom');
+            });
+        }
 
 
-            //month filter
-            if ($request->filled('month')) {
-    $baseQuery->where(function ($q) use ($request) {
-        $q->where(function ($q2) use ($request) {
-            $q2->where('fees.type', 'monthly')
-               ->where('fees.month', $request->month);
-        })->orWhere('fees.type', 'custom');
-    });
-}
+        //month filter
+        if ($request->filled('month')) {
+            $baseQuery->where(function ($q) use ($request) {
+                $q->where(function ($q2) use ($request) {
+                    $q2->where('fees.type', 'monthly')
+                        ->where('fees.month', $request->month);
+                })->orWhere('fees.type', 'custom');
+            });
+        }
 
 
         /* -------------------------------------------------
@@ -184,7 +184,7 @@ public function build(Request $request)
             ->groupBy('classes.id', 'classes.name')
             ->orderBy('classes.name')
             ->get()
-            ->map(fn ($row) => [
+            ->map(fn($row) => [
                 'class'      => $row->class_name,
                 'total'      => (int) $row->total,
                 'collected'  => (int) $row->collected,
@@ -194,23 +194,23 @@ public function build(Request $request)
                     : 0,
             ]);
 
-            $paidStudents = (clone $baseQuery)
-    ->whereNotNull('payments.id')
-    ->select(
-        'students.name as student_name',
-        'fees.title as fee_title',
-        'fees.amount'
-    )
-    ->get();
+        $paidStudents = (clone $baseQuery)
+            ->whereNotNull('payments.id')
+            ->select(
+                'students.name as student_name',
+                'fees.title as fee_title',
+                'fees.amount'
+            )
+            ->get();
 
-$unpaidStudents = (clone $baseQuery)
-    ->whereNull('payments.id')
-    ->select(
-        'students.name as student_name',
-        'fees.title as fee_title',
-        'fees.amount'
-    )
-    ->get();
+        $unpaidStudents = (clone $baseQuery)
+            ->whereNull('payments.id')
+            ->select(
+                'students.name as student_name',
+                'fees.title as fee_title',
+                'fees.amount'
+            )
+            ->get();
 
         /* -------------------------------------------------
            TABLE DATA (DETAILED ROWS)
@@ -219,13 +219,13 @@ $unpaidStudents = (clone $baseQuery)
             ->select(
                 'students.name as student_name',
                 'students.father_name as father_name',
-    'classes.name as class_name',
-    'sections.name as section_name',
-    'fees.title as fee_title',
-    'fees.type as fee_type',
-    'fees.month',
-    'fees.amount',
-    DB::raw('payments.id IS NOT NULL as is_paid')
+                'classes.name as class_name',
+                'sections.name as section_name',
+                'fees.title as fee_title',
+                'fees.type as fee_type',
+                'fees.month',
+                'fees.amount',
+                DB::raw('payments.id IS NOT NULL as is_paid')
             )
             ->orderBy('students.name')
             ->get();
@@ -245,340 +245,346 @@ $unpaidStudents = (clone $baseQuery)
             'tables' => [
                 'rows' => $rows,
                 'paid_students' => $paidStudents,
-        'unpaid_students' => $unpaidStudents,
+                'unpaid_students' => $unpaidStudents,
             ],
         ];
-
-
-
     }
 
     /* =========================================================
      | CSV EXPORT (USES SAME REPORT ENGINE)
      ========================================================= */
     public function exportCsv(Request $request)
-{
-    $request->validate([
-        'class_ids'   => 'required|array|min:1',
-        'section_ids' => 'array',
-        'student_ids' => 'array',
-        'paid_status' => 'array',
-        'month'       => 'nullable|string',
-        'year'        => 'nullable|integer',
-    ]);
-
-    $report = match ($request->report) {
-    'fees' => $this->buildFeesReport($request),
-    'attendance' => $this->buildAttendanceReport($request),
-    default => abort(400),
-};
-    $rows   = collect($report['tables']['rows']);
-
-    return new StreamedResponse(function () use ($rows) {
-        $handle = fopen('php://output', 'w');
-
-        if ($rows->isEmpty()) {
-            fclose($handle);
-            return;
-        }
-
-        /* ------------------------------------
-           CSV HEADERS (HUMAN FRIENDLY)
-        ------------------------------------ */
-        fputcsv($handle, [
-            'Student Name',
-            'Father Name',
-            'Class',
-            'Section',
-            'Fee Title',
-            'Month',
-            'Amount (PKR)',
-            'Paid Status',
-        ]);
-
-        /* ------------------------------------
-           CSV ROWS (FORMATTED)
-        ------------------------------------ */
-        foreach ($rows as $row) {
-            fputcsv($handle, [
-                $row->student_name,
-                $row->father_name,
-                $row->class_name,
-                $row->section_name,
-                $row->fee_title,
-                $row->month
-                    ? \Carbon\Carbon::createFromFormat('Y-m', $row->month)->format('F Y')
-                    : '',
-                $row->amount,
-                $row->is_paid ? 'Paid' : 'Unpaid',
-            ]);
-        }
-
-        fclose($handle);
-    }, 200, [
-        'Content-Type'        => 'text/csv',
-        'Content-Disposition' => 'attachment; filename=fees-report.csv',
-    ]);
-}
-
-public function exportPdf(Request $request)
-{
-    $request->validate([
-        'report' => 'required|string',
-    ]);
-
-    if ($request->report === 'student') {
-        $request->validate([
-            'student_id' => 'required|integer|exists:students,id',
-            'year'       => 'required|integer',
-            'month_from' => 'nullable|date_format:Y-m',
-            'month_to'   => 'nullable|date_format:Y-m',
-        ]);
-    }
-
-    if (in_array($request->report, ['fees', 'attendance'])) {
+    {
         $request->validate([
             'class_ids'   => 'required|array|min:1',
             'section_ids' => 'array',
             'student_ids' => 'array',
             'paid_status' => 'array',
-            'status'      => 'array',
             'month'       => 'nullable|string',
             'year'        => 'nullable|integer',
         ]);
+
+        $report = match ($request->report) {
+            'fees' => $this->buildFeesReport($request),
+            'attendance' => $this->buildAttendanceReport($request),
+            default => abort(400),
+        };
+        $rows   = collect($report['tables']['rows']);
+
+        return new StreamedResponse(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+
+            if ($rows->isEmpty()) {
+                fclose($handle);
+                return;
+            }
+
+            /* ------------------------------------
+           CSV HEADERS (HUMAN FRIENDLY)
+        ------------------------------------ */
+            fputcsv($handle, [
+                'Student Name',
+                'Father Name',
+                'Class',
+                'Section',
+                'Fee Title',
+                'Month',
+                'Amount (PKR)',
+                'Paid Status',
+            ]);
+
+            /* ------------------------------------
+           CSV ROWS (FORMATTED)
+        ------------------------------------ */
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row->student_name,
+                    $row->father_name,
+                    $row->class_name,
+                    $row->section_name,
+                    $row->fee_title,
+                    $row->month
+                        ? \Carbon\Carbon::createFromFormat('Y-m', $row->month)->format('F Y')
+                        : '',
+                    $row->amount,
+                    $row->is_paid ? 'Paid' : 'Unpaid',
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=fees-report.csv',
+        ]);
     }
 
-    /* -------------------------------
+    public function exportPdf(Request $request)
+    {
+        $request->validate([
+            'report' => 'required|string',
+        ]);
+
+        if ($request->report === 'student') {
+            $request->validate([
+                'student_id' => 'required|integer|exists:students,id',
+                'year'       => 'required|integer',
+                'month_from' => 'nullable|date_format:Y-m',
+                'month_to'   => 'nullable|date_format:Y-m',
+            ]);
+        }
+
+        if (in_array($request->report, ['fees', 'attendance'])) {
+            $request->validate([
+                'class_ids'   => 'required|array|min:1',
+                'section_ids' => 'array',
+                'student_ids' => 'array',
+                'paid_status' => 'array',
+                'status'      => 'array',
+                'month'       => 'nullable|string',
+                'year'        => 'nullable|integer',
+            ]);
+        }
+
+        /* -------------------------------
        BUILD REPORT
     -------------------------------- */
-    $report = match ($request->report) {
-        'fees'       => $this->buildFeesReport($request),
-        'attendance' => $this->buildAttendanceReport($request),
-        'student'    => $this->buildStudentReport($request),
-        default      => abort(400, 'Unsupported report type'),
-    };
+        $report = match ($request->report) {
+            'fees'       => $this->buildFeesReport($request),
+            'attendance' => $this->buildAttendanceReport($request),
+            'student'    => $this->buildStudentReport($request),
+            default      => abort(400, 'Unsupported report type'),
+        };
 
-    /* -------------------------------
+        /* -------------------------------
        VIEW SELECTION
     -------------------------------- */
-    $view = match ($request->report) {
-        'fees'       => 'reports.fees',
-        'attendance' => 'reports.attendance',
-        'student'    => 'reports.student',
-    };
+        $view = match ($request->report) {
+            'fees'       => 'reports.fees',
+            'attendance' => 'reports.attendance',
+            'student'    => 'reports.student',
+        };
 
-    $pdf = Pdf::loadView($view, $report)
-        ->setPaper('a4', 'portrait');
+        $pdf = Pdf::loadView($view, $report)
+            ->setPaper('a4', 'portrait');
 
-    return $pdf->stream("{$request->report}-report.pdf");
-}
+        return $pdf->stream("{$request->report}-report.pdf");
+    }
 
 
 
-private function buildAttendanceReport(Request $request): array
-{
-    /* -------------------------------
+    private function buildAttendanceReport(Request $request): array
+    {
+        /* -------------------------------
        BASE QUERY (CORRECT TABLE)
     -------------------------------- */
-    $query = DB::table('attendance')
-        ->join('student_sections', 'attendance.student_section_id', '=', 'student_sections.id')
-        ->join('students', 'student_sections.student_id', '=', 'students.id')
-        ->join('classes', 'student_sections.class_id', '=', 'classes.id')
-        ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
-        ->whereIn('student_sections.class_id', $request->class_ids);
+        $query = DB::table('attendance')
+            ->join('student_sections', 'attendance.student_section_id', '=', 'student_sections.id')
+            ->join('students', 'student_sections.student_id', '=', 'students.id')
+            ->join('classes', 'student_sections.class_id', '=', 'classes.id')
+            ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
+            ->whereIn('student_sections.class_id', $request->class_ids);
 
-    /* -------------------------------
+        /* -------------------------------
        OPTIONAL FILTERS
     -------------------------------- */
-    if (!empty($request->section_ids)) {
-        $query->whereIn('student_sections.section_id', $request->section_ids);
-    }
+        if (!empty($request->section_ids)) {
+            $query->whereIn('student_sections.section_id', $request->section_ids);
+        }
 
-    if (!empty($request->student_ids)) {
-        $query->whereIn('students.id', $request->student_ids);
-    }
+        if (!empty($request->student_ids)) {
+            $query->whereIn('students.id', $request->student_ids);
+        }
 
-    if (!empty($request->status)) {
-        $query->whereIn('attendance.status', $request->status);
-    }
+        if (!empty($request->status)) {
+            $query->whereIn('attendance.status', $request->status);
+        }
 
-    if ($request->filled('year')) {
-        $query->whereYear('attendance.date', $request->year);
-    }
+        if ($request->filled('year')) {
+            $query->whereYear('attendance.date', $request->year);
+        }
 
-    if ($request->filled('month')) {
-        $query->whereMonth('attendance.date', substr($request->month, 5, 2));
-    }
+        if ($request->filled('month')) {
+            $query->whereMonth('attendance.date', substr($request->month, 5, 2));
+        }
 
-    /* -------------------------------
+        /* -------------------------------
        SUMMARY (MYSQL SAFE)
     -------------------------------- */
-    $summaryRaw = (clone $query)
-        ->selectRaw('
+        $summaryRaw = (clone $query)
+            ->selectRaw('
             COUNT(*) as total_records,
             SUM(CASE WHEN attendance.status = "present" THEN 1 ELSE 0 END) as present,
             SUM(CASE WHEN attendance.status = "absent" THEN 1 ELSE 0 END) as absent,
             SUM(CASE WHEN attendance.status = "leave" THEN 1 ELSE 0 END) as `leave`
         ')
-        ->first();
+            ->first();
 
-    $total = (int) $summaryRaw->total_records;
+        $total = (int) $summaryRaw->total_records;
 
-    $summary = [
-        'total_records' => $total,
-        'present'       => (int) $summaryRaw->present,
-        'absent'        => (int) $summaryRaw->absent,
-        'leave'         => (int) $summaryRaw->leave,
-        'attendance_percentage' => $total > 0
-            ? round(($summaryRaw->present / $total) * 100, 2)
-            : 0,
-    ];
+        $summary = [
+            'total_records' => $total,
+            'present'       => (int) $summaryRaw->present,
+            'absent'        => (int) $summaryRaw->absent,
+            'leave'         => (int) $summaryRaw->leave,
+            'attendance_percentage' => $total > 0
+                ? round(($summaryRaw->present / $total) * 100, 2)
+                : 0,
+        ];
 
-    /* -------------------------------
+        /* -------------------------------
        BREAKDOWN — BY CLASS
     -------------------------------- */
-    $byClass = (clone $query)
-        ->selectRaw('
+        $byClass = (clone $query)
+            ->selectRaw('
             classes.name as class_name,
             COUNT(*) as total,
             SUM(CASE WHEN attendance.status = "present" THEN 1 ELSE 0 END) as present
         ')
-        ->groupBy('classes.id', 'classes.name')
-        ->orderBy('classes.name')
-        ->get()
-        ->map(fn ($row) => [
-            'class'       => $row->class_name,
-            'total'       => (int) $row->total,
-            'present'     => (int) $row->present,
-            'percentage'  => $row->total > 0
-                ? round(($row->present / $row->total) * 100, 2)
-                : 0,
-        ]);
+            ->groupBy('classes.id', 'classes.name')
+            ->orderBy('classes.name')
+            ->get()
+            ->map(fn($row) => [
+                'class'       => $row->class_name,
+                'total'       => (int) $row->total,
+                'present'     => (int) $row->present,
+                'percentage'  => $row->total > 0
+                    ? round(($row->present / $row->total) * 100, 2)
+                    : 0,
+            ]);
 
-    /* -------------------------------
+        /* -------------------------------
        TABLE ROWS
     -------------------------------- */
-    $rows = (clone $query)
-        ->select(
-            'students.name as student_name',
-            'students.father_name',
-            'classes.name as class_name',
-            'sections.name as section_name',
-            'attendance.date',
-            'attendance.status',
-            'attendance.lesson_learned'
-        )
-        ->orderBy('attendance.date')
-        ->orderBy('students.name')
-        ->get();
+        $rows = (clone $query)
+            ->select(
+                'students.name as student_name',
+                'students.father_name',
+                'classes.name as class_name',
+                'sections.name as section_name',
+                'attendance.date',
+                'attendance.status',
+                'attendance.lesson_learned'
+            )
+            ->orderBy('attendance.date')
+            ->orderBy('students.name')
+            ->get();
 
-    return [
-        'meta' => [
-            'report'       => 'attendance',
-            'generated_at' => now()->toDateTimeString(),
-        ],
+        return [
+            'meta' => [
+                'report'       => 'attendance',
+                'generated_at' => now()->toDateTimeString(),
+            ],
 
-        'summary' => $summary,
+            'summary' => $summary,
 
-        'breakdowns' => [
-            'by_class' => $byClass,
-        ],
+            'breakdowns' => [
+                'by_class' => $byClass,
+            ],
 
-        'tables' => [
-            'rows' => $rows,
-        ],
-    ];
-}
-
-
-private function buildAttendanceCalendar(Request $request): array
-{
-    $year  = (int) ($request->year ?? now()->year);
-    $month = (int) ($request->month ?? now()->month);
-
-    $start = \Carbon\Carbon::create($year, $month, 1);
-    $end   = $start->copy()->endOfMonth();
-
-    /* ----------------------------
-       DAYS
-    ----------------------------- */
-    $days = [];
-    for ($d = $start->copy(); $d <= $end; $d->addDay()) {
-        $days[] = [
-            'date' => $d->toDateString(),
-            'day'  => $d->format('d'),
+            'tables' => [
+                'rows' => $rows,
+            ],
         ];
     }
 
-    /* ----------------------------
-       STUDENTS
+
+    private function buildAttendanceCalendar(Request $request): array
+    {
+        $year  = (int) ($request->year ?? now()->year);
+        $month = (int) ($request->month ?? now()->month);
+
+        $start = \Carbon\Carbon::create($year, $month, 1);
+        $end   = $start->copy()->endOfMonth();
+
+        /* ----------------------------
+       DAYS
     ----------------------------- */
-    $students = DB::table('student_sections')
-    ->join('students', 'students.id', '=', 'student_sections.student_id')
-    ->whereIn('student_sections.class_id', $request->class_ids)
-    ->when($request->section_ids, fn ($q) =>
-        $q->whereIn('student_sections.section_id', $request->section_ids)
-    )
-    ->select(
-        'students.id',
-        'students.name',
-        'students.father_name',
-        'student_sections.id as student_section_id'
-    )
-    ->orderBy('students.name')
-    ->get();
-
-
-    /* ----------------------------
-       ATTENDANCE RECORDS
-    ----------------------------- */
-    $records = DB::table('attendance')
-        ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-        ->whereIn(
-            'student_section_id',
-            DB::table('student_sections')
-                ->whereIn('class_id', $request->class_ids)
-                ->pluck('id')
-        )
-        ->get()
-        ->groupBy(fn ($r) => "{$r->student_section_id}-{$r->date}");
-
-    /* ----------------------------
-       MAP STUDENTS
-    ----------------------------- */
-    $students = $students->map(function ($s) use ($days, $records) {
-        $studentDays = [];
-
-        foreach ($days as $day) {
-            $key = "{$s->student_section_id}-{$day['date']}";
-            $studentDays[$day['date']] = [
-                'status' => $records[$key][0]->status ?? null,
-                'lesson_learned' => $records[$key][0]->lesson_learned ?? null,
+        $days = [];
+        for ($d = $start->copy(); $d <= $end; $d->addDay()) {
+            $days[] = [
+                'date' => $d->toDateString(),
+                'day'  => $d->format('d'),
             ];
         }
 
+        /* ----------------------------
+       STUDENTS
+    ----------------------------- */
+        $students = DB::table('student_sections')
+            ->join('students', 'students.id', '=', 'student_sections.student_id')
+            ->whereIn('student_sections.class_id', $request->class_ids)
+            ->when(
+                $request->section_ids,
+                fn($q) =>
+                $q->whereIn('student_sections.section_id', $request->section_ids)
+            )
+            ->select(
+                'students.id',
+                'students.name',
+                'students.father_name',
+                'student_sections.id as student_section_id'
+            )
+            ->orderBy('students.name')
+            ->get();
+
+
+        /* ----------------------------
+       ATTENDANCE RECORDS
+    ----------------------------- */
+        $records = DB::table('attendance')
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->whereIn(
+                'student_section_id',
+                DB::table('student_sections')
+                    ->whereIn('class_id', $request->class_ids)
+                    ->pluck('id')
+            )
+            ->get()
+            ->groupBy(fn($r) => "{$r->student_section_id}-{$r->date}");
+
+        /* ----------------------------
+       MAP STUDENTS
+    ----------------------------- */
+        $students = $students->map(function ($s) use ($days, $records) {
+            $studentDays = [];
+
+            foreach ($days as $day) {
+                $key = "{$s->student_section_id}-{$day['date']}";
+                $studentDays[$day['date']] = [
+                    'status' => $records[$key][0]->status ?? null,
+                    'lesson_learned' => $records[$key][0]->lesson_learned ?? null,
+                ];
+            }
+
+            return [
+                'id'        => $s->id,
+                'name'      => $s->name,
+                'father_name' => $s->father_name,
+                'records'   => $studentDays,
+            ];
+        });
+
         return [
-            'id'        => $s->id,
-            'name'      => $s->name,
-            'father_name' => $s->father_name,
-            'records'   => $studentDays,
+            'meta' => [
+                'view' => 'calendar',
+                'month' => $start->format('F Y'),
+            ],
+            'calendar' => [
+                'days'     => $days,
+                'students' => $students,
+            ],
         ];
-    });
+    }
 
-    return [
-        'meta' => [
-            'view' => 'calendar',
-            'month' => $start->format('F Y'),
-        ],
-        'calendar' => [
-            'days'     => $days,
-            'students' => $students,
-        ],
-    ];
-}
-
-private function buildStudentReport(Request $request): array
+    private function buildStudentReport(Request $request): array
 {
+    logger()->info('STUDENT REPORT REQUEST', [
+        'student_id' => $request->student_id,
+        'year'       => $request->year,
+        'month_from' => $request->month_from,
+        'month_to'   => $request->month_to,
+    ]);
+
     /* ===============================
        VALIDATION
     ================================ */
@@ -601,53 +607,47 @@ private function buildStudentReport(Request $request): array
         ->first();
 
     /* ===============================
-       STUDENT SECTIONS
+       STUDENT SECTIONS (CASE SAFE)
     ================================ */
-    /* ===============================
-   STUDENT SECTIONS (CASE SAFE)
-=============================== */
-$sections = DB::table('student_sections')
-    ->join('classes', 'classes.id', '=', 'student_sections.class_id')
-    ->where('student_sections.student_id', $request->student_id)
-    ->select(
-        'student_sections.id as student_section_id',
-        DB::raw('LOWER(classes.type) as class_type')
-    )
-    ->get();
-
-/* ===============================
-   SPLIT BY TYPE
-=============================== */
-$gurmukhiSections = $sections
-    ->where('class_type', '!=', 'kirtan')
-    ->pluck('student_section_id')
-    ->values();
-
-$kirtanSections = $sections
-    ->where('class_type', 'kirtan')
-    ->pluck('student_section_id')
-    ->values();
-
-//log full data of both variables in laravel log for debugging
-logger()->info('STUDENT SECTIONS DEBUG', [
-    'student_id' => $student->id,
-    'gurmukhi_section_ids' => $gurmukhiSections->values()->all(),
-    'kirtan_section_ids' => $kirtanSections->values()->all(),
-]);
-
+    $sections = DB::table('student_sections')
+        ->join('classes', 'classes.id', '=', 'student_sections.class_id')
+        ->where('student_sections.student_id', $request->student_id)
+        ->select(
+            'student_sections.id as student_section_id',
+            DB::raw('LOWER(classes.type) as class_type')
+        )
+        ->get();
 
     /* ===============================
-       DATE RANGE
+       SPLIT BY TYPE
+    ================================ */
+    $gurmukhiSections = $sections
+        ->where('class_type', '!=', 'kirtan')
+        ->pluck('student_section_id')
+        ->values();
+
+    $kirtanSections = $sections
+        ->where('class_type', 'kirtan')
+        ->pluck('student_section_id')
+        ->values();
+
+    logger()->info('STUDENT SECTIONS DEBUG', [
+        'student_id' => $student->id,
+        'gurmukhi_section_ids' => $gurmukhiSections->all(),
+        'kirtan_section_ids'   => $kirtanSections->all(),
+    ]);
+
+    /* ===============================
+       YEAR RANGE (STRING BASED)
     ================================ */
     $year = (int) $request->year;
-
-    $start = \Carbon\Carbon::create($year, 1, 1)->startOfDay();
-    $end   = \Carbon\Carbon::create($year, 12, 31)->endOfDay();
+    $yearStart = "{$year}-01";
+    $yearEnd   = "{$year}-12";
 
     /* ===============================
-       FEES BUILDER
+       FEES BUILDER (MATCHES FeesController)
     ================================ */
-    $buildFees = function ($sectionIds) use ($start, $end) {
+    $buildFees = function ($sectionIds) use ($year, $yearStart, $yearEnd, $request) {
 
         if ($sectionIds->isEmpty()) {
             return [
@@ -656,30 +656,51 @@ logger()->info('STUDENT SECTIONS DEBUG', [
             ];
         }
 
-        $rows = DB::table('fees')
-            ->leftJoin('payments', fn ($j) =>
-                $j->on('payments.fee_id', '=', 'fees.id')
-                  ->whereNull('payments.deleted_at')
-            )
-            ->whereIn('fees.student_section_id', $sectionIds)
-            ->where(function ($q) use ($start, $end) {
-                $q->where(function ($q2) use ($start, $end) {
-                    $q2->where('fees.type', 'monthly')
-                       ->whereBetween('fees.month', [
-                           $start->format('Y-m'),
-                           $end->format('Y-m'),
-                       ]);
-                })->orWhere('fees.type', 'custom');
+        $query = DB::table('fees')
+            ->leftJoin('payments', function ($join) {
+                $join->on('payments.fee_id', '=', 'fees.id')
+                     ->whereNull('payments.deleted_at');
             })
+            ->whereIn('fees.student_section_id', $sectionIds)
+            ->where(function ($q) use ($year) {
+                $q->where(function ($qq) use ($year) {
+                    $qq->where('fees.type', 'monthly')
+                       ->where('fees.month', 'like', $year . '-%');
+                })
+                ->orWhere('fees.type', 'custom');
+            });
+
+        // OPTIONAL month range filters (non-breaking)
+        if ($request->month_from) {
+            $query->where('fees.month', '>=', $request->month_from);
+        }
+        if ($request->month_to) {
+            $query->where('fees.month', '<=', $request->month_to);
+        }
+
+        $rows = $query
             ->select(
+                'fees.id',
                 'fees.title',
                 'fees.type',
                 'fees.month',
                 'fees.amount',
                 DB::raw('payments.id IS NOT NULL as is_paid')
             )
+            ->orderByRaw('fees.month IS NULL')
             ->orderBy('fees.month')
             ->get();
+
+        logger()->info('FEES QUERY RESULT', [
+            'section_ids' => $sectionIds->values(),
+            'count' => $rows->count(),
+            'rows' => $rows->map(fn ($r) => [
+                'type'   => $r->type,
+                'month'  => $r->month,
+                'amount'=> $r->amount,
+                'paid'  => (bool) $r->is_paid,
+            ]),
+        ]);
 
         return [
             'summary' => [
@@ -692,9 +713,12 @@ logger()->info('STUDENT SECTIONS DEBUG', [
     };
 
     /* ===============================
-       ATTENDANCE BUILDER (FINAL FIX)
+       ATTENDANCE BUILDER
     ================================ */
-    $buildAttendance = function ($studentSectionIds) use ($year, $start, $end) {
+    $attendanceStart = "{$year}-01-01";
+    $attendanceEnd   = "{$year}-12-31";
+
+    $buildAttendance = function ($studentSectionIds) use ($year, $attendanceStart, $attendanceEnd) {
 
         if ($studentSectionIds->isEmpty()) {
             return [
@@ -711,7 +735,7 @@ logger()->info('STUDENT SECTIONS DEBUG', [
 
         $records = DB::table('attendance')
             ->whereIn('student_section_id', $studentSectionIds)
-            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->whereBetween('date', [$attendanceStart, $attendanceEnd])
             ->select('student_section_id', 'date', 'status', 'lesson_learned')
             ->get()
             ->groupBy(fn ($r) => "{$r->student_section_id}|{$r->date}");
@@ -732,7 +756,6 @@ logger()->info('STUDENT SECTIONS DEBUG', [
 
             for ($d = 1; $d <= $daysInMonth; $d++) {
                 $date = \Carbon\Carbon::create($year, $m, $d)->toDateString();
-
                 $dayRecords = collect();
 
                 foreach ($studentSectionIds as $sid) {
@@ -742,27 +765,19 @@ logger()->info('STUDENT SECTIONS DEBUG', [
                     }
                 }
 
-                $statuses = $dayRecords
-                    ->pluck('status')
-                    ->filter()
-                    ->map(fn ($s) => strtolower(trim($s)));
+                $statuses = $dayRecords->pluck('status')->filter()->map(fn ($s) => strtolower($s));
 
                 $status =
-                    $statuses->contains('present') ? 'present' :
-                    ($statuses->contains('leave') ? 'leave' :
-                    ($statuses->contains('absent') ? 'absent' : null));
+                    $statuses->contains('present') ? 'present'
+                    : ($statuses->contains('leave') ? 'leave'
+                    : ($statuses->contains('absent') ? 'absent' : null));
 
                 $lessonLearned = $dayRecords->contains(
                     fn ($r) => (int) ($r->lesson_learned ?? 0) === 1
                 );
 
-                if ($status) {
-                    $monthsSummary[$monthName][$status]++;
-                }
-
-                if ($lessonLearned) {
-                    $monthsSummary[$monthName]['lessons_learned']++;
-                }
+                if ($status) $monthsSummary[$monthName][$status]++;
+                if ($lessonLearned) $monthsSummary[$monthName]['lessons_learned']++;
 
                 $calendar[$monthName][$d] = [
                     'status' => $status,
@@ -795,8 +810,8 @@ logger()->info('STUDENT SECTIONS DEBUG', [
     ================================ */
     $evaluatePerformance = function ($attendance) {
         $total = $attendance['summary']['present']
-               + $attendance['summary']['absent']
-               + $attendance['summary']['leave'];
+            + $attendance['summary']['absent']
+            + $attendance['summary']['leave'];
 
         $lessons = collect($attendance['months'])->sum('lessons_learned');
 
@@ -823,21 +838,6 @@ logger()->info('STUDENT SECTIONS DEBUG', [
     $gurmukhiAttendance = $buildAttendance($gurmukhiSections);
     $kirtanAttendance   = $buildAttendance($kirtanSections);
 
-    logger()->info('KIRTAN DEBUG', [
-    'student_id' => $student->id,
-    'kirtan_section_ids' => $kirtanSections->values()->all(),
-    'attendance_summary' => $kirtanAttendance['summary'],
-    'months_with_data' => collect($kirtanAttendance['months'])
-        ->filter(fn ($m) =>
-            $m['present'] > 0 || $m['absent'] > 0 || $m['leave'] > 0
-        )
-        ->keys()
-        ->values()
-        ->all(),
-    'sample_calendar_jan' => $kirtanAttendance['calendar']['January'] ?? null,
-]);
-
-
     return [
         'meta' => [
             'report' => 'student',
@@ -859,8 +859,5 @@ logger()->info('STUDENT SECTIONS DEBUG', [
         ],
     ];
 }
-
-
-
 
 }

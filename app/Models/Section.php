@@ -23,4 +23,27 @@ class Section extends Model
     {
         return $this->hasMany(StudentSection::class, 'section_id');
     }
+    // App\Models\Section.php
+
+public function teachers()
+{
+    return $this->belongsToMany(User::class);
+}
+public function users()
+{
+    return $this->belongsToMany(User::class);
+}
+
+public function attendance()
+    {
+        return $this->hasManyThrough(
+            Attendance::class,
+            StudentSection::class,
+            'section_id',          // FK on student_sections
+            'student_section_id',  // FK on attendance
+            'id',                  // PK on sections
+            'id'                   // PK on student_sections
+        );
+    }
+
 }

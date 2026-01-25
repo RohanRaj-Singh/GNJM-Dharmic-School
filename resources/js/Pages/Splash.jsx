@@ -1,81 +1,109 @@
-import { useEffect, useState } from "react";
-import { router } from "@inertiajs/react";
+import { useForm } from "@inertiajs/react";
 import Logo from "../../images/logo.png";
 
 export default function Splash() {
-  const [showLogin, setShowLogin] = useState(false);
+  const { data, setData, post, processing, errors } = useForm({
+    login: "",
+    password: "",
+  });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowLogin(true);
-    }, 1200);
+  function submit(e) {
+    e.preventDefault();
+    post("/login", {
+  onStart: () => {
+    console.log("LOGIN: started");
+  },
+  onFinish: () => {
+    console.log("LOGIN: finished");
+  },
+  onSuccess: () => {
+    console.log("LOGIN: success");
+  },
+  onError: (errors) => {
+    console.log("LOGIN: errors", errors);
+  },
+});
 
-    return () => clearTimeout(timer);
-  }, []);
+  }
 
   return (
-    <div className="h-screen bg-white flex flex-col items-center justify-center overflow-hidden">
-      
-      {/* Logo Section */}
-      <div
-        className={`flex flex-col items-center transition-all duration-700 ease-in-out
-        ${showLogin ? "-translate-y-24" : "translate-y-0"}`}
-      >
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
+      {/* Logo */}
+      <div className="mb-8 text-center">
         <img
           src={Logo}
           alt="Guru Nanak Ji Mission Dharmic School"
-          className="w-32 h-32 mb-3"
+          className="w-28 h-28 mx-auto mb-3"
         />
-
         <h1 className="text-2xl font-bold text-gray-800">
           Guru Nanak Ji Mission
         </h1>
-        <p className="text-gray-500">
-          Dharmic School
+        <p className="text-gray-500 text-sm">
+          Dharmic School Management
         </p>
       </div>
 
-      {/* Login Buttons */}
-      <div
-        className={`mt-12 w-full max-w-sm px-6 transition-all duration-700 ease-in-out
-        ${showLogin ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+      {/* Login Card */}
+      <form
+        onSubmit={submit}
+        className="w-full max-w-sm bg-white border rounded-xl shadow p-6 space-y-4"
       >
-        <DemoButton
-          emoji="🛠️"
-          label="Login as Admin"
-          onClick={() => router.visit("/admin/dashboard")}
-        />
+        <h2 className="text-lg font-semibold text-gray-800 text-center">
+          Login
+        </h2>
 
-        <DemoButton
-          emoji="💰"
-          label="Login as Accountant"
-          onClick={() => router.visit("/accountant")}
-        />
+        {/* Username / Email */}
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">
+            Username or Email
+          </label>
+          <input
+            type="text"
+            value={data.login}
+            onChange={(e) => setData("login", e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-200"
+            placeholder="username or email"
+          />
+          {errors.login && (
+            <p className="text-xs text-red-600 mt-1">
+              {errors.login}
+            </p>
+          )}
+        </div>
 
-        <DemoButton
-          emoji="🕒"
-          label="Login as Attendance"
-          onClick={() => router.visit("/attendance")}
-        />
+        {/* Password */}
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">
+            Password
+          </label>
+          <input
+            type="password"
+            value={data.password}
+            onChange={(e) => setData("password", e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-200"
+            placeholder="••••••••"
+          />
+          {errors.password && (
+            <p className="text-xs text-red-600 mt-1">
+              {errors.password}
+            </p>
+          )}
+        </div>
 
-        <p className="text-xs text-gray-400 text-center mt-4">
-          This is temporary login
-        </p>
-      </div>
+        {/* Submit */}
+        <button
+          type="submit"
+          disabled={processing}
+          className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium text-sm hover:bg-blue-700 disabled:opacity-50"
+        >
+          {processing ? "Logging in…" : "Login"}
+        </button>
+      </form>
+
+      {/* Footer */}
+      <p className="text-xs text-gray-400 mt-6">
+        © {new Date().getFullYear()} Guru Nanak Ji Mission
+      </p>
     </div>
-  );
-}
-
-function DemoButton({ emoji, label, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full bg-white rounded-xl shadow p-4 flex items-center gap-4 mb-3 active:scale-95 transition-transform"
-    >
-      <span className="text-2xl">{emoji}</span>
-      <span className="text-lg font-semibold text-gray-800">
-        {label}
-      </span>
-    </button>
   );
 }

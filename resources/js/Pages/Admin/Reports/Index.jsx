@@ -245,14 +245,14 @@ export default function ReportsIndex() {
                         }
                     />
 
-                    <MultiSelect
+                    {/* <MultiSelect
                         options={studentOptions}
                         value={filters.student_ids}
                         placeholder="Select student(s)"
                         onChange={(ids) =>
                             setFilters({ ...filters, student_ids: ids })
                         }
-                    />
+                    /> */}
 
                     <button
                         onClick={buildReport}

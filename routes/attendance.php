@@ -5,62 +5,105 @@ use Inertia\Inertia;
 use App\Models\Section;
 use App\Http\Controllers\AttendanceController;
 
-/*
-|--------------------------------------------------------------------------
-| Attendance Role (Marking Only)
-|--------------------------------------------------------------------------
-*/
 Route::prefix('attendance')->group(function () {
 
     Route::get('/', fn () =>
         Inertia::render('Attendance/Dashboard')
     )->name('attendance.dashboard');
 
-    Route::get('/sections', fn () =>
-        Inertia::render('Attendance/Sections', [
-            'sections' => Section::with('schoolClass')
-                ->whereHas('schoolClass', fn ($q) =>
-                    $q->where('name', 'Gurmukhi')
-                )
-                ->get(),
-        ])
-    )->name('attendance.sections');
+    /* ===============================
+       SECTIONS LIST
+    ================================ */
+    Route::get('/sections', function () {
+        $user = auth()->user();
 
+        $sections = $user->isTeacher()
+            ? Section::whereIn(
+                'id',
+                $user->sections->pluck('id')
+              )->with('schoolClass')->get()
+            : Section::with('schoolClass')->get();
+
+        return Inertia::render('Attendance/Sections', [
+            'sections' => $sections,
+        ]);
+    })->name('attendance.sections');
+
+    /* ===============================
+       MARK ATTENDANCE
+    ================================ */
     Route::get('/sections/{section}', function (Section $section) {
 
-        $today = now()->toDateString();
+        $user = auth()->user();
 
+        /* ---------- Teacher access ---------- */
+        if ($user->isTeacher()) {
+            abort_unless(
+                $user->sections->pluck('id')->contains($section->id),
+                403
+            );
+        }
+
+        /* ---------- Load relations ---------- */
         $section->load([
             'schoolClass',
             'studentSections.student',
-            'studentSections.attendance' => fn ($q) =>
-                $q->where('date', $today),
         ]);
 
-        $records = $section->studentSections->map(function ($ss) {
-            $attendance = $ss->attendance->first();
+        /* ---------- Day rules ---------- */
+        $today = now()->dayOfWeek; // 0 = Sunday
+        $classType = $section->schoolClass->type;
 
-            return [
-                'student_id' => $ss->student->id,
-                'name' => $ss->student->name,
-                'status' => $attendance?->status,
-                'lesson_learned' => (bool) $attendance?->lesson_learned,
-                'has_record' => (bool) $attendance,
-            ];
-        });
+        if ($today === 0 && $classType === 'gurmukhi') {
+            return redirect()
+                ->route('attendance.sections')
+                ->with('error', '📅 Gurmukhi attendance cannot be marked on Sunday.');
+        }
+
+        if ($today !== 0 && $classType === 'kirtan') {
+            return redirect()
+                ->route('attendance.sections')
+                ->with('error', '📅 Kirtan attendance can only be marked on Sunday.');
+        }
+
+        /* ---------- Attendance ---------- */
+        $hasAttendanceToday = $section->attendance()
+            ->whereDate('date', today())
+            ->exists();
 
         return Inertia::render('Attendance/Mark', [
             'section' => $section,
-            'existingAttendance' => $records,
-            'hasAttendanceToday' => $records->every(fn ($r) => $r['has_record']),
+            'hasAttendanceToday' => $hasAttendanceToday,
+            'existingAttendance' => $hasAttendanceToday
+                ? $section->attendance()
+                    ->with('studentSection.student')
+                    ->whereDate('date', today())
+                    ->get()
+                : [],
         ]);
     })->name('attendance.mark');
-});
 
-/*
-|--------------------------------------------------------------------------
-| Attendance Store
-|--------------------------------------------------------------------------
-*/
-Route::post('/attendance', [AttendanceController::class, 'store'])
-    ->name('attendance.store');
+    /* ===============================
+       SAVE ATTENDANCE
+    ================================ */
+    Route::post('/', [AttendanceController::class, 'store'])
+        ->name('attendance.store');
+
+    /* ===============================
+       ABSENTEES
+    ================================ */
+    Route::get('/absentees', function () {
+        $user = auth()->user();
+
+        $sections = $user->isTeacher()
+            ? Section::whereIn(
+                'id',
+                $user->sections->pluck('id')
+              )->with('schoolClass')->get()
+            : Section::with('schoolClass')->get();
+
+        return Inertia::render('Attendance/Absentees', [
+            'sections' => $sections,
+        ]);
+    })->name('attendance.absentees');
+});

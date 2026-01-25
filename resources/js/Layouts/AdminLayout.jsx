@@ -1,6 +1,8 @@
 import { Head, Link, usePage } from "@inertiajs/react";
 import { useState } from "react";
 import SidebarGroup from "@/Components/SidebarGroup";
+import { Sidebar } from "lucide-react";
+import { router } from "@inertiajs/react";
 
 export default function AdminLayout({ title, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -25,7 +27,7 @@ export default function AdminLayout({ title, children }) {
       {/* ================= Sidebar ================= */}
       <aside
         className={`
-          fixed z-40 inset-y-0 left-0 w-64 bg-white border-r
+          fixed z-40 inset-y-0 left-0 w-auto bg-white border-r
           transform transition-transform duration-200
           md:static md:translate-x-0
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -39,6 +41,9 @@ export default function AdminLayout({ title, children }) {
           <p className="text-sm text-gray-500">
             Admin Panel
           </p>
+
+
+
         </div>
 
         {/* Navigation */}
@@ -74,13 +79,22 @@ export default function AdminLayout({ title, children }) {
         label="Student Report"
     />
 </SidebarGroup>
+<SidebarLink href="/admin/users" label="Users" />
 
                     <SidebarLink href="/admin/utilities" label="Utilities" />
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t text-xs text-gray-400">
-          Guru Nanak Ji Mission Dharmic School
+
+        <div className="px-4 py-3 border-t text-xs text-gray-400 d-flex flex-col justify-between items-center">
+        <div><button
+  onClick={() => router.post('/logout')}
+  className="button bg-red-100 text-red-600 px-2 py-1 rounded-lg text-sm"
+>
+  Logout
+</button>
+
+</div>
         </div>
       </aside>
 
