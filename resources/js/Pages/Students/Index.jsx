@@ -1,9 +1,10 @@
 import AccountantLayout from "@/Layouts/SimpleLayout";
-import { useState } from "react";
+import { use, useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import useRoles from "@/Hooks/useRoles";
 
 export default function StudentsIndex({ students }) {
+    console.log(usePage().props);
     const [search, setSearch] = useState("");
     const [classFilter, setClassFilter] = useState("gurmukhi"); // ✅ default
 
