@@ -117,10 +117,18 @@ function StudentCard({ student, classFilter }) {
 
     /* Teacher restriction */
     let visibleEnrollments = isTeacher
-        ? enrollments.filter((e) =>
-              allowedSectionIds.includes(e.section_id)
-          )
+        ? enrollments.filter((e) => {
+              const isAllowed = allowedSectionIds.includes(e.section_id);
+              console.log(
+                "section_id", typeof e.section_id,
+                "allowed", allowedSectionIds?.map(x => typeof x),
+                "isAllowed", isAllowed
+              );
+              return isAllowed;
+          })
         : enrollments;
+
+
 
     /* Accountant class filter */
     if (classFilter) {
@@ -133,6 +141,7 @@ function StudentCard({ student, classFilter }) {
     const isPaid = visibleEnrollments.some(
         (e) => e.student_type === "paid"
     );
+
 
     return (
         <Link
