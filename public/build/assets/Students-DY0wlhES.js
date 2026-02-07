@@ -1,0 +1,1 @@
+import{j as t}from"./app-Bx2dRyDp.js";import{S as e}from"./SimpleLayout-BL5fnf_T.js";function r(){return t.jsx(e,{title:"Students",children:t.jsx("div",{className:"bg-white rounded-xl shadow p-6",children:"Students list will be here"})})}export{r as default};
