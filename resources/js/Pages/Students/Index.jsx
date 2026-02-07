@@ -112,20 +112,14 @@ function StudentCard({ student, classFilter }) {
 
     /* Teacher allowed sections */
     const allowedSectionIds = isTeacher
-        ? auth.user.sections.map((s) => s.id)
+        ? auth.user.sections.map((s) => String(s.id))
         : null;
 
     /* Teacher restriction */
     let visibleEnrollments = isTeacher
-        ? enrollments.filter((e) => {
-              const isAllowed = allowedSectionIds.includes(e.section_id);
-              console.log(
-                "section_id", typeof e.section_id,
-                "allowed", allowedSectionIds?.map(x => typeof x),
-                "isAllowed", isAllowed
-              );
-              return isAllowed;
-          })
+        ? enrollments.filter((e) =>
+              allowedSectionIds.includes(String(e.section_id))
+          )
         : enrollments;
 
 
