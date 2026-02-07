@@ -70,7 +70,12 @@ class FeesController extends Controller
 })
 
         ->orderBy('fees.created_at', 'desc')
-        ->get();
+        ->get()
+        ->map(function ($fee) {
+            // Normalize to real boolean for JS (avoid "0" string truthiness)
+            $fee->is_paid = (bool) $fee->is_paid;
+            return $fee;
+        });
        // dd($fees->count(), $fees->take(5));
 
     return inertia('Admin/Fees/Index', [
