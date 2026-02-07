@@ -1,9 +1,12 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
-import { useForm } from "@inertiajs/react";
+import { useForm, usePage } from "@inertiajs/react";
 import { useState } from "react";
+import useRoles from "@/Hooks/useRoles";
 
 export default function CreateStudent({ classes }) {
   const [type, setType] = useState("paid");
+  const { isTeacher } = useRoles();
+  const { auth } = usePage().props;
 
   const { data, setData, post, processing } = useForm({
     name: "",
@@ -14,7 +17,22 @@ export default function CreateStudent({ classes }) {
     student_type: "paid",
   });
 
-  const selectedClass = classes.find(c =>
+  const allowedSectionIds = isTeacher
+    ? auth.user.sections.map((s) => String(s.id))
+    : null;
+
+  const visibleClasses = isTeacher
+    ? classes
+        .map((cls) => ({
+          ...cls,
+          sections: cls.sections.filter((sec) =>
+            allowedSectionIds.includes(String(sec.id))
+          ),
+        }))
+        .filter((cls) => cls.sections.length > 0)
+    : classes;
+
+  const selectedClass = visibleClasses.find(c =>
     c.sections.some(s => s.id === Number(data.section_id))
   );
 
@@ -64,7 +82,7 @@ export default function CreateStudent({ classes }) {
             required
           >
             <option value="">Select Section</option>
-            {classes.map(cls =>
+            {visibleClasses.map(cls =>
               cls.sections.map(sec => (
                 <option key={sec.id} value={sec.id}>
                   {cls.name} – {sec.name}
