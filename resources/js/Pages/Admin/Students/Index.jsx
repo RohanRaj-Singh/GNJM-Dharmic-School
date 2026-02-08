@@ -237,10 +237,27 @@ const sectionOptions = useMemo(() => {
                   "Delete this student? All enrollments will be removed."
                 )
               ) {
-                setData((prev) =>
-                  prev.filter((_, i) => i !== row.index)
-                );
-                setIsDirty(true);
+                const id = row.original.id;
+                if (!id) {
+                  setData((prev) =>
+                    prev.filter((_, i) => i !== row.index)
+                  );
+                  setIsDirty(true);
+                  return;
+                }
+
+                router.delete(`/admin/students/${id}`, {
+                  preserveScroll: true,
+                  onSuccess: () => {
+                    toast.success("Student deleted");
+                    setData((prev) =>
+                      prev.filter((_, i) => i !== row.index)
+                    );
+                    setIsDirty(true);
+                  },
+                  onError: () =>
+                    toast.error("Failed to delete student"),
+                });
               }
             }}
           >
@@ -600,4 +617,3 @@ function TextCell({ row, column, autoFocus = false }) {
     </AdminLayout>
   );
 }
-
