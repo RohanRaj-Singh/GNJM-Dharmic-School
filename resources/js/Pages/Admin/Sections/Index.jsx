@@ -54,7 +54,7 @@ export default function Index() {
       <input
         ref={ref}
         defaultValue={row.original[column.id] ?? ""}
-        className="w-full px-2 py-1 border rounded text-sm"
+        className="min-w-36 px-2 py-1 border rounded text-sm"
         onBlur={(e) =>
           updateCell(row.index, column.id, e.target.value.trim())
         }
@@ -70,7 +70,7 @@ export default function Index() {
       <input
         type="number"
         min="0"
-        className="w-full px-2 py-1 border rounded text-sm"
+        className="w-full min-w-36 px-2 py-1 border rounded text-sm"
         defaultValue={row.original[column.id] ?? 0}
         onBlur={(e) =>
           updateCell(row.index, column.id, Number(e.target.value) || 0)
@@ -83,7 +83,7 @@ export default function Index() {
     return (
       <select
         value={row.original.class_id ?? ""}
-        className="w-full px-2 py-1 border rounded text-sm"
+        className="w- px-2 py-1 border rounded text-sm"
         onChange={(e) =>
           updateCell(row.index, "class_id", e.target.value)
         }
