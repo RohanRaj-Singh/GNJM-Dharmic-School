@@ -58,7 +58,7 @@ export default function Index() {
     setLoading(true);
     setUiReady(false);
 
-    Promise.all([
+    return Promise.all([
       fetch("/admin/students/data").then((r) => r.json()),
       fetch("/admin/classes/options").then((r) => r.json()),
     ])
@@ -75,6 +75,7 @@ export default function Index() {
 
         setData(normalized);
         setClasses(classes);
+        return normalized;
       })
       .catch(() => toast.error("Failed to load students"))
       .finally(() => setLoading(false));
@@ -249,11 +250,17 @@ const sectionOptions = useMemo(() => {
                 router.delete(`/admin/students/${id}`, {
                   preserveScroll: true,
                   onSuccess: () => {
-                    toast.success("Student deleted");
-                    setData((prev) =>
-                      prev.filter((_, i) => i !== row.index)
-                    );
-                    setIsDirty(true);
+                    reloadData().then((students) => {
+                      const stillThere = students?.some(
+                        (s) => String(s.id) === String(id)
+                      );
+                      if (stillThere) {
+                        toast.error("Delete failed. Student still exists.");
+                        return;
+                      }
+
+                      toast.success("Student deleted");
+                    });
                   },
                   onError: () =>
                     toast.error("Failed to delete student"),
