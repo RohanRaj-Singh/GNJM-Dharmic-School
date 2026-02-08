@@ -210,11 +210,10 @@ Route::prefix('students')->name('students.')->group(function () {
         return back()->with('success', 'Students updated');
     })->name('bulk');
 
-    Route::delete(
-        '/{student}',
-        fn(Student $student) =>
-        tap($student)->delete() && back()
-    )->name('delete');
+    Route::delete('/{student}', function (Student $student) {
+        $student->delete();
+        return back(303);
+    })->name('delete');
 });
 
 /* =========================================================

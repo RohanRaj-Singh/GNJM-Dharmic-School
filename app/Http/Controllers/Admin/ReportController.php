@@ -228,7 +228,12 @@ class ReportController extends Controller
                 DB::raw('payments.id IS NOT NULL as is_paid')
             )
             ->orderBy('students.name')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                // Normalize to boolean for JS (avoid "0" string truthiness)
+                $row->is_paid = (bool) $row->is_paid;
+                return $row;
+            });
 
         return [
             'meta' => [
@@ -363,6 +368,10 @@ class ReportController extends Controller
             'attendance' => 'reports.attendance',
             'student'    => 'reports.student',
         };
+
+        if (isset($report['tables']['rows'])) {
+            $report['rows'] = $report['tables']['rows'];
+        }
 
         $pdf = Pdf::loadView($view, $report)
             ->setPaper('a4', 'portrait');

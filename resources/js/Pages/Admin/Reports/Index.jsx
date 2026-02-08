@@ -415,7 +415,7 @@ export default function ReportsIndex() {
                             </span>
                         </div>
 
-                        <ul className="divide-y text-sm">
+                        <ul className="divide-y text-sm max-h-96 overflow-y-auto">
                             {rows
                                 .filter((r) => r.is_paid)
                                 .map((r, i) => (
@@ -455,7 +455,7 @@ export default function ReportsIndex() {
                             </span>
                         </div>
 
-                        <ul className="divide-y text-sm">
+                        <ul className="divide-y text-sm max-h-96 overflow-y-auto">
                             {rows
                                 .filter((r) => !r.is_paid)
                                 .map((r, i) => (
