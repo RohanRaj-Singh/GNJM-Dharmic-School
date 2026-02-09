@@ -1,6 +1,6 @@
-import AdminLayout from "@/Layouts/AdminLayout";
+﻿import AdminLayout from "@/Layouts/AdminLayout";
 import { router } from "@inertiajs/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import EnrollmentsCell from "./EnrollmentsCell";
@@ -29,8 +29,13 @@ export default function Index() {
   const [uiReady, setUiReady] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingFocusId, setPendingFocusId] = useState(null);
   const isSavingRef = useRef(false);
   const newRowNameRef = useRef(null);
+  const safeRandomUUID = () =>
+    globalThis.crypto?.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
   /* ----------------------------------------
    | Filters (ONLY what we need)
@@ -66,7 +71,7 @@ export default function Index() {
         const normalized = students.map((s) => ({
           ...s,
           enrollments: (s.enrollments || []).map((e) => ({
-            id: e.id ?? crypto.randomUUID(),
+            id: e.id ?? safeRandomUUID(),
             class_id: String(e.class_id ?? ""),
             section_id: String(e.section_id ?? ""),
             student_type: e.student_type ?? "paid",
@@ -91,17 +96,26 @@ export default function Index() {
     }
   }, [loading]);
 
+  useEffect(() => {
+    if (!pendingFocusId) return;
+    const t = setTimeout(() => {
+      newRowNameRef.current?.focus();
+      setPendingFocusId(null);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [pendingFocusId, data.length]);
+
   /* ----------------------------------------
    | Helpers
    ---------------------------------------- */
-  function updateCell(rowIndex, key, value) {
+  const updateCell = useCallback((rowIndex, key, value) => {
     setData((prev) =>
       prev.map((row, i) =>
         i === rowIndex ? { ...row, [key]: value } : row
       )
     );
     setIsDirty(true);
-  }
+  }, []);
 
   function loadSections(classId) {
     if (!classId) return;
@@ -115,50 +129,58 @@ export default function Index() {
       );
   }
 
-const sectionOptions = useMemo(() => {
-  if (classFilter === "all") return [];
+  const sectionOptions = useMemo(() => {
+    if (classFilter === "all") return [];
 
-  const list = sectionsByClass[String(classFilter)];
-  if (!Array.isArray(list)) return [];
+    const list = sectionsByClass[String(classFilter)];
+    if (!Array.isArray(list)) return [];
 
-  return list.map((s) => ({
-    id: String(s.id),
-    name: s.name,
-  }));
-}, [classFilter, sectionsByClass]);
+    return list.map((s) => ({
+      id: String(s.id),
+      name: s.name,
+    }));
+  }, [classFilter, sectionsByClass]);
 
   /* ----------------------------------------
    | Cells
    ---------------------------------------- */
-  function TextCell({ row, column, autoFocus = false }) {
-    return (
-      <input
-        ref={autoFocus ? newRowNameRef : null}
-        defaultValue={row.original[column.id] ?? ""}
-        className="w-full px-2 py-1 border rounded text-sm"
-        onBlur={(e) =>
-          updateCell(row.index, column.id, e.target.value)
-        }
-      />
-    );
-  }
+  const TextCell = useMemo(
+    () =>
+      function TextCell({ row, column, autoFocus = false }) {
+        return (
+          <input
+            ref={autoFocus ? newRowNameRef : null}
+            defaultValue={row.original[column.id] ?? ""}
+            className="w-full px-2 py-1 border rounded text-sm"
+            onBlur={(e) =>
+              updateCell(row.index, column.id, e.target.value)
+            }
+          />
+        );
+      },
+    [updateCell]
+  );
 
-  function PhoneCell({ row, column }) {
-    return (
-      <input
-        defaultValue={row.original[column.id] ?? ""}
-        className="w-full px-2 py-1 border rounded text-sm"
-        onBlur={(e) => {
-          const val = e.target.value.trim();
-          if (val && !/^\d{10,15}$/.test(val)) {
-            toast.error("Phone must be 10–15 digits");
-            return;
-          }
-          updateCell(row.index, column.id, val);
-        }}
-      />
-    );
-  }
+  const PhoneCell = useMemo(
+    () =>
+      function PhoneCell({ row, column }) {
+        return (
+          <input
+            defaultValue={row.original[column.id] ?? ""}
+            className="w-full px-2 py-1 border rounded text-sm"
+            onBlur={(e) => {
+              const val = e.target.value.trim();
+              if (val && !/^\d{10,15}$/.test(val)) {
+                toast.error("Phone must be 10-15 digits");
+                return;
+              }
+              updateCell(row.index, column.id, val);
+            }}
+          />
+        );
+      },
+    [updateCell]
+  );
 
   /* ----------------------------------------
    | Columns
@@ -180,11 +202,15 @@ const sectionOptions = useMemo(() => {
         accessorKey: "name",
         header: "Name",
         enableSorting: true,
-        cell: ({ row, column }) => (
+        cell: ({ row, column, table }) => (
           <TextCell
             row={row}
             column={column}
-            autoFocus={row.original.__isNew}
+            autoFocus={
+              row.original.__isNew &&
+              row.original.__tempId ===
+                table.options.meta.pendingFocusId
+            }
           />
         ),
       },
@@ -215,16 +241,25 @@ const sectionOptions = useMemo(() => {
 
       {
         header: "Enrollments",
-        cell: ({ row }) => (
-          <EnrollmentsCell
-            row={row}
-            classes={classes}
-            sectionsByClass={sectionsByClass}
-            loadSections={loadSections}
-            setData={setData}
-            setIsDirty={setIsDirty}
-          />
-        ),
+        cell: ({ row, table }) => {
+          const {
+            classes,
+            sectionsByClass,
+            loadSections,
+            setData,
+            setIsDirty,
+          } = table.options.meta;
+          return (
+            <EnrollmentsCell
+              row={row}
+              classes={classes}
+              sectionsByClass={sectionsByClass}
+              loadSections={loadSections}
+              setData={setData}
+              setIsDirty={setIsDirty}
+            />
+          );
+        },
       },
 
       {
@@ -273,13 +308,13 @@ const sectionOptions = useMemo(() => {
         ),
       },
     ],
-    [classes, sectionsByClass]
+    [PhoneCell, TextCell]
   );
   //Student Row Filter
   const studentRowFilter = (row) => {
   const student = row.original;
 
-  // 🔍 Class filter
+  // Class filter
   if (classFilter !== "all") {
     const hasClass = student.enrollments?.some(
       (e) => String(e.class_id) === String(classFilter)
@@ -287,7 +322,7 @@ const sectionOptions = useMemo(() => {
     if (!hasClass) return false;
   }
 
-  // 💰 Paid / Free filter
+  // Paid / Free filter
   if (feeFilter !== "all") {
     const match = student.enrollments?.some((e) =>
       feeFilter === "free"
@@ -303,7 +338,7 @@ const sectionOptions = useMemo(() => {
 const filteredData = useMemo(() => {
   return data.filter((student) => {
 
-    // 🏫 Class filter
+    // Class filter
     if (classFilter !== "all") {
       const ok = student.enrollments?.some(
         (e) => String(e.class_id) === String(classFilter)
@@ -311,7 +346,7 @@ const filteredData = useMemo(() => {
       if (!ok) return false;
     }
 
-    // 🧩 Section filter
+    // Section filter
     if (sectionFilter !== "all") {
       const ok = student.enrollments?.some(
         (e) => String(e.section_id) === String(sectionFilter)
@@ -319,7 +354,7 @@ const filteredData = useMemo(() => {
       if (!ok) return false;
     }
 
-    // 💰 Paid / Free
+    // Paid / Free
     if (feeFilter !== "all") {
       const ok = student.enrollments?.some((e) =>
         feeFilter === "free"
@@ -342,6 +377,14 @@ const filteredData = useMemo(() => {
     columns,
     getRowId: (row) =>
       row.id ? `student-${row.id}` : row.__tempId,
+    meta: {
+      classes,
+      sectionsByClass,
+      loadSections,
+      setData,
+      setIsDirty,
+      pendingFocusId,
+    },
     state: {
       sorting,
       globalFilter,
@@ -358,39 +401,36 @@ const filteredData = useMemo(() => {
 
 
   function addEmptyRow() {
-  if (!uiReady) return;
+    if (!uiReady) return;
 
-  const hasUnfinished = data.some(
-    (r) => r.__isNew && !r.name?.trim()
-  );
+    const hasUnfinished = data.some(
+      (r) => r.__isNew && !r.name?.trim()
+    );
 
-  if (hasUnfinished) {
-    toast.error("Finish the current new student first");
-    return;
+    if (hasUnfinished) {
+      toast.error("Finish the current new student first");
+      return;
+    }
+
+    const tempId = safeRandomUUID();
+    setData((prev) => [
+      {
+        id: null,
+        __tempId: tempId, // required for TanStack
+        name: "",
+        father_name: "",
+        father_phone: "",
+        mother_phone: "",
+        status: "active",
+        enrollments: [],
+        __isNew: true,
+      },
+      ...prev,
+    ]);
+
+    setIsDirty(true);
+    setPendingFocusId(tempId);
   }
-
-  setData((prev) => [
-    {
-      id: null,
-      __tempId: crypto.randomUUID(), // 🔑 required for TanStack
-      name: "",
-      father_name: "",
-      father_phone: "",
-      mother_phone: "",
-      status: "active",
-      enrollments: [],
-      __isNew: true,
-    },
-    ...prev,
-  ]);
-
-  setIsDirty(true);
-
-  // autofocus name field
-  requestAnimationFrame(() => {
-    newRowNameRef.current?.focus();
-  });
-}
 
 //validate function
 function validateStudent(student) {
@@ -469,20 +509,6 @@ function saveChanges() {
 }
 
 
-function TextCell({ row, column, autoFocus = false }) {
-  return (
-    <input
-      ref={autoFocus ? newRowNameRef : null}
-      defaultValue={row.original[column.id] ?? ""}
-      className="w-full px-2 py-1 border rounded text-sm"
-      onBlur={(e) =>
-        updateCell(row.index, column.id, e.target.value)
-      }
-    />
-  );
-}
-
-
   /* ----------------------------------------
    | Render
    ---------------------------------------- */
@@ -494,7 +520,7 @@ function TextCell({ row, column, autoFocus = false }) {
   <div className="flex flex-wrap gap-2 items-center">
     <input
       className="px-3 py-2 border rounded text-sm w-64"
-      placeholder="Search…"
+      placeholder="Search..."
       value={globalFilter}
       onChange={(e) => setGlobalFilter(e.target.value)}
     />
@@ -569,13 +595,13 @@ function TextCell({ row, column, autoFocus = false }) {
           : "bg-green-600 hover:bg-green-700"
       } disabled:opacity-50`}
     >
-      {isSaving ? "Saving…" : "Save Changes"}
+      {isSaving ? "Saving..." : "Save Changes"}
     </button>
   </div>
 </div>
       {/* Table */}
       {loading ? (
-        <PageLoader text="Loading students…" />
+        <PageLoader text="Loading students..." />
       ) : (
         <div className="bg-white border rounded overflow-x-auto">
           <table className="min-w-[900px] text-sm">
@@ -593,8 +619,8 @@ function TextCell({ row, column, autoFocus = false }) {
                         h.getContext()
                       )}
                       {{
-                        asc: " ▲",
-                        desc: " ▼",
+                        asc: " â–²",
+                        desc: " â–¼",
                       }[h.column.getIsSorted()] ?? ""}
                     </th>
                   ))}
@@ -624,3 +650,4 @@ function TextCell({ row, column, autoFocus = false }) {
     </AdminLayout>
   );
 }
+

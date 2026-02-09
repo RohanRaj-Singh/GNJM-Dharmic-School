@@ -1,6 +1,6 @@
 import AdminLayout from "@/Layouts/AdminLayout";
 import { router, usePage } from "@inertiajs/react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -24,6 +24,8 @@ export default function FeesIndex() {
   const [sorting, setSorting] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
+  const [searchInput, setSearchInput] = useState(filters?.search ?? "");
+  const searchTimerRef = useRef(null);
 
   /* -------------------------------------------------
    | Dynamic years (2025 → current year)
@@ -61,6 +63,10 @@ export default function FeesIndex() {
       .then((r) => r.json())
       .then(setSections);
   }, [filters?.class_id]);
+
+  useEffect(() => {
+    setSearchInput(filters?.search ?? "");
+  }, [filters?.search]);
 
   /* -------------------------------------------------
    | Actions
@@ -183,7 +189,7 @@ export default function FeesIndex() {
   /* -------------------------------------------------
    | Filter helper (server-side only)
    ------------------------------------------------- */
-  function applyFilter(key, value) {
+  const applyFilter = useCallback((key, value, options = {}) => {
     router.get(
       route("admin.fees.index"),
       {
@@ -192,11 +198,20 @@ export default function FeesIndex() {
         ...(key === "class_id" ? { section_id: "" } : {}),
       },
       {
-        preserveState: false,
+        preserveState: options.preserveState ?? false,
         replace: true,
       }
     );
-  }
+  }, [filters]);
+
+  const applySearchLive = useCallback(
+    (value) => {
+      if ((filters?.search ?? "") !== value) {
+        applyFilter("search", value, { preserveState: true });
+      }
+    },
+    [applyFilter, filters?.search]
+  );
 
   /* -------------------------------------------------
    | Render
@@ -263,9 +278,13 @@ export default function FeesIndex() {
 
         <input
           className="border px-3 py-2 rounded text-sm w-64"
-          placeholder="Search student…"
-          defaultValue={filters?.search ?? ""}
-          onChange={(e) => applyFilter("search", e.target.value)}
+          placeholder="Search student..."
+          value={searchInput}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearchInput(value);
+            applySearchLive(value);
+          }}
         />
       </div>
 
