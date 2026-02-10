@@ -9,6 +9,7 @@ export default function PendingFeesSetup() {
 
   const [edits, setEdits] = useState({});
   const [lastSaved, setLastSaved] = useState({});
+  const [searchInput, setSearchInput] = useState(filters?.search ?? "");
 
   useEffect(() => {
     const next = {};
@@ -36,6 +37,16 @@ export default function PendingFeesSetup() {
         replace: true,
       }
     );
+  }
+
+  useEffect(() => {
+    setSearchInput(filters?.search ?? "");
+  }, [filters?.search]);
+
+  function applySearchLive(value) {
+    if ((filters?.search ?? "") !== value) {
+      applyFilter("search", value);
+    }
   }
 
   function onChangeMonths(id, value) {
@@ -145,8 +156,12 @@ export default function PendingFeesSetup() {
           <input
             className="border px-3 py-2 rounded text-sm w-64"
             placeholder="Name or student ID"
-            value={search}
-            onChange={(e) => applyFilter("search", e.target.value)}
+            value={searchInput}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchInput(value);
+              applySearchLive(value);
+            }}
             disabled={!classId}
           />
         </div>
