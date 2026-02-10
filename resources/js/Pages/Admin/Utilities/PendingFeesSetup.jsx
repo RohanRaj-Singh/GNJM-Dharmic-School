@@ -39,7 +39,7 @@ export default function PendingFeesSetup() {
   }
 
   function onChangeMonths(id, value) {
-    const asNumber = value === "" ? "" : Number(value);
+    const asNumber = value === "" ? 0 : Number(value);
     setEdits((prev) => ({ ...prev, [id]: asNumber }));
   }
 
@@ -58,7 +58,6 @@ export default function PendingFeesSetup() {
 
     const invalid = dirtyRows.find(
       (r) =>
-        r.value === "" ||
         r.value === null ||
         Number.isNaN(Number(r.value)) ||
         Number(r.value) < 0
@@ -215,7 +214,7 @@ export default function PendingFeesSetup() {
                           onChange={(e) =>
                             onChangeMonths(row.id, e.target.value)
                           }
-                          disabled={locked}
+                          disabled={locked || isFree}
                         />
                         {locked && (
                           <span

@@ -96,8 +96,9 @@ class PendingFeesController extends Controller
     public function update(Request $request, StudentSection $studentSection)
     {
         $data = $request->validate([
-            'assumed_pending_months' => ['required', 'integer', 'min:0', 'max:255'],
+            'assumed_pending_months' => ['nullable', 'integer', 'min:0', 'max:255'],
         ]);
+        $data['assumed_pending_months'] = (int) ($data['assumed_pending_months'] ?? 0);
 
         $hasPayments = Fee::where('student_section_id', $studentSection->id)
             ->whereHas('payments', fn ($q) => $q->whereNull('deleted_at'))
@@ -126,10 +127,13 @@ class PendingFeesController extends Controller
         $data = $request->validate([
             'updates' => ['required', 'array', 'min:1'],
             'updates.*.id' => ['required', 'integer', 'exists:student_sections,id'],
-            'updates.*.value' => ['required', 'integer', 'min:0', 'max:255'],
+            'updates.*.value' => ['nullable', 'integer', 'min:0', 'max:255'],
         ]);
 
-        $updates = collect($data['updates'])->keyBy('id');
+        $updates = collect($data['updates'])->map(function ($row) {
+            $row['value'] = (int) ($row['value'] ?? 0);
+            return $row;
+        })->keyBy('id');
         $ids = $updates->keys()->all();
 
         $lockedIds = Fee::whereIn('student_section_id', $ids)
@@ -164,7 +168,7 @@ class PendingFeesController extends Controller
 
     private function generatePendingMonthlyFees(StudentSection $studentSection, int $months): void
     {
-        if ($months <= 0) {
+        if ($months < 0) {
             return;
         }
 
@@ -173,17 +177,25 @@ class PendingFeesController extends Controller
             return;
         }
 
-        $existingMonths = Fee::where('student_section_id', $studentSection->id)
+        $desiredMonths = [];
+        for ($i = 0; $i < $months; $i++) {
+            $desiredMonths[] = Carbon::now()->subMonths($i)->format('Y-m');
+        }
+        $desiredSet = array_flip($desiredMonths);
+
+        $existingMonthly = Fee::where('student_section_id', $studentSection->id)
             ->where('type', 'monthly')
+            ->get();
+
+        $existingSet = $existingMonthly
             ->pluck('month')
             ->filter()
+            ->flip()
             ->all();
 
-        $existing = array_flip($existingMonths);
-
-        for ($i = 0; $i < $months; $i++) {
-            $month = Carbon::now()->subMonths($i)->format('Y-m');
-            if (isset($existing[$month])) {
+        // Create missing desired months
+        foreach ($desiredMonths as $month) {
+            if (isset($existingSet[$month])) {
                 continue;
             }
 
@@ -194,6 +206,27 @@ class PendingFeesController extends Controller
                 'amount' => $effectiveFee,
                 'source' => 'monthly',
             ]);
+        }
+
+        // Remove extra unpaid monthly fees not in desired set
+        if ($months === 0) {
+            Fee::where('student_section_id', $studentSection->id)
+                ->where('type', 'monthly')
+                ->whereDoesntHave('payments', fn ($q) => $q->whereNull('deleted_at'))
+                ->delete();
+            return;
+        }
+
+        $extra = $existingMonthly->filter(function ($fee) use ($desiredSet) {
+            $month = $fee->month ?? '';
+            return !isset($desiredSet[$month]);
+        });
+
+        foreach ($extra as $fee) {
+            if ($fee->payments()->whereNull('deleted_at')->exists()) {
+                continue;
+            }
+            $fee->delete();
         }
     }
 
