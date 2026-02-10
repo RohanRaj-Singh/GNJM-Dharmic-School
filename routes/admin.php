@@ -19,7 +19,8 @@ use App\Http\Controllers\Admin\{
     FeesController,
     ReportController,
     UserController,
-    DashboardController
+    DashboardController,
+    PendingFeesController
 };
 
 /*
@@ -77,6 +78,21 @@ Route::get(
     fn() =>
     Inertia::render('Admin/Utilities')
 )->name('utilities');
+
+Route::get(
+    '/utilities/pending-fees',
+    [PendingFeesController::class, 'index']
+)->name('utilities.pending-fees');
+
+Route::patch(
+    '/utilities/pending-fees/{studentSection}',
+    [PendingFeesController::class, 'update']
+)->name('utilities.pending-fees.update');
+
+Route::patch(
+    '/utilities/pending-fees',
+    [PendingFeesController::class, 'bulkUpdate']
+)->name('utilities.pending-fees.bulk');
 
 Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardController::class, 'summary'])
     ->name('admin.dashboard.summary');
