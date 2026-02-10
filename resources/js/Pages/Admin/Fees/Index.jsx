@@ -1,6 +1,6 @@
 import AdminLayout from "@/Layouts/AdminLayout";
 import { router, usePage } from "@inertiajs/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -25,7 +25,7 @@ export default function FeesIndex() {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [searchInput, setSearchInput] = useState(filters?.search ?? "");
-  const searchTimerRef = useRef(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   /* -------------------------------------------------
    | Dynamic years (2025 → current year)
@@ -80,20 +80,17 @@ export default function FeesIndex() {
 
   function deCollectFee(feeId) {
     if (!confirm("Un-collect this fee?")) return;
-
     router.post(route("admin.fees.deCollect", feeId), {}, {
       preserveScroll: true,
       onSuccess: () => toast.success("Fee un-collected"),
     });
   }
 
-  function deleteCustomFee(batchId) {
-    if (!confirm("Delete this custom fee for all students?")) return;
-
-    router.delete(route("admin.fees.custom.destroy", batchId), {
-      preserveScroll: true,
-      onSuccess: () => toast.success("Custom fee deleted"),
-    });
+  function formatMonthLabel(value) {
+    if (!value) return "";
+    const date = new Date(`${value}-01`);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString("en-US", { month: "short", year: "numeric" });
   }
 
   /* -------------------------------------------------
@@ -106,75 +103,63 @@ export default function FeesIndex() {
       { accessorKey: "class_name", header: "Class" },
       { accessorKey: "section_name", header: "Section" },
       {
-        header: "Fee",
-        cell: ({ row }) =>
-          row.original.type === "monthly"
-            ? row.original.month
-            : row.original.title,
+        header: "Unpaid",
+        cell: ({ row }) => (
+          <div className="text-sm">
+            <div className="font-medium text-red-600">
+              Rs {row.original.unpaid_amount}
+            </div>
+            <div className="text-xs text-gray-500">
+              {row.original.unpaid_count} fees
+            </div>
+          </div>
+        ),
       },
       {
-        header: "Amount",
-        cell: ({ row }) => `Rs ${row.original.amount}`,
+        header: "Paid",
+        cell: ({ row }) => (
+          <div className="text-sm">
+            <div className="font-medium text-green-600">
+              Rs {row.original.paid_amount}
+            </div>
+            <div className="text-xs text-gray-500">
+              {row.original.paid_count} fees
+            </div>
+          </div>
+        ),
       },
       {
-        header: "Status",
-        cell: ({ row }) =>
-          row.original.is_paid ? (
-            <span className="text-green-600 font-medium">✔ Paid</span>
-          ) : (
-            <span className="text-red-600 font-medium">Unpaid</span>
-          ),
+        header: "Total",
+        cell: ({ row }) => `Rs ${row.original.total_amount}`,
       },
       {
-        header: "Action",
+        header: "Details",
         cell: ({ row }) => {
-          const fee = row.original;
+          const item = row.original;
+          const unpaidCount = item.unpaid_count ?? 0;
 
-          if (fee.is_paid) {
-            return (
-              <button
-                onClick={() => deCollectFee(fee.id)}
-                className="text-yellow-600 text-sm"
-              >
-                Un-collect
-              </button>
-            );
-          }
-
-          if (fee.source === "custom") {
-            return (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => collectFee(fee.id)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm"
-                >
-                  Collect
-                </button>
-                <button
-                  onClick={() => deleteCustomFee(fee.batch_id)}
-                  className="text-red-600 text-sm"
-                >
-                  Delete
-                </button>
-              </div>
-            );
-          }
+          const isOpen = expandedId === row.id;
 
           return (
-            <button
-              onClick={() => collectFee(fee.id)}
-              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm"
-            >
-              Collect
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setExpandedId(isOpen ? null : row.id)}
+                className="text-blue-600 text-sm"
+              >
+                {isOpen ? "Hide" : "View"}
+              </button>
+              <span className="text-xs text-gray-500">
+                {unpaidCount === 0 ? "All paid" : `${unpaidCount} unpaid`}
+              </span>
+            </div>
           );
         },
       },
     ],
-    []
+    [expandedId]
   );
 
-  /* -------------------------------------------------
+/* -------------------------------------------------
    | Table
    ------------------------------------------------- */
   const table = useReactTable({
@@ -306,18 +291,109 @@ export default function FeesIndex() {
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="border-b">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-3 py-2">
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {table.getRowModel().rows.map((row) => {
+              const item = row.original;
+              const isOpen = expandedId === row.id;
+              const fees = item.fees ?? [];
+              const unpaid = fees.filter((f) => !f.is_paid);
+              const paid = fees.filter((f) => f.is_paid);
+
+              return (
+                <Fragment key={row.id}>
+                  <tr className="border-b">
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-3 py-2">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  {isOpen && (
+                    <tr className="border-b bg-gray-50">
+                      <td colSpan={8} className="px-3 py-3">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-xs font-semibold text-gray-600 mb-2">
+                              Unpaid Fees
+                            </div>
+                            {unpaid.length === 0 ? (
+                              <div className="text-xs text-gray-500">
+                                No unpaid fees.
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {unpaid.map((fee) => (
+                                  <div
+                                    key={fee.id}
+                                    className="flex items-center justify-between border rounded px-3 py-2 bg-white"
+                                  >
+                                    <div>
+                                      <div className="text-sm font-medium">
+                                        {fee.type === "monthly"
+                                          ? formatMonthLabel(fee.month)
+                                          : fee.title}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        Rs {fee.amount}
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => collectFee(fee.id)}
+                                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs"
+                                    >
+                                      Collect
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="text-xs font-semibold text-gray-600 mb-2">
+                              Paid Fees (Un-collect)
+                            </div>
+                            {paid.length === 0 ? (
+                              <div className="text-xs text-gray-500">
+                                No paid fees.
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {paid.map((fee) => (
+                                  <div
+                                    key={fee.id}
+                                    className="flex items-center justify-between border rounded px-3 py-2 bg-white"
+                                  >
+                                    <div>
+                                      <div className="text-sm font-medium">
+                                        {fee.type === "monthly"
+                                          ? formatMonthLabel(fee.month)
+                                          : fee.title}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        Rs {fee.amount}
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => deCollectFee(fee.id)}
+                                      className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-3 py-1.5 rounded text-xs"
+                                    >
+                                      Un-collect
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

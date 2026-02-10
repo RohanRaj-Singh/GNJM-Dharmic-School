@@ -35,6 +35,9 @@ class FeesController extends Controller
             'fees.title',
             'fees.amount',
             'fees.batch_id',
+            'student_sections.class_id',
+            'student_sections.section_id',
+            'students.id as student_id',
             'students.name as student_name',
             'classes.name as class_name',
             'sections.name as section_name',
@@ -76,10 +79,45 @@ class FeesController extends Controller
             $fee->is_paid = (bool) $fee->is_paid;
             return $fee;
         });
+
+    $grouped = $fees->groupBy(function ($f) {
+        return implode('|', [
+            $f->student_id,
+            $f->class_id ?? '',
+            $f->section_id ?? '',
+        ]);
+    })->map(function ($items) {
+        $first = $items->first();
+        $paid = $items->where('is_paid', true);
+        $unpaid = $items->where('is_paid', false);
+
+        return [
+            'student_id' => $first->student_id,
+            'student_name' => $first->student_name,
+            'class_name' => $first->class_name,
+            'section_name' => $first->section_name,
+            'paid_count' => $paid->count(),
+            'paid_amount' => $paid->sum('amount'),
+            'unpaid_count' => $unpaid->count(),
+            'unpaid_amount' => $unpaid->sum('amount'),
+            'total_amount' => $items->sum('amount'),
+            'fees' => $items->map(function ($f) {
+                return [
+                    'id' => $f->id,
+                    'type' => $f->type,
+                    'source' => $f->source,
+                    'month' => $f->month,
+                    'title' => $f->title,
+                    'amount' => $f->amount,
+                    'is_paid' => (bool) $f->is_paid,
+                ];
+            })->values(),
+        ];
+    })->values();
        // dd($fees->count(), $fees->take(5));
 
     return inertia('Admin/Fees/Index', [
-        'fees' => $fees,
+        'fees' => $grouped,
         'filters' => $request->only([
             'year',
             'class_id',
@@ -132,6 +170,7 @@ public function deCollect(Fee $fee)
 
     return back()->with('success', 'Fee un-collected successfully.');
 }
+
 public function customIndex()
 {
     $rows = Fee::query()
