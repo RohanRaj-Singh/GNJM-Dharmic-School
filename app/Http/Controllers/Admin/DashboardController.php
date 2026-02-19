@@ -81,10 +81,17 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        $classIdsByDivision = [
-            'gurmukhi' => $classes->where('type', 'gurmukhi')->pluck('id')->all(),
-            'kirtan' => $classes->where('type', 'kirtan')->pluck('id')->all(),
-        ];
+        $classIdsByDivision = ['gurmukhi' => [], 'kirtan' => []];
+        foreach ($classes as $class) {
+            $rawType = strtolower(trim((string) ($class->type ?? '')));
+            $normalizedType = match ($rawType) {
+                'kirtan', 'kirtan class' => 'kirtan',
+                'gurmukhi', 'gurmukhi class' => 'gurmukhi',
+                default => str_contains(strtolower((string) $class->name), 'kirtan') ? 'kirtan' : 'gurmukhi',
+            };
+
+            $classIdsByDivision[$normalizedType][] = (int) $class->id;
+        }
 
         return collect($classIdsByDivision)->map(function (array $classIds, string $type) use ($year, $classes) {
             $divisionClasses = $classes->whereIn('id', $classIds)->values();
