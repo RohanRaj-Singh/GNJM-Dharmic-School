@@ -24,15 +24,30 @@ Route::get('/', fn () =>
         Inertia::render('Accountant/Dashboard')
     );
 
-    /* Students */
-    // Route::get('/students', function () {
-    //     return Inertia::render('Accountant/Students/Index', [
-    //         'students' => Student::with([
-    //             'enrollments.schoolClass',
-    //             'enrollments.section',
-    //         ])->get(),
-    //     ]);
-    // })->name('accountant.students.index');
+    /* Students (fallback route for accountant-prefixed links) */
+    Route::get('/students', function () {
+        return Inertia::render('Students/Index', [
+            'students' => Student::with([
+                'enrollments.schoolClass',
+                'enrollments.section',
+            ])->get(),
+        ]);
+    })->name('accountant.students.index');
+
+    /* Attendance (fallback routes for accountant-prefixed links) */
+    Route::get('/attendance', fn () =>
+        Inertia::render('Attendance/Dashboard')
+    )->name('accountant.attendance.dashboard');
+
+    Route::get('/attendance/sections', function () {
+        return Inertia::render('Attendance/Sections', [
+            'sections' => Section::with('schoolClass')->get(),
+        ]);
+    })->name('accountant.attendance.sections');
+
+    Route::get('/attendance/sections/{section}', function (Section $section) {
+        return redirect()->route('attendance.mark', ['section' => $section->id]);
+    })->name('accountant.attendance.mark');
 
     // Route::get('/students/create', function () {
     //     return Inertia::render('Accountant/Students/Create', [
@@ -100,4 +115,3 @@ Route::get('/', fn () =>
 
     /* Late Fees */
     Route::get('/late-fees', [LateFeeSummaryController::class, 'index']);
-

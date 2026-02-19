@@ -35,6 +35,8 @@ export default function Sections({ sections = [] }) {
             (s) => isTypeMatch(getClassObj(s)?.type, classFilter)
         );
     }, [sections, classFilter, isAccountant]);
+    const sectionHref = (id) =>
+        isAccountant ? `/accountant/attendance/sections/${id}` : `/attendance/sections/${id}`;
 
     return (
         <SimpleLayout title="Select Section">
@@ -64,7 +66,7 @@ export default function Sections({ sections = [] }) {
                 {visibleSections.map((section) => (
                     <Link
                         key={section.id}
-                        href={`/attendance/sections/${section.id}`}
+                        href={sectionHref(section.id)}
                         className="block bg-white border rounded-xl p-4 hover:bg-gray-50"
                     >
                         <p className="font-semibold text-gray-800">
