@@ -22,8 +22,8 @@ export default function SimpleLayout({title, children})
     </button>
 
     {/* Title */}
-    <div className="flex-1 text-center">
-      <h1 className="text-sm font-semibold text-gray-800">
+    <div className="flex-1 text-start ml-12">
+      <h1 className="text-base font-semibold text-gray-800">
         {title ?? "GNJM"}
       </h1>
     </div>

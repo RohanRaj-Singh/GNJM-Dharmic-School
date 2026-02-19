@@ -3,6 +3,7 @@ import { useState } from "react";
 import SidebarGroup from "@/Components/SidebarGroup";
 import { Sidebar } from "lucide-react";
 import { router } from "@inertiajs/react";
+import Logo from "../../images/logo.png";
 
 export default function AdminLayout({ title, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,12 +36,13 @@ export default function AdminLayout({ title, children }) {
       >
         {/* Logo */}
         <div className="px-6 py-4 border-b">
-          <h1 className="text-xl font-semibold text-gray-800">
-            GNJM
-          </h1>
-          <p className="text-sm text-gray-500">
-            Admin Panel
-          </p>
+          <div className="flex items-center gap-3">
+            <img src={Logo} alt="GNJM Logo" className="h-10 w-10 object-contain" />
+            <div>
+              <h1 className="text-xl font-semibold text-gray-800">GNJM</h1>
+              <p className="text-sm text-gray-500">Admin Panel</p>
+            </div>
+          </div>
 
 
 

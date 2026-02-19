@@ -30,8 +30,10 @@ export default function Index() {
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingFocusId, setPendingFocusId] = useState(null);
+  const [rowNoColWidth, setRowNoColWidth] = useState(0);
   const isSavingRef = useRef(false);
   const newRowNameRef = useRef(null);
+  const rowNoHeaderRef = useRef(null);
   const safeRandomUUID = () =>
     globalThis.crypto?.randomUUID
       ? crypto.randomUUID()
@@ -105,6 +107,16 @@ export default function Index() {
     return () => clearTimeout(t);
   }, [pendingFocusId, data.length]);
 
+  useEffect(() => {
+    const updateWidth = () => {
+      setRowNoColWidth(rowNoHeaderRef.current?.offsetWidth ?? 0);
+    };
+
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, [data.length]);
+
   /* ----------------------------------------
    | Helpers
    ---------------------------------------- */
@@ -153,7 +165,7 @@ export default function Index() {
           <input
             ref={autoFocus ? newRowNameRef : null}
             defaultValue={row.original[column.id] ?? ""}
-            className="w-full px-2 py-1 border rounded text-sm"
+            className="w-full min-w-[120px] px-2 py-1 border rounded text-sm"
             onBlur={(e) =>
               updateCell(row.original.id ?? row.original.__tempId, column.id, e.target.value)
             }
@@ -169,7 +181,7 @@ export default function Index() {
         return (
           <input
             defaultValue={row.original[column.id] ?? ""}
-            className="w-full px-2 py-1 border rounded text-sm"
+            className="w-full min-w-[180px] px-2 py-1 border rounded text-sm"
             onBlur={(e) => {
               const val = e.target.value.trim();
               if (val && !/^\d{10,15}$/.test(val)) {
@@ -189,7 +201,7 @@ export default function Index() {
    ---------------------------------------- */
   const columns = useMemo(
     () => [
-      { header: "#",
+      { id: "row_no", header: "#",
 
         cell: ({ row }) => row.index + 1
     },
@@ -614,7 +626,15 @@ function saveChanges() {
                   {hg.headers.map((h) => (
                     <th
                       key={h.id}
-                      className="px-3 py-2 cursor-pointer select-none"
+                      ref={h.column.id === "row_no" ? rowNoHeaderRef : null}
+                      className={`px-3 py-2 cursor-pointer select-none ${
+                        h.column.id === "row_no"
+                          ? "sticky left-0 z-30 bg-gray-50"
+                          : h.column.id === "name"
+                          ? "sticky z-30 bg-gray-50 whitespace-nowrap"
+                          : ""
+                      }`}
+                      style={h.column.id === "name" ? { left: `${rowNoColWidth}px` } : undefined}
                       onClick={h.column.getToggleSortingHandler()}
                     >
                       {flexRender(
@@ -637,7 +657,17 @@ function saveChanges() {
                 <tr key={row.id} className="border-b">
 
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={`px-3 py-2 min-${cell.column.columnDef.header === "#" ? "w-auto" : "w-[150px]"} border-b align-top`}>
+                    <td
+                      key={cell.id}
+                      className={`px-3 py-2 border-b align-top ${
+                        cell.column.id === "row_no"
+                          ? "sticky left-0 z-20 bg-white"
+                          : cell.column.id === "name"
+                          ? "sticky z-20 bg-white whitespace-nowrap"
+                          : ""
+                      }`}
+                      style={cell.column.id === "name" ? { left: `${rowNoColWidth}px` } : undefined}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
