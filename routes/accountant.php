@@ -26,11 +26,32 @@ Route::get('/', fn () =>
 
     /* Students (fallback route for accountant-prefixed links) */
     Route::get('/students', function () {
-        return Inertia::render('Students/Index', [
+        return Inertia::render('Accountant/Students', [
             'students' => Student::with([
-                'enrollments.schoolClass',
-                'enrollments.section',
-            ])->get(),
+                'enrollments.schoolClass:id,name,type',
+                'enrollments.section:id,name,class_id',
+            ])->orderBy('name')->get()->map(function ($student) {
+                return [
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'father_name' => $student->father_name,
+                    'enrollments' => $student->enrollments->map(function ($e) {
+                        return [
+                            'id' => $e->id,
+                            'student_type' => $e->student_type,
+                            'school_class' => [
+                                'id' => $e->schoolClass?->id,
+                                'name' => $e->schoolClass?->name,
+                                'type' => $e->schoolClass?->type,
+                            ],
+                            'section' => [
+                                'id' => $e->section?->id,
+                                'name' => $e->section?->name,
+                            ],
+                        ];
+                    })->values(),
+                ];
+            }),
         ]);
     })->name('accountant.students.index');
 
@@ -40,8 +61,19 @@ Route::get('/', fn () =>
     )->name('accountant.attendance.dashboard');
 
     Route::get('/attendance/sections', function () {
-        return Inertia::render('Attendance/Sections', [
-            'sections' => Section::with('schoolClass')->get(),
+        return Inertia::render('Accountant/AttendanceSections', [
+            'sections' => Section::with('schoolClass:id,name,type')
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($section) => [
+                    'id' => $section->id,
+                    'name' => $section->name,
+                    'school_class' => [
+                        'id' => $section->schoolClass?->id,
+                        'name' => $section->schoolClass?->name,
+                        'type' => $section->schoolClass?->type,
+                    ],
+                ]),
         ]);
     })->name('accountant.attendance.sections');
 
