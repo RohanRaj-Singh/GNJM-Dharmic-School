@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Fee;
+use App\Models\FeeRatePeriod;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\StudentSection;
@@ -54,7 +55,9 @@ class PendingFeesController extends Controller
                     'students.name as student_name',
                     'students.father_name as father_name',
                     'classes.name as class_name',
+                    'classes.default_monthly_fee as class_default_monthly_fee',
                     'sections.name as section_name',
+                    'sections.monthly_fee as section_monthly_fee',
                 ])
                 ->selectSub(
                     function ($q) {
@@ -69,30 +72,26 @@ class PendingFeesController extends Controller
                     'has_payments'
                 )
                 ->orderBy('students.name')
-                ->get()
-                ->map(function ($row) {
-                    $row->has_payments = (bool) $row->has_payments;
-                    $enrollment = StudentSection::with([
-                        'section:id,class_id,monthly_fee',
-                        'schoolClass:id,default_monthly_fee',
-                    ])->find($row->id);
-                    if (!$enrollment) {
-                        $row->effective_monthly_fee = 0;
-                        $row->pending_amount_prefix_sums = [];
-                        $row->pending_amount = 0;
-                        return $row;
-                    }
+                ->get();
 
-                    $row->effective_monthly_fee = $this->monthlyFeeResolver->resolveForMonth(
-                        $enrollment,
-                        now(config('app.timezone'))->format('Y-m')
-                    );
+            $classIds = $rows->pluck('class_id')->filter()->unique()->map(fn ($id) => (int) $id)->all();
+            $sectionIds = $rows->pluck('section_id')->filter()->unique()->map(fn ($id) => (int) $id)->all();
+            $periodMap = $this->buildPeriodMap($classIds, $sectionIds);
+            $months = [];
+            for ($i = 0; $i < 255; $i++) {
+                $months[] = Carbon::now(config('app.timezone'))->subMonths($i)->format('Y-m');
+            }
+
+            $rows = $rows->map(function ($row) use ($periodMap, $months) {
+                    $row->has_payments = (bool) $row->has_payments;
+                    $currentMonth = $months[0] ?? Carbon::now(config('app.timezone'))->format('Y-m');
+                    $row->effective_monthly_fee = $this->resolveMonthFromMaps($row, $currentMonth, $periodMap);
 
                     $prefix = [];
                     $running = 0;
-                    for ($i = 1; $i <= 255; $i++) {
-                        $month = now(config('app.timezone'))->subMonths($i - 1)->format('Y-m');
-                        $running += $this->monthlyFeeResolver->resolveForMonth($enrollment, $month);
+                    foreach ($months as $idx => $month) {
+                        $running += $this->resolveMonthFromMaps($row, $month, $periodMap);
+                        $i = $idx + 1;
                         $prefix[$i] = $running;
                     }
 
@@ -261,6 +260,97 @@ class PendingFeesController extends Controller
             }
             $fee->delete();
         }
+    }
+
+    private function buildPeriodMap(array $classIds, array $sectionIds): array
+    {
+        $periods = FeeRatePeriod::query()
+            ->where(function ($q) use ($classIds, $sectionIds) {
+                if (!empty($classIds)) {
+                    $q->orWhere(function ($qq) use ($classIds) {
+                        $qq->where('scope_type', 'class')
+                            ->whereIn('scope_id', $classIds);
+                    });
+                }
+
+                if (!empty($sectionIds)) {
+                    $q->orWhere(function ($qq) use ($sectionIds) {
+                        $qq->where('scope_type', 'section')
+                            ->whereIn('scope_id', $sectionIds);
+                    });
+                }
+            })
+            ->orderByDesc('effective_from')
+            ->get(['scope_type', 'scope_id', 'amount', 'effective_from', 'effective_to']);
+
+        $map = [
+            'class' => [],
+            'section' => [],
+        ];
+
+        foreach ($periods as $period) {
+            $scopeType = (string) $period->scope_type;
+            $scopeId = (int) $period->scope_id;
+            $map[$scopeType][$scopeId] ??= [];
+            $map[$scopeType][$scopeId][] = [
+                'from' => substr((string) $period->effective_from, 0, 7),
+                'to' => $period->effective_to ? substr((string) $period->effective_to, 0, 7) : null,
+                'amount' => max(0, (int) $period->amount),
+            ];
+        }
+
+        return $map;
+    }
+
+    private function resolveMonthFromMaps(object $row, string $month, array $periodMap): int
+    {
+        if (($row->student_type ?? 'paid') === 'free') {
+            return 0;
+        }
+
+        $sectionId = (int) ($row->section_id ?? 0);
+        if ($sectionId > 0) {
+            $sectionPeriodAmount = $this->findPeriodAmount($periodMap['section'][$sectionId] ?? [], $month);
+            if ($sectionPeriodAmount > 0) {
+                return $sectionPeriodAmount;
+            }
+        }
+
+        $classId = (int) ($row->class_id ?? 0);
+        if ($classId > 0) {
+            $classPeriodAmount = $this->findPeriodAmount($periodMap['class'][$classId] ?? [], $month);
+            if ($classPeriodAmount > 0) {
+                return $classPeriodAmount;
+            }
+        }
+
+        $sectionFee = max(0, (int) ($row->section_monthly_fee ?? 0));
+        if ($sectionFee > 0) {
+            return $sectionFee;
+        }
+
+        $classFee = max(0, (int) ($row->class_default_monthly_fee ?? 0));
+        return $classFee;
+    }
+
+    private function findPeriodAmount(array $periods, string $month): int
+    {
+        foreach ($periods as $period) {
+            $from = (string) ($period['from'] ?? '');
+            $to = $period['to'] ?? null;
+
+            if ($from === '' || $from > $month) {
+                continue;
+            }
+
+            if ($to !== null && $to < $month) {
+                continue;
+            }
+
+            return max(0, (int) ($period['amount'] ?? 0));
+        }
+
+        return 0;
     }
 
 }
