@@ -20,7 +20,7 @@ export default function Sections({ sections = [] }) {
     }, [flash]);
 
     // Accountant filter (UI only)
-    const [classFilter, setClassFilter] = useState("gurmukhi");
+    const [classFilter, setClassFilter] = useState("all");
     const getClassObj = (section) => section?.school_class ?? section?.schoolClass ?? null;
     const isTypeMatch = (type, expected) => {
         const normalized = String(type ?? "").trim().toLowerCase();
@@ -31,18 +31,21 @@ export default function Sections({ sections = [] }) {
     const visibleSections = useMemo(() => {
         if (!isAccountant) return sections;
 
-        return sections.filter(
-            (s) => isTypeMatch(getClassObj(s)?.type, classFilter)
-        );
+        if (classFilter === "all") return sections;
+        return sections.filter((s) => isTypeMatch(getClassObj(s)?.type, classFilter));
     }, [sections, classFilter, isAccountant]);
-    const sectionHref = (id) =>
-        isAccountant ? `/accountant/attendance/sections/${id}` : `/attendance/sections/${id}`;
-
     return (
         <SimpleLayout title="Select Section">
             {/* FILTER PILLS (ACCOUNTANT ONLY) */}
             {isAccountant && (
                 <div className="flex gap-2 mb-4">
+                    <PillButton
+                        active={classFilter === "all"}
+                        onClick={() => setClassFilter("all")}
+                        color="blue"
+                    >
+                        All
+                    </PillButton>
                     <PillButton
                         active={classFilter === "gurmukhi"}
                         onClick={() => setClassFilter("gurmukhi")}
@@ -66,7 +69,7 @@ export default function Sections({ sections = [] }) {
                 {visibleSections.map((section) => (
                     <Link
                         key={section.id}
-                        href={sectionHref(section.id)}
+                        href={`/attendance/sections/${section.id}`}
                         className="block bg-white border rounded-xl p-4 hover:bg-gray-50"
                     >
                         <p className="font-semibold text-gray-800">

@@ -5,7 +5,7 @@ import useRoles from "@/Hooks/useRoles";
 
 export default function StudentsIndex({ students = [] }) {
     const [search, setSearch] = useState("");
-    const [classFilter, setClassFilter] = useState("gurmukhi");
+    const [classFilter, setClassFilter] = useState("all");
 
     const { isAccountant } = useRoles();
 
@@ -23,6 +23,7 @@ export default function StudentsIndex({ students = [] }) {
     const visibleStudents = searchedStudents.filter((student) => {
         if (!isAccountant) return true;
         const enrollments = student.enrollments ?? [];
+        if (classFilter === "all") return enrollments.length > 0;
         return enrollments.some((e) => isTypeMatch(getClassObj(e)?.type, classFilter));
     });
 
@@ -30,6 +31,16 @@ export default function StudentsIndex({ students = [] }) {
         <AccountantLayout title="Students">
             {isAccountant && (
                 <div className="flex gap-2 mb-4">
+                    <button
+                        onClick={() => setClassFilter("all")}
+                        className={`px-3 py-1 rounded-full text-sm font-medium border ${
+                            classFilter === "all"
+                                ? "bg-slate-700 text-white"
+                                : "bg-white text-gray-700"
+                        }`}
+                    >
+                        All
+                    </button>
                     <button
                         onClick={() => setClassFilter("gurmukhi")}
                         className={`px-3 py-1 rounded-full text-sm font-medium border ${
@@ -107,7 +118,7 @@ function StudentCard({ student, classFilter }) {
         ? enrollments.filter((e) => allowedSectionIds.includes(String(e.section_id)))
         : enrollments;
 
-    if (classFilter) {
+    if (classFilter && classFilter !== "all") {
         visibleEnrollments = visibleEnrollments.filter((e) => {
             const normalized = String((e.school_class ?? e.schoolClass ?? null)?.type ?? "")
                 .trim()

@@ -7,7 +7,7 @@ export default function Dashboard() {
       <div className="space-y-4">
 
         <ActionCard
-          href="/accountant/students"
+          href="/students"
           emoji="📋"
           title="Students"
           description="View all students"
@@ -28,7 +28,7 @@ export default function Dashboard() {
           highlight
         />
 <ActionCard
-  href="/accountant/attendance"
+  href="/attendance"
   emoji="🕒"
   title="Attendance"
   description="Mark & view attendance"
