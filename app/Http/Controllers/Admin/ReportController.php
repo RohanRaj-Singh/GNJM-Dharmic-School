@@ -698,7 +698,11 @@ class ReportController extends Controller
             )
             ->orderByRaw('fees.month IS NULL')
             ->orderBy('fees.month')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                $row->is_paid = (bool) $row->is_paid;
+                return $row;
+            });
 
         logger()->info('FEES QUERY RESULT', [
             'section_ids' => $sectionIds->values(),
@@ -714,8 +718,8 @@ class ReportController extends Controller
         return [
             'summary' => [
                 'total'   => (int) $rows->sum('amount'),
-                'paid'    => (int) $rows->where('is_paid', true)->sum('amount'),
-                'pending' => (int) $rows->where('is_paid', false)->sum('amount'),
+                'paid'    => (int) $rows->filter(fn ($r) => (bool) $r->is_paid)->sum('amount'),
+                'pending' => (int) $rows->reject(fn ($r) => (bool) $r->is_paid)->sum('amount'),
             ],
             'rows' => $rows,
         ];

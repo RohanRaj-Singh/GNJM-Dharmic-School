@@ -106,7 +106,7 @@ public function save(Request $request)
     $request->validate([
         'section_id' => 'required|exists:sections,id',
         'year'       => 'required|integer',
-        'month'      => 'required|integer',
+        'month'      => 'required|integer|min:1|max:12',
         'records'    => 'array',
     ]);
 
@@ -123,8 +123,12 @@ public function save(Request $request)
             continue;
         }
 
-        // 🔥 Correct split
-        [$studentSectionId, $date] = explode('-', $key, 2);
+        if (!preg_match('/^(\d+)-(\d{4}-\d{2}-\d{2})$/', (string) $key, $matches)) {
+            continue;
+        }
+
+        $studentSectionId = $matches[1];
+        $date = $matches[2];
 
         // 🔐 HARD SAFETY
         if (!isset($validIds[$studentSectionId])) {
@@ -153,7 +157,9 @@ public function save(Request $request)
             ],
             [
                 'status'         => $status,
-                'lesson_learned' => $payload['lesson_learned'] ?? null,
+                'lesson_learned' => $status === 'present'
+                    ? (bool) ($payload['lesson_learned'] ?? false)
+                    : null,
             ]
         );
     }

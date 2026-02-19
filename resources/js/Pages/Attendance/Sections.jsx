@@ -21,13 +21,17 @@ export default function Sections({ sections = [] }) {
 
     // Accountant filter (UI only)
     const [classFilter, setClassFilter] = useState("gurmukhi");
+    const isTypeMatch = (type, expected) => {
+        const normalized = String(type ?? "").trim().toLowerCase();
+        if (!normalized) return false;
+        return normalized === expected || normalized.includes(expected);
+    };
 
     const visibleSections = useMemo(() => {
         if (!isAccountant) return sections;
 
         return sections.filter(
-            (s) =>
-                s.school_class?.type?.toLowerCase() === classFilter
+            (s) => isTypeMatch(s.school_class?.type ?? s.schoolClass?.type, classFilter)
         );
     }, [sections, classFilter, isAccountant]);
 

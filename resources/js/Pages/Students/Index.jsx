@@ -1,14 +1,18 @@
 import AccountantLayout from "@/Layouts/SimpleLayout";
-import { use, useState } from "react";
+import { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import useRoles from "@/Hooks/useRoles";
 
 export default function StudentsIndex({ students }) {
-    console.log(usePage().props);
     const [search, setSearch] = useState("");
     const [classFilter, setClassFilter] = useState("gurmukhi"); // ✅ default
 
     const { isAccountant } = useRoles();
+    const isTypeMatch = (type, expected) => {
+        const normalized = String(type ?? "").trim().toLowerCase();
+        if (!normalized) return false;
+        return normalized === expected || normalized.includes(expected);
+    };
 
     const filteredStudents = students.filter((s) =>
         s.name.toLowerCase().includes(search.toLowerCase())
@@ -77,7 +81,7 @@ export default function StudentsIndex({ students }) {
         const enrollments = student.enrollments ?? [];
 
         return enrollments.some(
-            (e) => e.school_class?.type === classFilter
+            (e) => isTypeMatch(e.school_class?.type ?? e.schoolClass?.type, classFilter)
         );
     })
     .slice()
@@ -127,7 +131,12 @@ function StudentCard({ student, classFilter }) {
     /* Accountant class filter */
     if (classFilter) {
         visibleEnrollments = visibleEnrollments.filter(
-            (e) => e.school_class?.type === classFilter
+            (e) => {
+                const normalized = String(e.school_class?.type ?? e.schoolClass?.type ?? "")
+                    .trim()
+                    .toLowerCase();
+                return normalized === classFilter || normalized.includes(classFilter);
+            }
         );
     }
 

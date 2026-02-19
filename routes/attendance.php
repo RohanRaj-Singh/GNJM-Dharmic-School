@@ -8,6 +8,14 @@ use App\Http\Controllers\AttendanceController;
 use Carbon\Carbon;
 
 Route::prefix('attendance')->group(function () {
+    $isClassType = function (?string $type, string $needle): bool {
+        $normalized = strtolower(trim((string) $type));
+        if ($normalized === '') {
+            return false;
+        }
+
+        return $normalized === $needle || str_contains($normalized, $needle);
+    };
 
     Route::get('/', fn () =>
         Inertia::render('Attendance/Dashboard')
@@ -34,7 +42,7 @@ Route::prefix('attendance')->group(function () {
     /* ===============================
        MARK ATTENDANCE
     ================================ */
-    Route::get('/sections/{section}', function (Section $section) {
+    Route::get('/sections/{section}', function (Section $section) use ($isClassType) {
 
         $user = auth()->user();
 
@@ -56,13 +64,13 @@ Route::prefix('attendance')->group(function () {
         $today = now()->dayOfWeek; // 0 = Sunday
         $classType = $section->schoolClass->type;
 
-        if ($today === 0 && $classType === 'gurmukhi') {
+        if ($today === 0 && $isClassType($classType, 'gurmukhi')) {
             return redirect()
                 ->route('attendance.sections')
                 ->with('error', '📅 Gurmukhi attendance cannot be marked on Sunday.');
         }
 
-        if ($today !== 0 && $classType === 'kirtan') {
+        if ($today !== 0 && $isClassType($classType, 'kirtan')) {
             return redirect()
                 ->route('attendance.sections')
                 ->with('error', '📅 Kirtan attendance can only be marked on Sunday.');
@@ -94,7 +102,7 @@ Route::prefix('attendance')->group(function () {
     /* ===============================
        ABSENTEES
     ================================ */
-    Route::get('/absentees', function () {
+    Route::get('/absentees', function () use ($isClassType) {
         $user = auth()->user();
         $lastWorkingDay = Carbon::today(config('app.timezone'))->subDay();
         while ($lastWorkingDay->dayOfWeek === Carbon::SUNDAY) {
@@ -112,11 +120,14 @@ Route::prefix('attendance')->group(function () {
             'attendance' => fn ($q) => $q->orderByDesc('date'),
         ])
             ->whereIn('section_id', $allowedSectionIds)
-            ->whereHas('schoolClass', fn ($q) => $q->where('type', 'gurmukhi'))
             ->get();
 
         $students = [];
         foreach ($enrollments as $enrollment) {
+            if (!$isClassType($enrollment->schoolClass->type ?? null, 'gurmukhi')) {
+                continue;
+            }
+
             $attendance = $enrollment->attendance
                 ->filter(fn ($a) => Carbon::parse($a->date)->dayOfWeek !== Carbon::SUNDAY)
                 ->values();
