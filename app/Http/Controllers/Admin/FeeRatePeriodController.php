@@ -7,12 +7,17 @@ use App\Models\Fee;
 use App\Models\FeeRatePeriod;
 use App\Models\SchoolClass;
 use App\Models\Section;
+use App\Services\MonthlyFeeResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class FeeRatePeriodController extends Controller
 {
+    public function __construct(private readonly MonthlyFeeResolver $monthlyFeeResolver)
+    {
+    }
+
     public function classPeriods(SchoolClass $class)
     {
         return response()->json([
@@ -29,26 +34,27 @@ class FeeRatePeriodController extends Controller
 
     public function storeForClass(Request $request, SchoolClass $class)
     {
-        $period = $this->storePeriod($request, 'class', (int) $class->id);
-        return response()->json(['period' => $period], 201);
+        $result = $this->storePeriod($request, 'class', (int) $class->id);
+        return response()->json($result, 201);
     }
 
     public function storeForSection(Request $request, Section $section)
     {
-        $period = $this->storePeriod($request, 'section', (int) $section->id);
-        return response()->json(['period' => $period], 201);
+        $result = $this->storePeriod($request, 'section', (int) $section->id);
+        return response()->json(['period' => $result['period']], 201);
     }
 
     public function updateForClass(Request $request, SchoolClass $class, FeeRatePeriod $period)
     {
         abort_unless($period->scope_type === 'class' && (int) $period->scope_id === (int) $class->id, 404);
-        return response()->json(['period' => $this->updatePeriod($request, $period)]);
+        return response()->json($this->updatePeriod($request, $period));
     }
 
     public function updateForSection(Request $request, Section $section, FeeRatePeriod $period)
     {
         abort_unless($period->scope_type === 'section' && (int) $period->scope_id === (int) $section->id, 404);
-        return response()->json(['period' => $this->updatePeriod($request, $period)]);
+        $result = $this->updatePeriod($request, $period);
+        return response()->json(['period' => $result['period']]);
     }
 
     public function destroyForClass(SchoolClass $class, FeeRatePeriod $period)
@@ -85,12 +91,28 @@ class FeeRatePeriodController extends Controller
         ]);
 
         $this->syncLegacyFeeColumn($scopeType, $scopeId);
+        $sectionSync = $this->applySectionLegacyReset($scopeType, $scopeId, $data);
+        if (!empty($sectionSync['valid_ids'])) {
+            $this->refreshUnpaidMonthlyFeesForSections($sectionSync['valid_ids']);
+        }
+        $this->refreshUnpaidMonthlyFees(
+            $scopeType,
+            $scopeId,
+            $this->toMonth($normalized['start_date']),
+            $this->toMonth($normalized['end_date'])
+        );
 
-        return $this->serializePeriod($period);
+        return [
+            'period' => $this->serializePeriod($period),
+            'section_sync' => $sectionSync,
+        ];
     }
 
     private function updatePeriod(Request $request, FeeRatePeriod $period): array
     {
+        $oldStartMonth = $this->toMonth($period->effective_from);
+        $oldEndMonth = $this->toMonth($period->effective_to);
+
         $data = $this->validatePayload($request);
         $normalized = $this->normalizePeriodBounds($data);
 
@@ -121,20 +143,36 @@ class FeeRatePeriodController extends Controller
 
         $period = $period->fresh();
 
-        $this->updateUnpaidMonthlyFeeAmounts(
+        [$refreshStartMonth, $refreshEndMonth] = $this->mergeMonthRanges(
+            $oldStartMonth,
+            $oldEndMonth,
+            $this->toMonth($period->effective_from),
+            $this->toMonth($period->effective_to)
+        );
+
+        $this->syncLegacyFeeColumn($period->scope_type, (int) $period->scope_id);
+        $sectionSync = $this->applySectionLegacyReset($period->scope_type, (int) $period->scope_id, $data);
+        if (!empty($sectionSync['valid_ids'])) {
+            $this->refreshUnpaidMonthlyFeesForSections($sectionSync['valid_ids']);
+        }
+        $this->refreshUnpaidMonthlyFees(
             $period->scope_type,
             (int) $period->scope_id,
-            $this->toMonth($period->effective_from),
-            $this->toMonth($period->effective_to),
-            (int) $period->amount
+            $refreshStartMonth,
+            $refreshEndMonth
         );
-        $this->syncLegacyFeeColumn($period->scope_type, (int) $period->scope_id);
 
-        return $this->serializePeriod($period);
+        return [
+            'period' => $this->serializePeriod($period),
+            'section_sync' => $sectionSync,
+        ];
     }
 
     private function destroyPeriod(FeeRatePeriod $period)
     {
+        $startMonth = $this->toMonth($period->effective_from);
+        $endMonth = $this->toMonth($period->effective_to);
+
         if ($this->collectedMonthlyFeesExist(
             $period->scope_type,
             (int) $period->scope_id,
@@ -148,6 +186,12 @@ class FeeRatePeriodController extends Controller
 
         $period->delete();
         $this->syncLegacyFeeColumn($period->scope_type, (int) $period->scope_id);
+        $this->refreshUnpaidMonthlyFees(
+            $period->scope_type,
+            (int) $period->scope_id,
+            $startMonth,
+            $endMonth
+        );
 
         return response()->json([], 204);
     }
@@ -158,6 +202,8 @@ class FeeRatePeriodController extends Controller
             'amount' => ['required', 'integer', 'min:0'],
             'effective_from' => ['required', 'date_format:Y-m'],
             'effective_to' => ['nullable', 'date_format:Y-m'],
+            'reset_section_ids' => ['nullable', 'array'],
+            'reset_section_ids.*' => ['integer', 'exists:sections,id'],
         ]);
     }
 
@@ -269,12 +315,11 @@ class FeeRatePeriodController extends Controller
         return $query->exists();
     }
 
-    private function updateUnpaidMonthlyFeeAmounts(
+    private function refreshUnpaidMonthlyFees(
         string $scopeType,
         int $scopeId,
         string $startMonth,
-        ?string $endMonth,
-        int $amount
+        ?string $endMonth
     ): void {
         $query = Fee::query()
             ->join('student_sections', 'student_sections.id', '=', 'fees.student_section_id')
@@ -298,9 +343,147 @@ class FeeRatePeriodController extends Controller
             return;
         }
 
-        Fee::whereIn('id', $ids)->update([
-            'amount' => max(0, $amount),
-        ]);
+        $fees = Fee::query()
+            ->whereIn('id', $ids)
+            ->with([
+                'studentSection:id,class_id,section_id,student_type',
+                'studentSection.section:id,class_id,monthly_fee',
+                'studentSection.schoolClass:id,default_monthly_fee',
+            ])
+            ->get();
+
+        foreach ($fees as $fee) {
+            if (empty($fee->month) || !$fee->studentSection) {
+                continue;
+            }
+
+            $resolvedAmount = $this->monthlyFeeResolver->resolveForMonth($fee->studentSection, $fee->month);
+            if ($resolvedAmount <= 0) {
+                $fee->delete();
+                continue;
+            }
+
+            if ((int) $fee->amount !== (int) $resolvedAmount) {
+                $fee->update(['amount' => (int) $resolvedAmount]);
+            }
+        }
+    }
+
+    private function mergeMonthRanges(
+        ?string $startA,
+        ?string $endA,
+        ?string $startB,
+        ?string $endB
+    ): array {
+        $starts = array_filter([$startA, $startB]);
+        $mergedStart = empty($starts) ? now(config('app.timezone'))->format('Y-m') : min($starts);
+
+        if ($endA === null || $endB === null) {
+            return [$mergedStart, null];
+        }
+
+        return [$mergedStart, max($endA, $endB)];
+    }
+
+    private function applySectionLegacyReset(string $scopeType, int $scopeId, array $data): array
+    {
+        if ($scopeType !== 'class') {
+            return ['requested' => 0, 'updated' => 0, 'with_timeline' => 0, 'ignored' => 0, 'timelines_zeroed' => 0, 'valid_ids' => []];
+        }
+
+        $requestedIds = collect($data['reset_section_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($requestedIds->isEmpty()) {
+            return ['requested' => 0, 'updated' => 0, 'with_timeline' => 0, 'ignored' => 0, 'timelines_zeroed' => 0, 'valid_ids' => []];
+        }
+
+        $validIds = Section::query()
+            ->where('class_id', $scopeId)
+            ->whereIn('id', $requestedIds->all())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (!empty($validIds)) {
+            Section::whereIn('id', $validIds)->update(['monthly_fee' => 0]);
+        }
+
+        $sectionTimelineQuery = FeeRatePeriod::query()
+            ->where('scope_type', 'section')
+            ->whereIn('scope_id', $validIds);
+
+        $withTimelineCount = empty($validIds)
+            ? 0
+            : (clone $sectionTimelineQuery)
+                ->distinct('scope_id')
+                ->count('scope_id');
+        $timelinesZeroed = empty($validIds)
+            ? 0
+            : (clone $sectionTimelineQuery)->update(['amount' => 0]);
+
+        return [
+            'requested' => $requestedIds->count(),
+            'updated' => count($validIds),
+            'with_timeline' => (int) $withTimelineCount,
+            'ignored' => max(0, $requestedIds->count() - count($validIds)),
+            'timelines_zeroed' => (int) $timelinesZeroed,
+            'valid_ids' => $validIds,
+        ];
+    }
+
+    private function refreshUnpaidMonthlyFeesForSections(array $sectionIds): void
+    {
+        $sectionIds = collect($sectionIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($sectionIds)) {
+            return;
+        }
+
+        $ids = Fee::query()
+            ->join('student_sections', 'student_sections.id', '=', 'fees.student_section_id')
+            ->where('fees.type', 'monthly')
+            ->whereNotNull('fees.month')
+            ->whereIn('student_sections.section_id', $sectionIds)
+            ->whereDoesntHave('payments', fn ($q) => $q->whereNull('deleted_at'))
+            ->pluck('fees.id');
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $fees = Fee::query()
+            ->whereIn('id', $ids)
+            ->with([
+                'studentSection:id,class_id,section_id,student_type',
+                'studentSection.section:id,class_id,monthly_fee',
+                'studentSection.schoolClass:id,default_monthly_fee',
+            ])
+            ->get();
+
+        foreach ($fees as $fee) {
+            if (empty($fee->month) || !$fee->studentSection) {
+                continue;
+            }
+
+            $resolvedAmount = $this->monthlyFeeResolver->resolveForMonth($fee->studentSection, $fee->month);
+            if ($resolvedAmount <= 0) {
+                $fee->delete();
+                continue;
+            }
+
+            if ((int) $fee->amount !== (int) $resolvedAmount) {
+                $fee->update(['amount' => (int) $resolvedAmount]);
+            }
+        }
     }
 
     private function listPeriods(string $scopeType, int $scopeId): array

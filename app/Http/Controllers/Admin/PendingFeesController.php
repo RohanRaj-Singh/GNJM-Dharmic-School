@@ -76,12 +76,28 @@ class PendingFeesController extends Controller
                         'section:id,class_id,monthly_fee',
                         'schoolClass:id,default_monthly_fee',
                     ])->find($row->id);
-                    $row->effective_monthly_fee = $enrollment
-                        ? $this->monthlyFeeResolver->resolveForMonth(
-                            $enrollment,
-                            now(config('app.timezone'))->format('Y-m')
-                        )
-                        : 0;
+                    if (!$enrollment) {
+                        $row->effective_monthly_fee = 0;
+                        $row->pending_amount_prefix_sums = [];
+                        $row->pending_amount = 0;
+                        return $row;
+                    }
+
+                    $row->effective_monthly_fee = $this->monthlyFeeResolver->resolveForMonth(
+                        $enrollment,
+                        now(config('app.timezone'))->format('Y-m')
+                    );
+
+                    $prefix = [];
+                    $running = 0;
+                    for ($i = 1; $i <= 255; $i++) {
+                        $month = now(config('app.timezone'))->subMonths($i - 1)->format('Y-m');
+                        $running += $this->monthlyFeeResolver->resolveForMonth($enrollment, $month);
+                        $prefix[$i] = $running;
+                    }
+
+                    $row->pending_amount_prefix_sums = $prefix;
+                    $row->pending_amount = (int) ($prefix[(int) ($row->assumed_pending_months ?? 0)] ?? 0);
                     return $row;
                 });
         }
@@ -185,31 +201,44 @@ class PendingFeesController extends Controller
         $existingMonthly = Fee::where('student_section_id', $studentSection->id)
             ->where('type', 'monthly')
             ->get();
-
-        $existingSet = $existingMonthly
-            ->pluck('month')
-            ->filter()
+        $existingByMonth = $existingMonthly
+            ->filter(fn ($fee) => !empty($fee->month))
+            ->keyBy('month');
+        $paidFeeIds = Fee::whereIn('id', $existingMonthly->pluck('id'))
+            ->whereHas('payments', fn ($q) => $q->whereNull('deleted_at'))
+            ->pluck('id')
             ->flip()
             ->all();
 
         // Create missing desired months
         foreach ($desiredMonths as $month) {
-            if (isset($existingSet[$month])) {
-                continue;
-            }
-
             $amount = $this->monthlyFeeResolver->resolveForMonth($studentSection, $month);
-            if ($amount <= 0) {
+            $existingFee = $existingByMonth->get($month);
+
+            if ($existingFee) {
+                $isPaid = isset($paidFeeIds[$existingFee->id]);
+
+                if (!$isPaid && $amount <= 0) {
+                    $existingFee->delete();
+                    continue;
+                }
+
+                if (!$isPaid && (int) $existingFee->amount !== (int) $amount) {
+                    $existingFee->update(['amount' => max(0, (int) $amount)]);
+                }
+
                 continue;
             }
 
-            Fee::create([
-                'student_section_id' => $studentSection->id,
-                'type' => 'monthly',
-                'month' => $month,
-                'amount' => $amount,
-                'source' => 'monthly',
-            ]);
+            if ($amount > 0) {
+                Fee::create([
+                    'student_section_id' => $studentSection->id,
+                    'type' => 'monthly',
+                    'month' => $month,
+                    'amount' => $amount,
+                    'source' => 'monthly',
+                ]);
+            }
         }
 
         // Remove extra unpaid monthly fees not in desired set

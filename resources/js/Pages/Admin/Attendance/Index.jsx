@@ -1,5 +1,5 @@
 import AdminLayout from "@/Layouts/AdminLayout";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 /*
@@ -33,6 +33,8 @@ export default function Index() {
   const [draft, setDraft] = useState({});
   const [draftLesson, setDraftLesson] = useState({});
   const [loading, setLoading] = useState(false);
+  const [studentColWidth, setStudentColWidth] = useState(0);
+  const studentHeaderRef = useRef(null);
 
   /* ---------------------------------------
    | Derived
@@ -199,6 +201,16 @@ export default function Index() {
   const days = grid?.days ?? [];
   const students = grid?.students ?? [];
 
+  useEffect(() => {
+    const updateWidth = () => {
+      setStudentColWidth(studentHeaderRef.current?.offsetWidth ?? 0);
+    };
+
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, [grid, classId, sectionId]);
+
   /* ---------------------------------------
    | Render
    --------------------------------------- */
@@ -266,8 +278,17 @@ export default function Index() {
         <table className="min-w-max text-sm border-collapse">
           <thead className="bg-gray-50 sticky top-0 z-20">
             <tr>
-              <th className="px-3 py-2 sticky left-0 bg-gray-50 z-30 text-left">
+              <th
+                ref={studentHeaderRef}
+                className="px-3 py-2 sticky left-0 bg-gray-50 z-30 text-left whitespace-nowrap"
+              >
                 Student
+              </th>
+              <th
+                className="px-3 py-2 sticky bg-gray-50 z-30 text-left border-r whitespace-nowrap"
+                style={{ left: `${studentColWidth}px` }}
+              >
+                Father Name
               </th>
               {days.map(d => (
                 <th
@@ -285,8 +306,14 @@ export default function Index() {
           <tbody>
             {students.map(student => (
               <tr key={student.id} className="border-b">
-                <td className="px-3 py-2 sticky left-0 bg-white z-10 font-medium">
+                <td className="px-3 py-2 sticky left-0 bg-white z-10 font-medium whitespace-nowrap">
                   {student.name}
+                </td>
+                <td
+                  className="px-3 py-2 sticky bg-white z-10 border-r text-gray-600 whitespace-nowrap"
+                  style={{ left: `${studentColWidth}px` }}
+                >
+                  {student.father_name || "-"}
                 </td>
 
                 {days.map(d => {
@@ -356,7 +383,7 @@ export default function Index() {
             {!students.length && (
               <tr>
                 <td
-                  colSpan={days.length + 1}
+                  colSpan={days.length + 2}
                   className="px-4 py-6 text-center text-gray-500"
                 >
                   No students found in this section

@@ -70,6 +70,7 @@ class AdminAttendanceController extends Controller
             $students[] = [
                 'id'      => $enrollment->id,
                 'name'    => $enrollment->student->name,
+                'father_name' => $enrollment->student->father_name,
                 'records' => $records->map(fn ($r) => [
                     'status'         => $r->status,
                     'lesson_learned' => $r->lesson_learned,

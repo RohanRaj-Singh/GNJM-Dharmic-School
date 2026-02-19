@@ -375,7 +375,25 @@ Route::prefix('sections')->name('sections.')->group(function () {
 
     Route::get('/options', function (Request $request) {
         $classIds = (array) ($request->class_ids ?? [$request->class_id]);
-        return Section::whereIn('class_id', $classIds)->get(['id', 'name', 'class_id']);
+        $query = Section::query()->whereIn('class_id', $classIds);
+
+        if ((int) $request->query('include_meta', 0) === 1) {
+            return $query
+                ->select(['id', 'name', 'class_id', 'monthly_fee'])
+                ->selectSub(
+                    function ($q) {
+                        $q->from('fee_rate_periods')
+                            ->whereColumn('fee_rate_periods.scope_id', 'sections.id')
+                            ->where('fee_rate_periods.scope_type', 'section')
+                            ->selectRaw('COUNT(*) > 0');
+                    },
+                    'has_timeline'
+                )
+                ->orderBy('name')
+                ->get();
+        }
+
+        return $query->get(['id', 'name', 'class_id']);
     })->name('options');
 });
 

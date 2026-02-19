@@ -24,6 +24,8 @@ export default function Index() {
     amount: 0,
     effective_from: "",
     effective_to: "",
+    sectionOptions: [],
+    resetSectionIds: [],
   });
 
   const newRowRef = useRef(null);
@@ -59,10 +61,19 @@ export default function Index() {
     }
 
     try {
-      const res = await window.axios.get(`/admin/classes/${row.original.id}/fee-periods`, {
-        headers: { Accept: "application/json" },
-      });
-      const payload = res?.data ?? {};
+      const [periodsRes, sectionsRes] = await Promise.all([
+        window.axios.get(`/admin/classes/${row.original.id}/fee-periods`, {
+          headers: { Accept: "application/json" },
+        }),
+        window.axios.get(`/admin/sections/options?class_id=${row.original.id}&include_meta=1`, {
+          headers: { Accept: "application/json" },
+        }),
+      ]);
+      const payload = periodsRes?.data ?? {};
+      const sections = (sectionsRes?.data ?? []).map((s) => ({
+        ...s,
+        has_timeline: Boolean(s?.has_timeline),
+      }));
       setFeeModal({
         open: true,
         classId: row.original.id,
@@ -72,6 +83,8 @@ export default function Index() {
         amount: 0,
         effective_from: "",
         effective_to: "",
+        sectionOptions: sections,
+        resetSectionIds: [],
       });
     } catch {
       toast.error("Failed to load fee timeline");
@@ -90,7 +103,7 @@ export default function Index() {
     const method = feeModal.editingId ? "PUT" : "POST";
 
     try {
-      await window.axios.request({
+      const res = await window.axios.request({
         url,
         method: method.toLowerCase(),
         headers: { Accept: "application/json" },
@@ -98,8 +111,20 @@ export default function Index() {
           amount: Number(feeModal.amount || 0),
           effective_from: feeModal.effective_from,
           effective_to: feeModal.effective_to || null,
+          reset_section_ids: feeModal.resetSectionIds,
         },
       });
+
+      const sectionSync = res?.data?.section_sync;
+      if ((sectionSync?.updated ?? 0) > 0) {
+        const timelineNote =
+          (sectionSync?.timelines_zeroed ?? 0) > 0
+            ? `, and zeroed ${sectionSync.timelines_zeroed} section timeline period(s)`
+            : "";
+        toast.success(
+          `Updated ${sectionSync.updated} section legacy fee(s) to Rs. 0${timelineNote}`
+        );
+      }
 
       await openFeeTimeline({ original: { id: feeModal.classId, name: feeModal.className } });
       toast.success("Fee period saved");
@@ -137,6 +162,18 @@ export default function Index() {
       effective_from: period.effective_from,
       effective_to: period.effective_to ?? "",
     }));
+  }
+
+  function toggleResetSection(sectionId, checked) {
+    setFeeModal((prev) => {
+      const next = new Set(prev.resetSectionIds ?? []);
+      if (checked) {
+        next.add(Number(sectionId));
+      } else {
+        next.delete(Number(sectionId));
+      }
+      return { ...prev, resetSectionIds: Array.from(next) };
+    });
   }
 
   const columns = useMemo(
@@ -318,6 +355,38 @@ export default function Index() {
               <button onClick={saveFeePeriod} className="bg-blue-600 text-white rounded px-3 py-1 text-sm">
                 {feeModal.editingId ? "Update" : "Add"}
               </button>
+            </div>
+
+            <div className="mb-3 border rounded p-3 bg-amber-50/40">
+              <p className="text-sm font-medium text-slate-800 mb-1">Optional: reset section legacy fee to inherit class</p>
+              <p className="text-xs text-slate-600 mb-2">
+                Selected sections will get legacy fee <span className="font-semibold">Rs. 0</span>. Section timelines still override class where configured.
+              </p>
+              <div className="max-h-36 overflow-auto space-y-1">
+                {(feeModal.sectionOptions ?? []).length === 0 ? (
+                  <p className="text-xs text-gray-500">No sections found for this class.</p>
+                ) : (
+                  feeModal.sectionOptions.map((section) => (
+                    <label key={section.id} className="flex items-center justify-between gap-2 text-xs border rounded px-2 py-1 bg-white">
+                      <span>
+                        {section.name} <span className="text-gray-500">(Legacy: Rs. {section.monthly_fee ?? 0})</span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        {section.has_timeline ? (
+                          <span className="text-amber-700">Has timeline</span>
+                        ) : (
+                          <span className="text-emerald-700">No timeline</span>
+                        )}
+                        <input
+                          type="checkbox"
+                          checked={(feeModal.resetSectionIds ?? []).includes(Number(section.id))}
+                          onChange={(e) => toggleResetSection(section.id, e.target.checked)}
+                        />
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
 
             <div className="border rounded max-h-80 overflow-auto">

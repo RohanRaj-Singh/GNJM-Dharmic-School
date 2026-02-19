@@ -203,7 +203,9 @@ export default function PendingFeesSetup() {
               {displayRows.map((row) => {
                 const value = edits[row.id] ?? 0;
                 const effectiveFee = Number(row.effective_monthly_fee || 0);
-                const pendingAmount = effectiveFee * Number(value || 0);
+                const pendingAmount = Number(
+                  row?.pending_amount_prefix_sums?.[Number(value)] ?? 0
+                );
                 const locked = row.has_payments;
                 const isFree = effectiveFee === 0;
 
