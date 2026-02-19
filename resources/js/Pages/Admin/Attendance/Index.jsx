@@ -13,6 +13,12 @@ import toast from "react-hot-toast";
 */
 
 export default function Index() {
+  const isKirtanClass = (cls) => {
+    const type = String(cls?.type ?? "").trim().toLowerCase();
+    if (type === "kirtan" || type === "kirtan class") return true;
+    return String(cls?.name ?? "").toLowerCase().includes("kirtan");
+  };
+
   /* ---------------------------------------
    | State
    --------------------------------------- */
@@ -44,7 +50,7 @@ export default function Index() {
     [classes, classId]
   );
 
-  const isKirtan = selectedClass?.type === "kirtan";
+  const isKirtan = isKirtanClass(selectedClass);
 
   /* ---------------------------------------
    | Load classes (ONCE)

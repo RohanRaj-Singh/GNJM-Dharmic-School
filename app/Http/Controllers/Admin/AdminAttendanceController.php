@@ -12,6 +12,16 @@ use App\Models\SchoolClass;
 
 class AdminAttendanceController extends Controller
 {
+    private function isKirtanClass(?string $type, ?string $name = null): bool
+    {
+        $normalized = strtolower(trim((string) ($type ?? '')));
+        if (in_array($normalized, ['kirtan', 'kirtan class'], true)) {
+            return true;
+        }
+
+        return str_contains(strtolower((string) ($name ?? '')), 'kirtan');
+    }
+
     public function index()
     {
         return Inertia::render('Admin/Attendance/Index', [
@@ -37,7 +47,10 @@ class AdminAttendanceController extends Controller
             'studentSections.student',
         ])->findOrFail($request->section_id);
 
-        $isKirtan = $section->schoolClass->type === 'kirtan';
+        $isKirtan = $this->isKirtanClass(
+            $section->schoolClass->type ?? null,
+            $section->schoolClass->name ?? null
+        );
 
         $start = Carbon::create($request->year, $request->month, 1);
         $end   = $start->copy()->endOfMonth();

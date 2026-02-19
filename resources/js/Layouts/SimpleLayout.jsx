@@ -10,7 +10,7 @@ export default function SimpleLayout({title, children})
             <Head title={title}></Head>
             {/*Top Bar*/}
             <header className="bg-white shadow-sm sticky top-0 z-10">
-  <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+  <div className="max-w-md mx-auto px-4 py-3 relative flex items-center">
 
     {/* logout Button */}
     <button
@@ -22,7 +22,7 @@ export default function SimpleLayout({title, children})
     </button>
 
     {/* Title */}
-    <div className="flex-1 text-start ml-12">
+    <div className="absolute inset-x-0 text-center pointer-events-none">
       <h1 className="text-base font-semibold text-gray-800">
         {title ?? "GNJM"}
       </h1>
