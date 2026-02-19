@@ -9,6 +9,7 @@ export default function EnrollmentsCell({
   setIsDirty,
 }) {
   const enrollments = row.original.enrollments ?? [];
+  const studentKey = row.original.id ?? row.original.__tempId;
 
 
 //   useEffect(() => {
@@ -46,11 +47,9 @@ export default function EnrollmentsCell({
    | Helpers
    ---------------------------------------- */
  function updateEnrollment(enrollmentId, key, value) {
-  console.log("UPDATE ENROLLMENT", enrollmentId, key, value);
-
   setData((prev) =>
-    prev.map((r, rIdx) =>
-      rIdx !== row.index
+    prev.map((r) =>
+      (r.id ?? r.__tempId) !== studentKey
         ? r
         : {
             ...r,
@@ -71,8 +70,8 @@ export default function EnrollmentsCell({
 
   function addEnrollment() {
     setData((prev) =>
-      prev.map((r, rIdx) =>
-        rIdx !== row.index
+      prev.map((r) =>
+        (r.id ?? r.__tempId) !== studentKey
           ? r
           : {
               ...r,
@@ -93,8 +92,8 @@ export default function EnrollmentsCell({
 
   function removeEnrollment(enrollmentId) {
     setData((prev) =>
-      prev.map((r, rIdx) =>
-        rIdx !== row.index
+      prev.map((r) =>
+        (r.id ?? r.__tempId) !== studentKey
           ? r
           : {
               ...r,
@@ -187,7 +186,6 @@ export default function EnrollmentsCell({
                 type="checkbox"
                 checked={e.student_type === "free"}
                 onChange={(e2) =>{
-                    console.log("TOGGLE FREE", e.id, e2.target.checked);
                   updateEnrollment(
                     e.id,
                     "student_type",

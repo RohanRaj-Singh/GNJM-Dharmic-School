@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Models\StudentSection;
 use App\Models\Fee;
 use Carbon\Carbon;
+use App\Services\MonthlyFeeResolver;
 
 class GenerateMonthlyFees extends Command
 {
@@ -13,11 +14,16 @@ class GenerateMonthlyFees extends Command
 
     protected $description = 'Generate monthly fees for eligible students';
 
+    public function __construct(private readonly MonthlyFeeResolver $monthlyFeeResolver)
+    {
+        parent::__construct();
+    }
+
     public function handle()
     {
-        $month = Carbon::now()->format('Y-m');
+        $month = Carbon::now(config('app.timezone'))->format('Y-m');
 
-        $enrollments = StudentSection::with('schoolClass')
+        $enrollments = StudentSection::with(['schoolClass', 'section'])
             ->where('student_type', 'paid')
             ->get();
 
@@ -38,12 +44,18 @@ class GenerateMonthlyFees extends Command
                 continue;
             }
 
+            $amount = $this->monthlyFeeResolver->resolveForMonth($enrollment, $month);
+            if ($amount <= 0) {
+                continue;
+            }
+
             Fee::create([
                 'student_section_id' => $enrollment->id,
                 'type' => 'monthly',
                 'title' => 'Monthly Fee',
-                'amount' => $enrollment->monthly_fee,
+                'amount' => $amount,
                 'month' => $month,
+                'source' => 'monthly',
             ]);
         }
 

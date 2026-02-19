@@ -105,7 +105,7 @@ public function save(Request $request)
         ->flip(); // FAST lookup
 
     foreach ($request->records as $key => $payload) {
-        if (!is_array($payload) || empty($payload['status'])) {
+        if (!is_array($payload) || !array_key_exists('status', $payload)) {
             continue;
         }
 
@@ -117,13 +117,28 @@ public function save(Request $request)
             continue; // ⛔ ignore instead of 403
         }
 
+        $status = $payload['status'];
+        $allowedStatuses = ['present', 'absent', 'leave'];
+
+        if ($status === null) {
+            Attendance::where([
+                'student_section_id' => $studentSectionId,
+                'date' => $date,
+            ])->delete();
+            continue;
+        }
+
+        if (!in_array($status, $allowedStatuses, true)) {
+            continue;
+        }
+
         Attendance::updateOrCreate(
             [
                 'student_section_id' => $studentSectionId,
                 'date'               => $date,
             ],
             [
-                'status'         => $payload['status'],
+                'status'         => $status,
                 'lesson_learned' => $payload['lesson_learned'] ?? null,
             ]
         );

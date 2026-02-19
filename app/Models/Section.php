@@ -34,7 +34,7 @@ public function users()
     return $this->belongsToMany(User::class);
 }
 
-public function attendance()
+    public function attendance()
     {
         return $this->hasManyThrough(
             Attendance::class,
@@ -44,6 +44,12 @@ public function attendance()
             'id',                  // PK on sections
             'id'                   // PK on student_sections
         );
+    }
+
+    public function feeRatePeriods(): HasMany
+    {
+        return $this->hasMany(FeeRatePeriod::class, 'scope_id')
+            ->where('scope_type', 'section');
     }
 
 }

@@ -11,17 +11,28 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
+function csrf() {
+  return document.querySelector('meta[name="csrf-token"]')?.content ?? "";
+}
+
 export default function Index() {
   const [data, setData] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sorting, setSorting] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [feeModal, setFeeModal] = useState({
+    open: false,
+    sectionId: null,
+    sectionName: "",
+    periods: [],
+    editingId: null,
+    amount: 0,
+    effective_from: "",
+    effective_to: "",
+  });
 
   const newRowRef = useRef(null);
 
-  /* -----------------------------------------
-   | Load data
-   ----------------------------------------- */
   useEffect(() => {
     reloadData();
 
@@ -36,15 +47,8 @@ export default function Index() {
       .then(setData);
   }
 
-  /* -----------------------------------------
-   | Helpers
-   ----------------------------------------- */
   function updateCell(rowIndex, key, value) {
-    setData((old) =>
-      old.map((row, i) =>
-        i === rowIndex ? { ...row, [key]: value } : row
-      )
-    );
+    setData((old) => old.map((row, i) => (i === rowIndex ? { ...row, [key]: value } : row)));
   }
 
   function TextCell({ row, column, autoFocus = false }) {
@@ -55,26 +59,10 @@ export default function Index() {
         ref={ref}
         defaultValue={row.original[column.id] ?? ""}
         className="min-w-36 px-2 py-1 border rounded text-sm"
-        onBlur={(e) =>
-          updateCell(row.index, column.id, e.target.value.trim())
-        }
+        onBlur={(e) => updateCell(row.index, column.id, e.target.value.trim())}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
         }}
-      />
-    );
-  }
-
-  function NumberCell({ row, column }) {
-    return (
-      <input
-        type="number"
-        min="0"
-        className="w-full min-w-36 px-2 py-1 border rounded text-sm"
-        defaultValue={row.original[column.id] ?? 0}
-        onBlur={(e) =>
-          updateCell(row.index, column.id, Number(e.target.value) || 0)
-        }
       />
     );
   }
@@ -83,10 +71,8 @@ export default function Index() {
     return (
       <select
         value={row.original.class_id ?? ""}
-        className="w- px-2 py-1 border rounded text-sm"
-        onChange={(e) =>
-          updateCell(row.index, "class_id", e.target.value)
-        }
+        className="px-2 py-1 border rounded text-sm"
+        onChange={(e) => updateCell(row.index, "class_id", e.target.value)}
       >
         <option value="">Select class</option>
         {classes.map((cls) => (
@@ -98,56 +84,152 @@ export default function Index() {
     );
   }
 
-  /* -----------------------------------------
-   | Columns
-   ----------------------------------------- */
+  async function openFeeTimeline(row) {
+    if (!row.original.id) {
+      toast.error("Save section first, then configure fee timeline");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/admin/sections/${row.original.id}/fee-periods`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to load timeline");
+      const payload = await res.json();
+      setFeeModal({
+        open: true,
+        sectionId: row.original.id,
+        sectionName: row.original.name,
+        periods: payload.periods ?? [],
+        editingId: null,
+        amount: 0,
+        effective_from: "",
+        effective_to: "",
+      });
+    } catch {
+      toast.error("Failed to load fee timeline");
+    }
+  }
+
+  async function saveFeePeriod() {
+    if (!feeModal.effective_from) {
+      toast.error("Start month is required");
+      return;
+    }
+
+    const url = feeModal.editingId
+      ? `/admin/sections/${feeModal.sectionId}/fee-periods/${feeModal.editingId}`
+      : `/admin/sections/${feeModal.sectionId}/fee-periods`;
+    const method = feeModal.editingId ? "PUT" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": csrf(),
+        },
+        body: JSON.stringify({
+          amount: Number(feeModal.amount || 0),
+          effective_from: feeModal.effective_from,
+          effective_to: feeModal.effective_to || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        const msg =
+          payload?.message ||
+          Object.values(payload?.errors ?? {}).flat()?.[0] ||
+          "Failed";
+        throw new Error(msg);
+      }
+
+      await openFeeTimeline({ original: { id: feeModal.sectionId, name: feeModal.sectionName } });
+      toast.success("Fee period saved");
+    } catch (err) {
+      toast.error(err.message || "Could not save period");
+    }
+  }
+
+  async function deleteFeePeriod(periodId) {
+    if (!confirm("Delete this fee period?")) return;
+
+    try {
+      const res = await fetch(`/admin/sections/${feeModal.sectionId}/fee-periods/${periodId}`, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          "X-CSRF-TOKEN": csrf(),
+        },
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        const msg =
+          payload?.message ||
+          Object.values(payload?.errors ?? {}).flat()?.[0] ||
+          "Delete failed";
+        throw new Error(msg);
+      }
+
+      await openFeeTimeline({ original: { id: feeModal.sectionId, name: feeModal.sectionName } });
+      toast.success("Fee period deleted");
+    } catch (err) {
+      toast.error(err.message || "Could not delete period");
+    }
+  }
+
+  function startEditPeriod(period) {
+    setFeeModal((prev) => ({
+      ...prev,
+      editingId: period.id,
+      amount: period.amount,
+      effective_from: period.effective_from,
+      effective_to: period.effective_to ?? "",
+    }));
+  }
+
   const columns = useMemo(
     () => [
       {
         accessorKey: "name",
         header: "Section Name",
-        cell: ({ row, column }) => (
-          <TextCell
-            row={row}
-            column={column}
-            autoFocus={row.original.__isNew}
-          />
-        ),
+        cell: ({ row, column }) => <TextCell row={row} column={column} autoFocus={row.original.__isNew} />,
       },
-
       {
         accessorKey: "class_id",
         header: "Class",
         cell: ({ row }) => <ClassSelectCell row={row} />,
       },
-
       {
         accessorKey: "monthly_fee",
-        header: "Section Fee",
-        cell: ({ row, column }) => (
-          <NumberCell row={row} column={column} />
-        ),
+        header: "Legacy Section Fee",
+        cell: ({ row }) => <span className="text-gray-500">Rs. {row.original.monthly_fee ?? 0}</span>,
       },
-
       {
         accessorKey: "student_sections_count",
         header: "Students",
         cell: ({ row }) => (
-          <span className="text-gray-600 text-sm">
-            {row.original.student_sections_count ?? 0}
-          </span>
+          <span className="text-gray-600 text-sm">{row.original.student_sections_count ?? 0}</span>
         ),
       },
-
+      {
+        header: "Fee Timeline",
+        cell: ({ row }) => (
+          <button
+            onClick={() => openFeeTimeline(row)}
+            className="px-2 py-1 text-xs bg-slate-700 text-white rounded"
+          >
+            Manage
+          </button>
+        ),
+      },
       {
         header: "Action",
         cell: ({ row }) => {
           if ((row.original.student_sections_count ?? 0) > 0) {
-            return (
-              <span className="text-gray-400 text-sm">
-                In use
-              </span>
-            );
+            return <span className="text-gray-400 text-sm">In use</span>;
           }
 
           return (
@@ -164,14 +246,10 @@ export default function Index() {
     [classes]
   );
 
-  /* -----------------------------------------
-   | Table
-   ----------------------------------------- */
   const table = useReactTable({
     data,
     columns,
-    getRowId: (row) =>
-      row.id ? `section-${row.id}` : row.__tempId,
+    getRowId: (row) => (row.id ? `section-${row.id}` : row.__tempId),
     state: {
       sorting,
       globalFilter,
@@ -184,38 +262,24 @@ export default function Index() {
     globalFilterFn: "includesString",
   });
 
-  /* -----------------------------------------
-   | Validation
-   ----------------------------------------- */
   function validate() {
     const errors = [];
 
     data.forEach((row, i) => {
-      if (!row.name?.trim())
-        errors.push(`Row ${i + 1}: Section name required`);
-
-      if (!row.class_id)
-        errors.push(`Row ${i + 1}: Class required`);
-
-      if (row.monthly_fee < 0)
-        errors.push(`Row ${i + 1}: Fee cannot be negative`);
+      if (!row.name?.trim()) errors.push(`Row ${i + 1}: Section name required`);
+      if (!row.class_id) errors.push(`Row ${i + 1}: Class required`);
     });
 
-    // duplicate section name within same class
     const seen = new Set();
     data.forEach((row, i) => {
       const key = `${row.class_id}-${row.name?.toLowerCase()}`;
-      if (seen.has(key))
-        errors.push(`Row ${i + 1}: Duplicate section in same class`);
+      if (seen.has(key)) errors.push(`Row ${i + 1}: Duplicate section in same class`);
       seen.add(key);
     });
 
     return errors;
   }
 
-  /* -----------------------------------------
-   | Actions
-   ----------------------------------------- */
   function saveChanges() {
     const errors = validate();
 
@@ -253,10 +317,7 @@ export default function Index() {
         reloadData();
       },
       onError: (err) => {
-        toast.error(
-          err?.response?.data?.message ||
-            "Cannot delete section"
-        );
+        toast.error(err?.response?.data?.message || "Cannot delete section");
       },
     });
   }
@@ -283,38 +344,27 @@ export default function Index() {
     });
   }
 
-  /* -----------------------------------------
-   | Render
-   ----------------------------------------- */
   return (
     <AdminLayout title="Sections">
-      {/* Top bar */}
       <div className="flex flex-col sm:flex-row gap-3 justify-between mb-4">
         <input
           className="px-3 py-2 border rounded text-sm w-full sm:w-64"
-          placeholder="Search sections…"
+          placeholder="Search sections..."
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
         />
 
         <div className="flex gap-2">
-          <button
-            onClick={addEmptyRow}
-            className="px-4 py-2 bg-blue-600 text-white rounded text-sm"
-          >
+          <button onClick={addEmptyRow} className="px-4 py-2 bg-blue-600 text-white rounded text-sm">
             + Add Section
           </button>
 
-          <button
-            onClick={saveChanges}
-            className="px-4 py-2 bg-green-600 text-white rounded text-sm"
-          >
+          <button onClick={saveChanges} className="px-4 py-2 bg-green-600 text-white rounded text-sm">
             Save Changes
           </button>
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white border rounded-lg overflow-auto max-h-[70vh]">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50 border-b sticky top-0">
@@ -326,10 +376,7 @@ export default function Index() {
                     className="px-3 py-2 text-left font-medium cursor-pointer"
                     onClick={header.column.getToggleSortingHandler()}
                   >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                     {header.column.getIsSorted() === "asc" && " ↑"}
                     {header.column.getIsSorted() === "desc" && " ↓"}
                   </th>
@@ -340,16 +387,10 @@ export default function Index() {
 
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className="border-b hover:bg-gray-50"
-              >
+              <tr key={row.id} className="border-b hover:bg-gray-50">
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className="px-3 py-2">
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
               </tr>
@@ -357,6 +398,89 @@ export default function Index() {
           </tbody>
         </table>
       </div>
+
+      {feeModal.open && (
+        <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded shadow-xl w-full max-w-2xl p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold">Section Fee Timeline: {feeModal.sectionName}</h3>
+              <button
+                onClick={() => setFeeModal((prev) => ({ ...prev, open: false }))}
+                className="text-sm text-gray-500"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
+              <input
+                type="number"
+                min="0"
+                className="border rounded px-2 py-1 text-sm"
+                placeholder="Amount"
+                value={feeModal.amount}
+                onChange={(e) =>
+                  setFeeModal((prev) => ({ ...prev, amount: Number(e.target.value || 0) }))
+                }
+              />
+              <input
+                type="month"
+                className="border rounded px-2 py-1 text-sm"
+                value={feeModal.effective_from}
+                onChange={(e) =>
+                  setFeeModal((prev) => ({ ...prev, effective_from: e.target.value }))
+                }
+              />
+              <input
+                type="month"
+                className="border rounded px-2 py-1 text-sm"
+                value={feeModal.effective_to}
+                onChange={(e) => setFeeModal((prev) => ({ ...prev, effective_to: e.target.value }))}
+              />
+              <button onClick={saveFeePeriod} className="bg-blue-600 text-white rounded px-3 py-1 text-sm">
+                {feeModal.editingId ? "Update" : "Add"}
+              </button>
+            </div>
+
+            <div className="border rounded max-h-80 overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-3 py-2">From</th>
+                    <th className="text-left px-3 py-2">To</th>
+                    <th className="text-left px-3 py-2">Amount</th>
+                    <th className="text-left px-3 py-2">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feeModal.periods.map((p) => (
+                    <tr key={p.id} className="border-t">
+                      <td className="px-3 py-2">{p.effective_from}</td>
+                      <td className="px-3 py-2">{p.effective_to ?? "Open"}</td>
+                      <td className="px-3 py-2">Rs. {p.amount}</td>
+                      <td className="px-3 py-2 space-x-2">
+                        <button onClick={() => startEditPeriod(p)} className="text-blue-600 text-xs">
+                          Edit
+                        </button>
+                        <button onClick={() => deleteFeePeriod(p.id)} className="text-red-600 text-xs">
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {feeModal.periods.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-3 py-3 text-gray-500">
+                        No fee periods configured.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

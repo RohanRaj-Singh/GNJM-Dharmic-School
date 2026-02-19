@@ -24,4 +24,10 @@ class SchoolClass extends Model
     {
         return $this->hasMany(StudentSection::class, 'class_id');
     }
+
+    public function feeRatePeriods(): HasMany
+    {
+        return $this->hasMany(FeeRatePeriod::class, 'scope_id')
+            ->where('scope_type', 'class');
+    }
 }

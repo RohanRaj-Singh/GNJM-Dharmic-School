@@ -11,14 +11,22 @@ class Fee extends Model
     protected $fillable = [
         'student_section_id',
         'type',
+        'source',
+        'batch_id',
         'title',
         'amount',
+        'is_locked',
         'month',
     ];
 
-    public function enrollment(): BelongsTo
+    public function studentSection(): BelongsTo
     {
         return $this->belongsTo(StudentSection::class, 'student_section_id');
+    }
+
+    public function enrollment(): BelongsTo
+    {
+        return $this->studentSection();
     }
 
     public function payments(): HasMany

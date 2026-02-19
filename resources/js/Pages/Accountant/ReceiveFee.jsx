@@ -110,7 +110,7 @@ export default function ReceiveFee({ student, fees = [] }) {
 
         <div className="text-center">
           <Link
-            href={`/accountant/students/${student.id}`}
+            href={`/students/${student.id}`}
             className="text-sm text-gray-600 underline"
           >
             ← Back to Student

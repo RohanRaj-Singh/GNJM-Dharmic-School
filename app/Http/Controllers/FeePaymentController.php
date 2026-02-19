@@ -3,11 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use App\Models\Student;
 use App\Models\Fee;
-use App\Models\FeePayment;
-use App\Models\Payment;
 
 class FeePaymentController extends Controller
 {
@@ -23,7 +19,7 @@ class FeePaymentController extends Controller
         $fee = Fee::findOrFail($feeId);
 
         // Skip if already paid
-        if ($fee->payments()->exists()) {
+        if ($fee->payments()->whereNull('deleted_at')->exists()) {
             continue;
         }
 

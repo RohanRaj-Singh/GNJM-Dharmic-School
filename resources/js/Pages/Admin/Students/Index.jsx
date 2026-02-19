@@ -108,10 +108,12 @@ export default function Index() {
   /* ----------------------------------------
    | Helpers
    ---------------------------------------- */
-  const updateCell = useCallback((rowIndex, key, value) => {
+  const updateCell = useCallback((studentKey, key, value) => {
     setData((prev) =>
-      prev.map((row, i) =>
-        i === rowIndex ? { ...row, [key]: value } : row
+      prev.map((row) =>
+        (row.id ?? row.__tempId) === studentKey
+          ? { ...row, [key]: value }
+          : row
       )
     );
     setIsDirty(true);
@@ -153,7 +155,7 @@ export default function Index() {
             defaultValue={row.original[column.id] ?? ""}
             className="w-full px-2 py-1 border rounded text-sm"
             onBlur={(e) =>
-              updateCell(row.index, column.id, e.target.value)
+              updateCell(row.original.id ?? row.original.__tempId, column.id, e.target.value)
             }
           />
         );
@@ -174,7 +176,7 @@ export default function Index() {
                 toast.error("Phone must be 10-15 digits");
                 return;
               }
-              updateCell(row.index, column.id, val);
+              updateCell(row.original.id ?? row.original.__tempId, column.id, val);
             }}
           />
         );
@@ -275,8 +277,9 @@ export default function Index() {
               ) {
                 const id = row.original.id;
                 if (!id) {
+                  const rowKey = row.original.__tempId ?? row.original.id;
                   setData((prev) =>
-                    prev.filter((_, i) => i !== row.index)
+                    prev.filter((r) => (r.id ?? r.__tempId) !== rowKey)
                   );
                   setIsDirty(true);
                   return;

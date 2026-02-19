@@ -25,7 +25,7 @@ export default function FeesIndex({ fees }) {
             {/* Student Info */}
             <div className="mb-3">
               <Link
-                href={`/accountant/students/${fee.enrollment.student.id}`}
+                href={`/students/${fee.enrollment.student.id}`}
                 className="text-lg font-semibold text-blue-600 underline"
               >
                 {fee.enrollment.student.name}
@@ -66,7 +66,7 @@ export default function FeesIndex({ fees }) {
 
               {/* Action */}
               <Link
-                href={`/accountant/fees/${fee.id}`}
+                href={`/accountant/receive-fee?student_id=${fee.enrollment.student.id}`}
                 className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm"
               >
                 Receive

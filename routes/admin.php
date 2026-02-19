@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 use App\Models\{
     Student,
@@ -17,11 +18,13 @@ use App\Models\{
 use App\Http\Controllers\Admin\{
     AdminAttendanceController,
     FeesController,
+    FeeRatePeriodController,
     ReportController,
     UserController,
     DashboardController,
     PendingFeesController
 };
+use App\Services\MonthlyFeeResolver;
 
 /*
 |--------------------------------------------------------------------------
@@ -151,20 +154,28 @@ Route::prefix('students')->name('students.')->group(function () {
     Route::post('/bulk-update', function (Request $request) {
 
         DB::transaction(function () use ($request) {
+            $formatName = function (?string $value): ?string {
+                if ($value === null) {
+                    return null;
+                }
+
+                $normalized = Str::of($value)->squish()->lower()->title()->toString();
+                return $normalized === '' ? null : $normalized;
+            };
 
             foreach ($request->students as $row) {
 
                 $student = empty($row['id'])
                     ? Student::create([
-                        'name' => $row['name'],
-                        'father_name' => $row['father_name'] ?? null,
+                        'name' => $formatName($row['name']) ?? $row['name'],
+                        'father_name' => $formatName($row['father_name'] ?? null),
                         'father_phone' => $row['father_phone'] ?? null,
                         'mother_phone' => $row['mother_phone'] ?? null,
                         'status' => $row['status'] ?? 'active',
                     ])
                     : tap(Student::findOrFail($row['id']))->update([
-                        'name' => $row['name'],
-                        'father_name' => $row['father_name'] ?? null,
+                        'name' => $formatName($row['name']) ?? $row['name'],
+                        'father_name' => $formatName($row['father_name'] ?? null),
                         'father_phone' => $row['father_phone'] ?? null,
                         'mother_phone' => $row['mother_phone'] ?? null,
                         'status' => $row['status'] ?? 'active',
@@ -194,17 +205,29 @@ Route::prefix('students')->name('students.')->group(function () {
                         ['student_type' => $studentType]
                     );
 
+                    $previousType = $enrollment->student_type;
+
                     if ($enrollment->student_type !== $studentType) {
                         $enrollment->update(['student_type' => $studentType]);
                     }
 
-                    if ($studentType === 'free') continue;
+                    if ($studentType === 'free') {
+                        if ($previousType === 'paid') {
+                            $currentMonth = now(config('app.timezone'))->format('Y-m');
+                            Fee::where('student_section_id', $enrollment->id)
+                                ->where('type', 'monthly')
+                                ->where('month', '>', $currentMonth)
+                                ->whereDoesntHave('payments', fn ($q) => $q->whereNull('deleted_at'))
+                                ->delete();
+                        }
+                        continue;
+                    }
 
                     $class = SchoolClass::find($section->class_id);
                     if (!$class) continue;
 
-                    $fee = $enrollment->monthly_fee
-                        ?: ($section->monthly_fee ?: $class->default_monthly_fee);
+                    $fee = app(MonthlyFeeResolver::class)
+                        ->resolveForMonth($enrollment, now(config('app.timezone'))->format('Y-m'));
 
                     if ($fee <= 0) continue;
 
@@ -254,22 +277,39 @@ Route::prefix('classes')->name('classes.')->group(function () {
 
     Route::post('/save', function (Request $request) {
         foreach ($request->classes as $row) {
-            SchoolClass::updateOrCreate(
-                ['id' => $row['id'] ?? null],
-                [
-                    'name' => $row['name'],
-                    'type' => $row['type'],
-                    'default_monthly_fee' => $row['default_monthly_fee'] ?? 0,
-                ]
-            );
+            if (!empty($row['id'])) {
+                $existing = SchoolClass::find($row['id']);
+                if ($existing) {
+                    $existing->update([
+                        'name' => $row['name'],
+                        'type' => $row['type'] ?? $existing->type,
+                    ]);
+                }
+                continue;
+            }
+
+            SchoolClass::create([
+                'name' => $row['name'],
+                'type' => $row['type'],
+                'default_monthly_fee' => 0,
+            ]);
         }
         return back();
     })->name('save');
 
+    Route::get('/{class}/fee-periods', [FeeRatePeriodController::class, 'classPeriods'])
+        ->name('fee-periods.index');
+    Route::post('/{class}/fee-periods', [FeeRatePeriodController::class, 'storeForClass'])
+        ->name('fee-periods.store');
+    Route::put('/{class}/fee-periods/{period}', [FeeRatePeriodController::class, 'updateForClass'])
+        ->name('fee-periods.update');
+    Route::delete('/{class}/fee-periods/{period}', [FeeRatePeriodController::class, 'destroyForClass'])
+        ->name('fee-periods.destroy');
+
     Route::get(
         '/options',
         fn() =>
-        SchoolClass::select('id', 'name')->orderBy('name')->get()
+        SchoolClass::select('id', 'name', 'type')->orderBy('name')->get()
     )->name('options');
 });
 
@@ -296,17 +336,34 @@ Route::prefix('sections')->name('sections.')->group(function () {
 
     Route::post('/save', function (Request $request) {
         foreach ($request->sections as $row) {
-            Section::updateOrCreate(
-                ['id' => $row['id'] ?? null],
-                [
-                    'name' => $row['name'],
-                    'class_id' => $row['class_id'],
-                    'monthly_fee' => $row['monthly_fee'] ?? 0,
-                ]
-            );
+            if (!empty($row['id'])) {
+                $existing = Section::find($row['id']);
+                if ($existing) {
+                    $existing->update([
+                        'name' => $row['name'],
+                        'class_id' => $row['class_id'],
+                    ]);
+                }
+                continue;
+            }
+
+            Section::create([
+                'name' => $row['name'],
+                'class_id' => $row['class_id'],
+                'monthly_fee' => 0,
+            ]);
         }
         return back();
     })->name('save');
+
+    Route::get('/{section}/fee-periods', [FeeRatePeriodController::class, 'sectionPeriods'])
+        ->name('fee-periods.index');
+    Route::post('/{section}/fee-periods', [FeeRatePeriodController::class, 'storeForSection'])
+        ->name('fee-periods.store');
+    Route::put('/{section}/fee-periods/{period}', [FeeRatePeriodController::class, 'updateForSection'])
+        ->name('fee-periods.update');
+    Route::delete('/{section}/fee-periods/{period}', [FeeRatePeriodController::class, 'destroyForSection'])
+        ->name('fee-periods.destroy');
 
     Route::delete(
         '/{section}',

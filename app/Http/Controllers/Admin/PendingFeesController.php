@@ -11,9 +11,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use App\Services\MonthlyFeeResolver;
 
 class PendingFeesController extends Controller
 {
+    public function __construct(private readonly MonthlyFeeResolver $monthlyFeeResolver)
+    {
+    }
+
     public function index(Request $request)
     {
         $filters = $request->only(['class_id', 'section_id', 'search']);
@@ -51,17 +56,6 @@ class PendingFeesController extends Controller
                     'classes.name as class_name',
                     'sections.name as section_name',
                 ])
-                ->addSelect(DB::raw(
-                    "CASE
-                        WHEN student_sections.student_type = 'free' THEN 0
-                        ELSE COALESCE(
-                            NULLIF(student_sections.monthly_fee, 0),
-                            NULLIF(sections.monthly_fee, 0),
-                            classes.default_monthly_fee,
-                            0
-                        )
-                    END as effective_monthly_fee"
-                ))
                 ->selectSub(
                     function ($q) {
                         $q->from('fees')
@@ -78,6 +72,16 @@ class PendingFeesController extends Controller
                 ->get()
                 ->map(function ($row) {
                     $row->has_payments = (bool) $row->has_payments;
+                    $enrollment = StudentSection::with([
+                        'section:id,class_id,monthly_fee',
+                        'schoolClass:id,default_monthly_fee',
+                    ])->find($row->id);
+                    $row->effective_monthly_fee = $enrollment
+                        ? $this->monthlyFeeResolver->resolveForMonth(
+                            $enrollment,
+                            now(config('app.timezone'))->format('Y-m')
+                        )
+                        : 0;
                     return $row;
                 });
         }
@@ -172,14 +176,9 @@ class PendingFeesController extends Controller
             return;
         }
 
-        $effectiveFee = $this->resolveEffectiveMonthlyFee($studentSection);
-        if ($effectiveFee <= 0) {
-            return;
-        }
-
         $desiredMonths = [];
         for ($i = 0; $i < $months; $i++) {
-            $desiredMonths[] = Carbon::now()->subMonths($i)->format('Y-m');
+            $desiredMonths[] = Carbon::now(config('app.timezone'))->subMonths($i)->format('Y-m');
         }
         $desiredSet = array_flip($desiredMonths);
 
@@ -199,11 +198,16 @@ class PendingFeesController extends Controller
                 continue;
             }
 
+            $amount = $this->monthlyFeeResolver->resolveForMonth($studentSection, $month);
+            if ($amount <= 0) {
+                continue;
+            }
+
             Fee::create([
                 'student_section_id' => $studentSection->id,
                 'type' => 'monthly',
                 'month' => $month,
-                'amount' => $effectiveFee,
+                'amount' => $amount,
                 'source' => 'monthly',
             ]);
         }
@@ -230,23 +234,4 @@ class PendingFeesController extends Controller
         }
     }
 
-    private function resolveEffectiveMonthlyFee(StudentSection $studentSection): int
-    {
-        if ($studentSection->student_type === 'free') {
-            return 0;
-        }
-
-        $own = (int) $studentSection->monthly_fee;
-        if ($own > 0) {
-            return $own;
-        }
-
-        $sectionFee = (int) optional($studentSection->section)->monthly_fee;
-        if ($sectionFee > 0) {
-            return $sectionFee;
-        }
-
-        $classFee = (int) optional($studentSection->schoolClass)->default_monthly_fee;
-        return $classFee > 0 ? $classFee : 0;
-    }
 }

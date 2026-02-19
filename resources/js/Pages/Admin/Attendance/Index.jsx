@@ -38,13 +38,11 @@ export default function Index() {
    | Derived
    --------------------------------------- */
   const selectedClass = useMemo(
-    () => classes.find(c => String(c.id) === String(classId)),
+    () => classes.find((c) => String(c.id) === String(classId)),
     [classes, classId]
   );
-  console.log("Selected class:", selectedClass);
 
-const isKirtan =
-  selectedClass?.name?.toLowerCase().includes("kirtan");
+  const isKirtan = selectedClass?.type === "kirtan";
 
   /* ---------------------------------------
    | Load classes (ONCE)
@@ -116,13 +114,14 @@ const isKirtan =
     if (!enabled) return;
 
     const key = `${studentId}-${date}`;
+    const hasDraft = Object.prototype.hasOwnProperty.call(draft, key);
 
-    const current =
-      draft[key] ??
+    const persisted =
       grid?.students
-        ?.find(s => s.id === studentId)
-        ?.records?.[key]?.status ??
-      null;
+        ?.find((s) => s.id === studentId)
+        ?.records?.[key]?.status ?? null;
+
+    const current = hasDraft ? draft[key] : persisted;
 
     const next =
       current === null
@@ -292,16 +291,19 @@ const isKirtan =
 
                 {days.map(d => {
                   const key = `${student.id}-${d.date}`;
+                  const hasDraft = Object.prototype.hasOwnProperty.call(draft, key);
+                  const hasLessonDraft = Object.prototype.hasOwnProperty.call(
+                    draftLesson,
+                    key
+                  );
 
-                  const value =
-                    draft[key] ??
-                    student.records?.[key]?.status ??
-                    null;
+                  const persisted = student.records?.[key]?.status ?? null;
+                  const value = hasDraft ? draft[key] : persisted;
 
-                  const lessonValue =
-                    draftLesson[key] ??
-                    student.records?.[key]?.lesson_learned ??
-                    false;
+                  const persistedLesson = student.records?.[key]?.lesson_learned ?? false;
+                  const lessonValue = hasLessonDraft
+                    ? draftLesson[key]
+                    : persistedLesson;
 
                   const statusClass =
                     value === "present"

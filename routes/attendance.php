@@ -3,7 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Models\Section;
+use App\Models\StudentSection;
 use App\Http\Controllers\AttendanceController;
+use Carbon\Carbon;
 
 Route::prefix('attendance')->group(function () {
 
@@ -94,16 +96,71 @@ Route::prefix('attendance')->group(function () {
     ================================ */
     Route::get('/absentees', function () {
         $user = auth()->user();
+        $lastWorkingDay = Carbon::today(config('app.timezone'))->subDay();
+        while ($lastWorkingDay->dayOfWeek === Carbon::SUNDAY) {
+            $lastWorkingDay->subDay();
+        }
 
-        $sections = $user->isTeacher()
-            ? Section::whereIn(
-                'id',
-                $user->sections->pluck('id')
-              )->with('schoolClass')->get()
-            : Section::with('schoolClass')->get();
+        $allowedSectionIds = $user->isTeacher()
+            ? $user->sections->pluck('id')->all()
+            : Section::pluck('id')->all();
+
+        $enrollments = StudentSection::with([
+            'student',
+            'section',
+            'schoolClass',
+            'attendance' => fn ($q) => $q->orderByDesc('date'),
+        ])
+            ->whereIn('section_id', $allowedSectionIds)
+            ->whereHas('schoolClass', fn ($q) => $q->where('type', 'gurmukhi'))
+            ->get();
+
+        $students = [];
+        foreach ($enrollments as $enrollment) {
+            $attendance = $enrollment->attendance
+                ->filter(fn ($a) => Carbon::parse($a->date)->dayOfWeek !== Carbon::SUNDAY)
+                ->values();
+
+            if ($attendance->isEmpty()) {
+                continue;
+            }
+
+            $lastDayRecord = $attendance->firstWhere('date', $lastWorkingDay->toDateString());
+            if (!$lastDayRecord) {
+                continue;
+            }
+
+            $status = strtolower((string) $lastDayRecord->status);
+            if (!in_array($status, ['absent', 'leave'], true)) {
+                continue;
+            }
+
+            $streak = 0;
+            foreach ($attendance as $record) {
+                if (strtolower((string) $record->status) === $status) {
+                    $streak++;
+                } else {
+                    break;
+                }
+            }
+
+            if ($status === 'absent') {
+                $category = $streak >= 3 ? 'absent_3_plus' : ($streak === 2 ? 'absent_2' : 'absent_1');
+            } else {
+                $category = $streak >= 2 ? 'leave_2_plus' : 'leave_1';
+            }
+
+            $students[] = [
+                'id' => $enrollment->student->id,
+                'name' => $enrollment->student->name,
+                'father_name' => $enrollment->student->father_name,
+                'section' => $enrollment->schoolClass->name . ' - ' . $enrollment->section->name,
+                'category' => $category,
+            ];
+        }
 
         return Inertia::render('Attendance/Absentees', [
-            'sections' => $sections,
+            'students' => $students,
         ]);
     })->name('attendance.absentees');
 });

@@ -86,7 +86,7 @@ Route::get('/', fn () =>
     Route::get('/receive-fee', function () {
         $student = Student::with([
             'enrollments.fees' => fn ($q) =>
-                $q->whereDoesntHave('payments'),
+                $q->whereDoesntHave('payments', fn ($qq) => $qq->whereNull('deleted_at')),
         ])->findOrFail(request('student_id'));
 
         return Inertia::render('Accountant/ReceiveFee', [
@@ -100,5 +100,4 @@ Route::get('/', fn () =>
 
     /* Late Fees */
     Route::get('/late-fees', [LateFeeSummaryController::class, 'index']);
-
 

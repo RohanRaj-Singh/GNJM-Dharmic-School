@@ -6,10 +6,15 @@ use App\Models\Fee;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\StudentSection;
+use App\Services\MonthlyFeeResolver;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
+    public function __construct(private readonly MonthlyFeeResolver $monthlyFeeResolver)
+    {
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -21,7 +26,6 @@ class StudentController extends Controller
             'student_type' => 'required|in:paid,free',
         ]);
 
-        // 1️⃣ Create student
         $student = Student::create([
             'name' => $validated['name'],
             'father_name' => $validated['father_name'] ?? null,
@@ -30,31 +34,25 @@ class StudentController extends Controller
             'status' => 'active',
         ]);
 
-        // 2️⃣ Get section + class
         $section = Section::with('schoolClass')->findOrFail($validated['section_id']);
 
-        // 3️⃣ Create enrollment
         $enrollment = StudentSection::create([
-            'student_id'   => $student->id,
-            'class_id'     => $section->schoolClass->id,
-            'section_id'   => $section->id,
+            'student_id' => $student->id,
+            'class_id' => $section->schoolClass->id,
+            'section_id' => $section->id,
             'student_type' => $validated['student_type'],
         ]);
 
-        // 4️⃣ Auto-generate CURRENT month fee (PAID students only)
         if ($validated['student_type'] === 'paid') {
-
-            $resolvedFee =
-                $enrollment->monthly_fee > 0
-                    ? $enrollment->monthly_fee
-                    : $section->schoolClass->default_monthly_fee;
+            $month = now(config('app.timezone'))->format('Y-m');
+            $resolvedFee = $this->monthlyFeeResolver->resolveForMonth($enrollment, $month);
 
             if ($resolvedFee > 0) {
                 Fee::firstOrCreate(
                     [
                         'student_section_id' => $enrollment->id,
                         'type' => 'monthly',
-                        'month' => now()->format('Y-m'),
+                        'month' => $month,
                     ],
                     [
                         'source' => 'monthly',
