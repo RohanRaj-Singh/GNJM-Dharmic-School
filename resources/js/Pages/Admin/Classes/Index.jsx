@@ -11,10 +11,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-function csrf() {
-  return document.querySelector('meta[name="csrf-token"]')?.content ?? "";
-}
-
 export default function Index() {
   const [data, setData] = useState([]);
   const [sorting, setSorting] = useState([]);
@@ -63,11 +59,10 @@ export default function Index() {
     }
 
     try {
-      const res = await fetch(`/admin/classes/${row.original.id}/fee-periods`, {
+      const res = await window.axios.get(`/admin/classes/${row.original.id}/fee-periods`, {
         headers: { Accept: "application/json" },
       });
-      if (!res.ok) throw new Error("Failed to load timeline");
-      const payload = await res.json();
+      const payload = res?.data ?? {};
       setFeeModal({
         open: true,
         classId: row.original.id,
@@ -95,33 +90,24 @@ export default function Index() {
     const method = feeModal.editingId ? "PUT" : "POST";
 
     try {
-      const res = await fetch(url, {
-        method,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-CSRF-TOKEN": csrf(),
-        },
-        body: JSON.stringify({
+      await window.axios.request({
+        url,
+        method: method.toLowerCase(),
+        headers: { Accept: "application/json" },
+        data: {
           amount: Number(feeModal.amount || 0),
           effective_from: feeModal.effective_from,
           effective_to: feeModal.effective_to || null,
-        }),
+        },
       });
-
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        const msg =
-          payload?.message ||
-          Object.values(payload?.errors ?? {}).flat()?.[0] ||
-          "Failed to save";
-        throw new Error(msg);
-      }
 
       await openFeeTimeline({ original: { id: feeModal.classId, name: feeModal.className } });
       toast.success("Fee period saved");
     } catch (err) {
-      toast.error(err.message || "Could not save period");
+      const payload = err?.response?.data;
+      const msg =
+        payload?.message || Object.values(payload?.errors ?? {}).flat()?.[0] || err?.message;
+      toast.error(msg || "Could not save period");
     }
   }
 
@@ -129,26 +115,17 @@ export default function Index() {
     if (!confirm("Delete this fee period?")) return;
 
     try {
-      const res = await fetch(`/admin/classes/${feeModal.classId}/fee-periods/${periodId}`, {
-        method: "DELETE",
-        headers: {
-          Accept: "application/json",
-          "X-CSRF-TOKEN": csrf(),
-        },
+      await window.axios.delete(`/admin/classes/${feeModal.classId}/fee-periods/${periodId}`, {
+        headers: { Accept: "application/json" },
       });
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        const msg =
-          payload?.message ||
-          Object.values(payload?.errors ?? {}).flat()?.[0] ||
-          "Delete failed";
-        throw new Error(msg);
-      }
 
       await openFeeTimeline({ original: { id: feeModal.classId, name: feeModal.className } });
       toast.success("Fee period deleted");
     } catch (err) {
-      toast.error(err.message || "Could not delete period");
+      const payload = err?.response?.data;
+      const msg =
+        payload?.message || Object.values(payload?.errors ?? {}).flat()?.[0] || err?.message;
+      toast.error(msg || "Could not delete period");
     }
   }
 

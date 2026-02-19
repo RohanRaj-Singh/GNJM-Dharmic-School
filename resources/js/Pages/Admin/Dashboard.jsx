@@ -2,6 +2,11 @@ import AdminLayout from "@/Layouts/AdminLayout";
 import { formatPKR } from "@/utils/helper";
 import { useEffect, useMemo, useState } from "react";
 
+function num(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function StatTile({ label, value, sub, accent = "bg-slate-700" }) {
   return (
     <div className="bg-white border rounded-xl p-4">
@@ -16,7 +21,10 @@ function StatTile({ label, value, sub, accent = "bg-slate-700" }) {
 }
 
 function Meter({ label, value, total, tone = "bg-blue-600", suffix = "" }) {
-  const pct = total > 0 ? Math.max(0, Math.min(100, Math.round((value / total) * 100))) : 0;
+  const safeValue = num(value);
+  const safeTotal = num(total);
+  const pct =
+    safeTotal > 0 ? Math.max(0, Math.min(100, Math.round((safeValue / safeTotal) * 100))) : 0;
   return (
     <div>
       <div className="flex items-center justify-between text-xs mb-1">
@@ -116,19 +124,19 @@ export default function Dashboard() {
         {!loading && !error && data ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-              <StatTile label="Total Fees" value={formatPKR(data.fees.total)} accent="bg-blue-600" />
-              <StatTile label="Collected" value={formatPKR(data.fees.collected)} accent="bg-emerald-600" />
-              <StatTile label="Pending" value={formatPKR(data.fees.pending)} accent="bg-rose-600" />
+              <StatTile label="Total Fees" value={formatPKR(num(data.fees.total))} accent="bg-blue-600" />
+              <StatTile label="Collected" value={formatPKR(num(data.fees.collected))} accent="bg-emerald-600" />
+              <StatTile label="Pending" value={formatPKR(num(data.fees.pending))} accent="bg-rose-600" />
               <StatTile
                 label="Collection Rate"
-                value={`${data.fees.percentage}%`}
+                value={`${num(data.fees.percentage)}%`}
                 sub="Collected / Total"
                 accent="bg-violet-600"
               />
               <StatTile
                 label="Active Students"
-                value={data.students.active}
-                sub={`${data.students.total} total students`}
+                value={num(data.students.active)}
+                sub={`${num(data.students.total)} total students`}
                 accent="bg-amber-500"
               />
             </div>
@@ -177,23 +185,23 @@ export default function Dashboard() {
                     <div className="space-y-3">
                       <Meter
                         label="Division Fee Collection"
-                        value={activeDivision.fees.collected}
-                        total={Math.max(1, activeDivision.fees.total)}
+                        value={num(activeDivision.fees.collected)}
+                        total={Math.max(1, num(activeDivision.fees.total))}
                         tone="bg-emerald-600"
                         suffix=""
                       />
                       <Meter
                         label="Division Attendance (Present %)"
-                        value={activeDivision.attendance.percentage}
+                        value={num(activeDivision.attendance.percentage)}
                         total={100}
                         tone="bg-blue-600"
                         suffix="%"
                       />
                       <div className="grid grid-cols-2 gap-2 pt-1">
-                        <StatTile label="Classes" value={activeDivision.stats.classes_count} accent="bg-slate-600" />
-                        <StatTile label="Sections" value={activeDivision.stats.sections_count} accent="bg-slate-600" />
-                        <StatTile label="Students" value={activeDivision.stats.students_count} accent="bg-amber-500" />
-                        <StatTile label="Active" value={activeDivision.stats.active_students_count} accent="bg-emerald-600" />
+                        <StatTile label="Classes" value={num(activeDivision.stats.classes_count)} accent="bg-slate-600" />
+                        <StatTile label="Sections" value={num(activeDivision.stats.sections_count)} accent="bg-slate-600" />
+                        <StatTile label="Students" value={num(activeDivision.stats.students_count)} accent="bg-amber-500" />
+                        <StatTile label="Active" value={num(activeDivision.stats.active_students_count)} accent="bg-emerald-600" />
                       </div>
                     </div>
                   </div>
@@ -220,10 +228,10 @@ export default function Dashboard() {
                               .map((cls) => (
                                 <tr key={cls.id} className="border-b">
                                   <td className="px-3 py-2 font-medium text-slate-800">{cls.name}</td>
-                                  <td className="px-3 py-2">{cls.students_count}</td>
-                                  <td className="px-3 py-2">{formatPKR(cls.fees.total)}</td>
-                                  <td className="px-3 py-2">{cls.fees.percentage}%</td>
-                                  <td className="px-3 py-2">{cls.attendance.percentage}%</td>
+                                  <td className="px-3 py-2">{num(cls.students_count)}</td>
+                                  <td className="px-3 py-2">{formatPKR(num(cls.fees.total))}</td>
+                                  <td className="px-3 py-2">{num(cls.fees.percentage)}%</td>
+                                  <td className="px-3 py-2">{num(cls.attendance.percentage)}%</td>
                                 </tr>
                               ))}
                           </tbody>
@@ -251,10 +259,10 @@ export default function Dashboard() {
                               {sectionRows.map((sec) => (
                                 <tr key={sec.id} className="border-b">
                                   <td className="px-3 py-2 font-medium text-slate-800">{sec.name}</td>
-                                  <td className="px-3 py-2">{sec.students_count}</td>
-                                  <td className="px-3 py-2">{formatPKR(sec.fees.total)}</td>
-                                  <td className="px-3 py-2">{sec.fees.percentage}%</td>
-                                  <td className="px-3 py-2">{sec.attendance.percentage}%</td>
+                                  <td className="px-3 py-2">{num(sec.students_count)}</td>
+                                  <td className="px-3 py-2">{formatPKR(num(sec.fees.total))}</td>
+                                  <td className="px-3 py-2">{num(sec.fees.percentage)}%</td>
+                                  <td className="px-3 py-2">{num(sec.attendance.percentage)}%</td>
                                 </tr>
                               ))}
                               {sectionRows.length === 0 ? (

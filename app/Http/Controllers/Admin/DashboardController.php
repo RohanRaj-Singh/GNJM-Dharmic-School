@@ -27,40 +27,30 @@ class DashboardController extends Controller
 
     private function buildOverall(int $year): array
     {
-        $fees = DB::table('fees')
-            ->leftJoin('payments', function ($join) {
-                $join->on('payments.fee_id', '=', 'fees.id')
+        $fees = DB::table('fees');
+        $this->applyFeeYearFilter($fees, $year);
+
+        $totalFees = (int) (clone $fees)->sum('fees.amount');
+        $collectedFees = (int) (clone $fees)
+            ->whereExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('payments')
+                    ->whereColumn('payments.fee_id', 'fees.id')
                     ->whereNull('payments.deleted_at');
             })
-            ->where(function ($q) use ($year) {
-                $q->where(function ($qq) use ($year) {
-                    $qq->where('fees.type', 'monthly')
-                        ->where('fees.month', 'like', $year . '-%');
-                })
-                    ->orWhere(function ($qq) use ($year) {
-                        $qq->where('fees.type', 'custom')
-                            ->whereYear('fees.created_at', $year);
-                    });
-            })
-            ->select(
-                'fees.amount',
-                DB::raw('payments.id IS NOT NULL as is_paid')
-            )
-            ->get();
-
-        $totalFees = (int) $fees->sum('amount');
-        $collectedFees = (int) $fees->where('is_paid', true)->sum('amount');
+            ->sum('fees.amount');
         $pendingFees = $totalFees - $collectedFees;
 
-        $attendance = DB::table('attendance')
+        $attendanceCounts = DB::table('attendance')
             ->whereYear('date', $year)
-            ->select('status')
+            ->selectRaw('LOWER(TRIM(status)) as normalized_status, COUNT(*) as total')
+            ->groupBy('normalized_status')
             ->get()
-            ->map(fn ($r) => strtolower(trim((string) $r->status)));
+            ->pluck('total', 'normalized_status');
 
-        $present = $attendance->where('status', 'present')->count();
-        $absent = $attendance->where('status', 'absent')->count();
-        $leave = $attendance->where('status', 'leave')->count();
+        $present = (int) ($attendanceCounts['present'] ?? 0);
+        $absent = (int) ($attendanceCounts['absent'] ?? 0);
+        $leave = (int) ($attendanceCounts['leave'] ?? 0);
         $attendanceTotal = $present + $absent + $leave;
 
         return [
@@ -224,25 +214,14 @@ class DashboardController extends Controller
 
         $rows = DB::table('fees')
             ->join('student_sections', 'student_sections.id', '=', 'fees.student_section_id')
-            ->leftJoin('payments', function ($join) {
-                $join->on('payments.fee_id', '=', 'fees.id')
-                    ->whereNull('payments.deleted_at');
-            })
             ->whereIn($column, $ids)
             ->where(function ($q) use ($year) {
-                $q->where(function ($qq) use ($year) {
-                    $qq->where('fees.type', 'monthly')
-                        ->where('fees.month', 'like', $year . '-%');
-                })
-                    ->orWhere(function ($qq) use ($year) {
-                        $qq->where('fees.type', 'custom')
-                            ->whereYear('fees.created_at', $year);
-                    });
+                $this->applyFeeYearFilter($q, $year);
             })
             ->select(
                 DB::raw($column . ' as scope_id'),
                 DB::raw('SUM(fees.amount) as total'),
-                DB::raw('SUM(CASE WHEN payments.id IS NOT NULL THEN fees.amount ELSE 0 END) as collected')
+                DB::raw('SUM(CASE WHEN EXISTS (SELECT 1 FROM payments WHERE payments.fee_id = fees.id AND payments.deleted_at IS NULL) THEN fees.amount ELSE 0 END) as collected')
             )
             ->groupBy('scope_id')
             ->get();
@@ -322,5 +301,18 @@ class DashboardController extends Controller
                 ],
             ];
         })->all();
+    }
+
+    private function applyFeeYearFilter($query, int $year): void
+    {
+        $query->where(function ($q) use ($year) {
+            $q->where(function ($qq) use ($year) {
+                $qq->where('fees.type', 'monthly')
+                    ->where('fees.month', 'like', $year . '-%');
+            })->orWhere(function ($qq) use ($year) {
+                $qq->where('fees.type', 'custom')
+                    ->whereYear('fees.created_at', $year);
+            });
+        });
     }
 }
