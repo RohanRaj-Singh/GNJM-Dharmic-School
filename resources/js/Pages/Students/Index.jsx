@@ -10,10 +10,14 @@ export default function StudentsIndex({ students = [] }) {
     const { isAccountant } = useRoles();
 
     const getClassObj = (enrollment) => enrollment?.school_class ?? enrollment?.schoolClass ?? null;
-    const isTypeMatch = (type, expected) => {
-        const normalized = String(type ?? "").trim().toLowerCase();
-        if (!normalized) return true; // fail-open when type metadata is missing
-        return normalized === expected || normalized.includes(expected);
+    const classTypeToken = (cls) => {
+        const typeText = String(cls?.type ?? "").trim().toLowerCase();
+        const nameText = String(cls?.name ?? "").trim().toLowerCase();
+        const hay = `${typeText} ${nameText}`.trim();
+        if (!hay) return "";
+        if (hay.includes("kirtan")) return "kirtan";
+        if (hay.includes("gurmukhi")) return "gurmukhi";
+        return "";
     };
 
     const searchedStudents = (students ?? []).filter((s) =>
@@ -24,7 +28,7 @@ export default function StudentsIndex({ students = [] }) {
         if (!isAccountant) return true;
         const enrollments = student.enrollments ?? [];
         if (classFilter === "all") return enrollments.length > 0;
-        return enrollments.some((e) => isTypeMatch(getClassObj(e)?.type, classFilter));
+        return enrollments.some((e) => classTypeToken(getClassObj(e)) === classFilter);
     });
 
     return (
@@ -120,11 +124,8 @@ function StudentCard({ student, classFilter }) {
 
     if (classFilter && classFilter !== "all") {
         visibleEnrollments = visibleEnrollments.filter((e) => {
-            const normalized = String((e.school_class ?? e.schoolClass ?? null)?.type ?? "")
-                .trim()
-                .toLowerCase();
-            if (!normalized) return true;
-            return normalized === classFilter || normalized.includes(classFilter);
+            const cls = e.school_class ?? e.schoolClass ?? null;
+            return classTypeToken(cls) === classFilter;
         });
     }
 
@@ -156,7 +157,7 @@ function StudentCard({ student, classFilter }) {
                 {visibleEnrollments.map((e) => {
                     const cls = e.school_class ?? e.schoolClass ?? null;
                     const sec = e.section ?? null;
-                    const isKirtan = String(cls?.type ?? "").toLowerCase().includes("kirtan");
+                    const isKirtan = classTypeToken(cls) === "kirtan";
 
                     return (
                         <span

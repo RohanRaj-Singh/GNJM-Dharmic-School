@@ -22,17 +22,21 @@ export default function Sections({ sections = [] }) {
     // Accountant filter (UI only)
     const [classFilter, setClassFilter] = useState("all");
     const getClassObj = (section) => section?.school_class ?? section?.schoolClass ?? null;
-    const isTypeMatch = (type, expected) => {
-        const normalized = String(type ?? "").trim().toLowerCase();
-        if (!normalized) return true; // fail-open when metadata is missing
-        return normalized === expected || normalized.includes(expected);
+    const classTypeToken = (cls) => {
+        const typeText = String(cls?.type ?? "").trim().toLowerCase();
+        const nameText = String(cls?.name ?? "").trim().toLowerCase();
+        const hay = `${typeText} ${nameText}`.trim();
+        if (!hay) return "";
+        if (hay.includes("kirtan")) return "kirtan";
+        if (hay.includes("gurmukhi")) return "gurmukhi";
+        return "";
     };
 
     const visibleSections = useMemo(() => {
         if (!isAccountant) return sections;
 
         if (classFilter === "all") return sections;
-        return sections.filter((s) => isTypeMatch(getClassObj(s)?.type, classFilter));
+        return sections.filter((s) => classTypeToken(getClassObj(s)) === classFilter);
     }, [sections, classFilter, isAccountant]);
     return (
         <SimpleLayout title="Select Section">
