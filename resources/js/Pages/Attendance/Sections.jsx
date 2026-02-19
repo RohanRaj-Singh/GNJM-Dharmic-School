@@ -21,9 +21,10 @@ export default function Sections({ sections = [] }) {
 
     // Accountant filter (UI only)
     const [classFilter, setClassFilter] = useState("gurmukhi");
+    const getClassObj = (section) => section?.school_class ?? section?.schoolClass ?? null;
     const isTypeMatch = (type, expected) => {
         const normalized = String(type ?? "").trim().toLowerCase();
-        if (!normalized) return false;
+        if (!normalized) return true; // fail-open when metadata is missing
         return normalized === expected || normalized.includes(expected);
     };
 
@@ -31,7 +32,7 @@ export default function Sections({ sections = [] }) {
         if (!isAccountant) return sections;
 
         return sections.filter(
-            (s) => isTypeMatch(s.school_class?.type ?? s.schoolClass?.type, classFilter)
+            (s) => isTypeMatch(getClassObj(s)?.type, classFilter)
         );
     }, [sections, classFilter, isAccountant]);
 
@@ -67,7 +68,7 @@ export default function Sections({ sections = [] }) {
                         className="block bg-white border rounded-xl p-4 hover:bg-gray-50"
                     >
                         <p className="font-semibold text-gray-800">
-                            {section.school_class.name}
+                            {getClassObj(section)?.name ?? "Class"}
                         </p>
                         <p className="text-sm text-gray-500">
                             {section.name}
