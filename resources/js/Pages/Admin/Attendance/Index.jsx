@@ -157,15 +157,19 @@ export default function Index() {
   function saveAttendance() {
     setLoading(true);
 
-    const payload = Object.fromEntries(
-      Object.entries(draft).map(([key, status]) => [
-        key,
-        {
+    const payload = Object.entries(draft)
+      .map(([key, status]) => {
+        const match = String(key).match(/^(\d+)-(\d{4}-\d{2}-\d{2})$/);
+        if (!match) return null;
+
+        return {
+          student_section_id: Number(match[1]),
+          date: match[2],
           status,
           lesson_learned: isKirtan ? draftLesson[key] ?? null : null,
-        },
-      ])
-    );
+        };
+      })
+      .filter(Boolean);
 
     fetch("/admin/attendance/save", {
       method: "POST",
@@ -183,7 +187,11 @@ export default function Index() {
       }),
     })
       .then(r => {
-        if (!r.ok) throw new Error();
+        if (!r.ok) {
+          return r.json().catch(() => ({})).then((err) => {
+            throw new Error(err?.message || "Failed to save attendance");
+          });
+        }
         return r.json();
       })
       .then(() => {
@@ -197,7 +205,7 @@ export default function Index() {
         ).then(r => r.json());
       })
       .then(setGrid)
-      .catch(() => toast.error("Failed to save attendance"))
+      .catch((err) => toast.error(err?.message || "Failed to save attendance"))
       .finally(() => setLoading(false));
   }
 

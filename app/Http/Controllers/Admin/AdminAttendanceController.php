@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Section;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use App\Models\SchoolClass;
 
@@ -119,20 +120,38 @@ public function save(Request $request)
         ->flip(); // FAST lookup
 
     foreach ($request->records as $key => $payload) {
-        if (!is_array($payload) || !array_key_exists('status', $payload)) {
+        if (!is_array($payload)) {
             continue;
         }
 
-        if (!preg_match('/^(\d+)-(\d{4}-\d{2}-\d{2})$/', (string) $key, $matches)) {
-            continue;
+        $studentSectionId = null;
+        $date = null;
+
+        // New format: [{ student_section_id, date, status, lesson_learned }]
+        if (array_key_exists('student_section_id', $payload) || array_key_exists('date', $payload)) {
+            $studentSectionId = (string) Arr::get($payload, 'student_section_id', '');
+            $date = (string) Arr::get($payload, 'date', '');
+        } else {
+            // Legacy format: { "studentSectionId-YYYY-MM-DD": { status, lesson_learned } }
+            if (!preg_match('/^(\d+)-(\d{4}-\d{2}-\d{2})$/', (string) $key, $matches)) {
+                continue;
+            }
+
+            $studentSectionId = $matches[1];
+            $date = $matches[2];
         }
 
-        $studentSectionId = $matches[1];
-        $date = $matches[2];
+        if (!preg_match('/^\d+$/', $studentSectionId) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            continue;
+        }
 
         // 🔐 HARD SAFETY
         if (!isset($validIds[$studentSectionId])) {
             continue; // ⛔ ignore instead of 403
+        }
+
+        if (!array_key_exists('status', $payload)) {
+            continue;
         }
 
         $status = $payload['status'];
