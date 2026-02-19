@@ -104,10 +104,15 @@ Route::prefix('attendance')->group(function () {
     ================================ */
     Route::get('/absentees', function () use ($isClassType) {
         $user = auth()->user();
-        $lastWorkingDay = Carbon::today(config('app.timezone'))->subDay();
-        while ($lastWorkingDay->dayOfWeek === Carbon::SUNDAY) {
-            $lastWorkingDay->subDay();
-        }
+        $normalizeStatus = function ($raw) {
+            $value = strtolower(trim((string) $raw));
+            return match ($value) {
+                'a', 'absent' => 'absent',
+                'l', 'leave' => 'leave',
+                'p', 'present' => 'present',
+                default => $value,
+            };
+        };
 
         $allowedSectionIds = $user->isTeacher()
             ? $user->sections->pluck('id')->all()
@@ -136,19 +141,17 @@ Route::prefix('attendance')->group(function () {
                 continue;
             }
 
-            $lastDayRecord = $attendance->firstWhere('date', $lastWorkingDay->toDateString());
-            if (!$lastDayRecord) {
-                continue;
-            }
+            // Use latest available non-Sunday record, not a fixed calendar day.
+            $lastDayRecord = $attendance->first();
 
-            $status = strtolower((string) $lastDayRecord->status);
+            $status = $normalizeStatus($lastDayRecord->status);
             if (!in_array($status, ['absent', 'leave'], true)) {
                 continue;
             }
 
             $streak = 0;
             foreach ($attendance as $record) {
-                if (strtolower((string) $record->status) === $status) {
+                if ($normalizeStatus($record->status) === $status) {
                     $streak++;
                 } else {
                     break;
@@ -166,6 +169,7 @@ Route::prefix('attendance')->group(function () {
                 'name' => $enrollment->student->name,
                 'father_name' => $enrollment->student->father_name,
                 'section' => $enrollment->schoolClass->name . ' - ' . $enrollment->section->name,
+                'date' => $lastDayRecord->date,
                 'category' => $category,
             ];
         }
