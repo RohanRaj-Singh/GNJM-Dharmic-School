@@ -3,22 +3,22 @@ import { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import useRoles from "@/Hooks/useRoles";
 
+const getClassObj = (enrollment) => enrollment?.school_class ?? enrollment?.schoolClass ?? null;
+const classTypeToken = (cls) => {
+    const typeText = String(cls?.type ?? "").trim().toLowerCase();
+    const nameText = String(cls?.name ?? "").trim().toLowerCase();
+    const hay = `${typeText} ${nameText}`.trim();
+    if (!hay) return "";
+    if (hay.includes("kirtan")) return "kirtan";
+    if (hay.includes("gurmukhi")) return "gurmukhi";
+    return "";
+};
+
 export default function StudentsIndex({ students = [] }) {
     const [search, setSearch] = useState("");
-    const [classFilter, setClassFilter] = useState("all");
+    const [classFilter, setClassFilter] = useState("gurmukhi");
 
     const { isAccountant } = useRoles();
-
-    const getClassObj = (enrollment) => enrollment?.school_class ?? enrollment?.schoolClass ?? null;
-    const classTypeToken = (cls) => {
-        const typeText = String(cls?.type ?? "").trim().toLowerCase();
-        const nameText = String(cls?.name ?? "").trim().toLowerCase();
-        const hay = `${typeText} ${nameText}`.trim();
-        if (!hay) return "";
-        if (hay.includes("kirtan")) return "kirtan";
-        if (hay.includes("gurmukhi")) return "gurmukhi";
-        return "";
-    };
 
     const searchedStudents = (students ?? []).filter((s) =>
         String(s?.name ?? "").toLowerCase().includes(search.toLowerCase())
@@ -27,7 +27,6 @@ export default function StudentsIndex({ students = [] }) {
     const visibleStudents = searchedStudents.filter((student) => {
         if (!isAccountant) return true;
         const enrollments = student.enrollments ?? [];
-        if (classFilter === "all") return enrollments.length > 0;
         return enrollments.some((e) => classTypeToken(getClassObj(e)) === classFilter);
     });
 
@@ -35,16 +34,6 @@ export default function StudentsIndex({ students = [] }) {
         <AccountantLayout title="Students">
             {isAccountant && (
                 <div className="flex gap-2 mb-4">
-                    <button
-                        onClick={() => setClassFilter("all")}
-                        className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                            classFilter === "all"
-                                ? "bg-slate-700 text-white"
-                                : "bg-white text-gray-700"
-                        }`}
-                    >
-                        All
-                    </button>
                     <button
                         onClick={() => setClassFilter("gurmukhi")}
                         className={`px-3 py-1 rounded-full text-sm font-medium border ${
@@ -122,7 +111,7 @@ function StudentCard({ student, classFilter }) {
         ? enrollments.filter((e) => allowedSectionIds.includes(String(e.section_id)))
         : enrollments;
 
-    if (classFilter && classFilter !== "all") {
+    if (classFilter) {
         visibleEnrollments = visibleEnrollments.filter((e) => {
             const cls = e.school_class ?? e.schoolClass ?? null;
             return classTypeToken(cls) === classFilter;

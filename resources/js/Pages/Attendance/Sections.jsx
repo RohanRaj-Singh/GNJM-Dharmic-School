@@ -20,7 +20,7 @@ export default function Sections({ sections = [] }) {
     }, [flash]);
 
     // Accountant filter (UI only)
-    const [classFilter, setClassFilter] = useState("all");
+    const [classFilter, setClassFilter] = useState("gurmukhi");
     const getClassObj = (section) => section?.school_class ?? section?.schoolClass ?? null;
     const classTypeToken = (cls) => {
         const typeText = String(cls?.type ?? "").trim().toLowerCase();
@@ -35,7 +35,6 @@ export default function Sections({ sections = [] }) {
     const visibleSections = useMemo(() => {
         if (!isAccountant) return sections;
 
-        if (classFilter === "all") return sections;
         return sections.filter((s) => classTypeToken(getClassObj(s)) === classFilter);
     }, [sections, classFilter, isAccountant]);
     return (
@@ -43,13 +42,6 @@ export default function Sections({ sections = [] }) {
             {/* FILTER PILLS (ACCOUNTANT ONLY) */}
             {isAccountant && (
                 <div className="flex gap-2 mb-4">
-                    <PillButton
-                        active={classFilter === "all"}
-                        onClick={() => setClassFilter("all")}
-                        color="blue"
-                    >
-                        All
-                    </PillButton>
                     <PillButton
                         active={classFilter === "gurmukhi"}
                         onClick={() => setClassFilter("gurmukhi")}
