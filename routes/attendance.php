@@ -129,12 +129,14 @@ Route::prefix('attendance')->group(function () {
 
         $students = [];
         foreach ($enrollments as $enrollment) {
-            if (!$isClassType($enrollment->schoolClass->type ?? null, 'gurmukhi')) {
-                continue;
-            }
+            $isKirtanClass = $isClassType($enrollment->schoolClass->type ?? null, 'kirtan');
 
             $attendance = $enrollment->attendance
-                ->filter(fn ($a) => Carbon::parse($a->date)->dayOfWeek !== Carbon::SUNDAY)
+                // Gurmukhi: Mon-Sat, Kirtan: Sunday only.
+                ->filter(function ($a) use ($isKirtanClass) {
+                    $isSunday = Carbon::parse($a->date)->dayOfWeek === Carbon::SUNDAY;
+                    return $isKirtanClass ? $isSunday : !$isSunday;
+                })
                 ->values();
 
             if ($attendance->isEmpty()) {
