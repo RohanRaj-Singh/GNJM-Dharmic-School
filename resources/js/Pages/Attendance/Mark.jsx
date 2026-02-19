@@ -10,23 +10,36 @@ export default function Mark({
   hasAttendanceToday,
   existingAttendance = [],
 }) {
-  const isKirtan =
-    section.school_class.type === "kirtan";
+  const classTypeToken = (cls) => {
+    const typeText = String(cls?.type ?? "").trim().toLowerCase();
+    const nameText = String(cls?.name ?? "").trim().toLowerCase();
+    const hay = `${typeText} ${nameText}`.trim();
+    if (hay.includes("kirtan")) return "kirtan";
+    if (hay.includes("gurmukhi")) return "gurmukhi";
+    return "";
+  };
 
-  /* -------------------------------------------------
-   | Normalize helpers
-   ------------------------------------------------- */
+  const isKirtan = classTypeToken(section.school_class) === "kirtan";
+  const now = new Date();
+  const dayLabel = now.toLocaleDateString(undefined, { weekday: "long" });
+  const dateLabel = now.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 
   const normalizeExisting = (r) => ({
-  student_id: r.student_section?.student?.id,
-  name: r.student_section?.student?.name ?? "Unknown",
-  status: r.status ?? "present",
-  lesson_learned: !!r.lesson_learned,
-});
+    student_id: r.student_section?.student?.id,
+    name: r.student_section?.student?.name ?? "Unknown",
+    father_name: r.student_section?.student?.father_name ?? null,
+    status: r.status ?? "present",
+    lesson_learned: !!r.lesson_learned,
+  });
 
   const normalizeFresh = (ss) => ({
     student_id: ss.student.id,
     name: ss.student.name,
+    father_name: ss.student.father_name ?? null,
     status: "present",
     lesson_learned: false,
   });
@@ -38,18 +51,13 @@ export default function Mark({
     return changes;
   };
 
-  /* -------------------------------------------------
-   | State (SINGLE SOURCE OF TRUTH)
-   ------------------------------------------------- */
-
   const [records, setRecords] = useState(() =>
-  hasAttendanceToday
-    ? existingAttendance
-        .map(normalizeExisting)
-        .filter(r => r.student_id)   // 🛡 GUARANTEE UNIQUE ID
-    : section.student_sections.map(normalizeFresh)
-);
-
+    hasAttendanceToday
+      ? existingAttendance
+          .map(normalizeExisting)
+          .filter((r) => r.student_id)
+      : section.student_sections.map(normalizeFresh)
+  );
 
   const [mode, setMode] = useState(
     hasAttendanceToday ? "summary" : "mark"
@@ -57,33 +65,19 @@ export default function Mark({
 
   const [index, setIndex] = useState(0);
 
-  /* -------------------------------------------------
-   | Update handlers
-   ------------------------------------------------- */
-
   const updateCurrent = (changes) => {
     setRecords((prev) =>
-      prev.map((r, i) =>
-        i === index
-          ? { ...r, ...normalizeChange(changes) }
-          : r
-      )
+      prev.map((r, i) => (i === index ? { ...r, ...normalizeChange(changes) } : r))
     );
   };
 
   const updateRecord = (studentId, changes) => {
     setRecords((prev) =>
       prev.map((r) =>
-        r.student_id === studentId
-          ? { ...r, ...normalizeChange(changes) }
-          : r
+        r.student_id === studentId ? { ...r, ...normalizeChange(changes) } : r
       )
     );
   };
-
-  /* -------------------------------------------------
-   | Save
-   ------------------------------------------------- */
 
   const saveAttendance = () => {
     router.post(
@@ -100,16 +94,14 @@ export default function Mark({
     );
   };
 
-  /* -------------------------------------------------
-   | Render
-   ------------------------------------------------- */
-  console.log("RECORDS DEBUG", records);
-
   return (
     <SimpleLayout title="Mark Attendance">
-      <h2 className="font-semibold text-gray-800 mb-4 text-center">
-        {section.school_class.name} · {section.name}
+      <h2 className="font-semibold text-gray-800 mb-2 text-center">
+        {section.school_class.name} - {section.name}
       </h2>
+      <p className="text-center text-xs text-gray-500 mb-4">
+        {dayLabel}, {dateLabel}
+      </p>
 
       {records.length === 0 && (
         <p className="text-center text-gray-500">

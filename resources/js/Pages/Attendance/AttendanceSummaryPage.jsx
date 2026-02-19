@@ -22,6 +22,7 @@ export default function AttendanceSummaryPage({
   <AttendanceRecordCard
     key={`attendance-${r.student_id}`}   // ✅ STABLE & UNIQUE
     name={r.name}
+    fatherName={r.father_name}
     status={r.status}
     lessonLearned={r.lesson_learned}
     showLesson={isKirtan}

@@ -1,5 +1,6 @@
 export default function AttendanceRecordCard({
   name,
+  fatherName,
   status,
   lessonLearned,
   onStatusChange,
@@ -15,6 +16,9 @@ export default function AttendanceRecordCard({
       {/* Student Name */}
       <p className="font-medium text-gray-800">
         {name}
+      </p>
+      <p className="text-xs text-gray-500">
+        Father: {fatherName || "-"}
       </p>
 
       {/* Status Buttons (Selected Feel) */}

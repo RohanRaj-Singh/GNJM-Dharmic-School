@@ -37,6 +37,27 @@ export default function Sections({ sections = [] }) {
 
         return sections.filter((s) => classTypeToken(getClassObj(s)) === classFilter);
     }, [sections, classFilter, isAccountant]);
+    const isSunday = new Date().getDay() === 0;
+    const canMarkToday = (section) => {
+        const token = classTypeToken(getClassObj(section));
+        if (token === "gurmukhi") {
+            return !isSunday;
+        }
+        if (token === "kirtan") {
+            return isSunday;
+        }
+        return true;
+    };
+    const dayRuleMessage = (section) => {
+        const token = classTypeToken(getClassObj(section));
+        if (token === "gurmukhi" && isSunday) {
+            return "Gurmukhi attendance is closed on Sunday";
+        }
+        if (token === "kirtan" && !isSunday) {
+            return "Kirtan attendance opens only on Sunday";
+        }
+        return "";
+    };
     return (
         <SimpleLayout title="Select Section">
             {/* FILTER PILLS (ACCOUNTANT ONLY) */}
@@ -62,20 +83,44 @@ export default function Sections({ sections = [] }) {
 
             {/* SECTIONS LIST */}
             <div className="space-y-3">
-                {visibleSections.map((section) => (
-                    <Link
-                        key={section.id}
-                        href={`/attendance/sections/${section.id}`}
-                        className="block bg-white border rounded-xl p-4 hover:bg-gray-50"
-                    >
-                        <p className="font-semibold text-gray-800">
-                            {getClassObj(section)?.name ?? "Class"}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                            {section.name}
-                        </p>
-                    </Link>
-                ))}
+                {visibleSections.map((section) => {
+                    const allowed = canMarkToday(section);
+                    const message = dayRuleMessage(section);
+
+                    if (!allowed) {
+                        return (
+                            <div
+                                key={section.id}
+                                className="block bg-gray-50 border border-gray-200 rounded-xl p-4 opacity-80 cursor-not-allowed"
+                            >
+                                <p className="font-semibold text-gray-700">
+                                    {getClassObj(section)?.name ?? "Class"}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                    {section.name}
+                                </p>
+                                <p className="text-xs text-amber-700 mt-2">
+                                    {message}
+                                </p>
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <Link
+                            key={section.id}
+                            href={`/attendance/sections/${section.id}`}
+                            className="block bg-white border rounded-xl p-4 hover:bg-gray-50"
+                        >
+                            <p className="font-semibold text-gray-800">
+                                {getClassObj(section)?.name ?? "Class"}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                {section.name}
+                            </p>
+                        </Link>
+                    );
+                })}
 
                 {visibleSections.length === 0 && (
                     <p className="text-center text-sm text-gray-400">

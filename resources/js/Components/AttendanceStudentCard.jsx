@@ -14,6 +14,9 @@ export default function AttendanceStudentCard({
       <h3 className="text-xl font-semibold text-gray-800 text-center">
         {student.name}
       </h3>
+      <p className="text-sm text-gray-500 text-center -mt-4">
+        Father: {student.father_name || "-"}
+      </p>
 
       {/* Attendance Buttons */}
       <div className="grid grid-cols-3 gap-3">
