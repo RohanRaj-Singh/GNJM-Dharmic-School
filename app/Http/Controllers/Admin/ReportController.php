@@ -666,10 +666,6 @@ class ReportController extends Controller
         }
 
         $query = DB::table('fees')
-            ->leftJoin('payments', function ($join) {
-                $join->on('payments.fee_id', '=', 'fees.id')
-                     ->whereNull('payments.deleted_at');
-            })
             ->whereIn('fees.student_section_id', $sectionIds)
             ->where(function ($q) use ($year) {
                 $q->where(function ($qq) use ($year) {
@@ -694,7 +690,7 @@ class ReportController extends Controller
                 'fees.type',
                 'fees.month',
                 'fees.amount',
-                DB::raw('payments.id IS NOT NULL as is_paid')
+                DB::raw('EXISTS(SELECT 1 FROM payments WHERE payments.fee_id = fees.id AND payments.deleted_at IS NULL) as is_paid')
             )
             ->orderByRaw('fees.month IS NULL')
             ->orderBy('fees.month')
