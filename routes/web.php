@@ -32,7 +32,7 @@ require __DIR__.'/auth.php';
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'session.cache_guard'])->group(function () {
 
     require __DIR__.'/attendance.php';
 
@@ -57,5 +57,4 @@ Route::middleware('auth')->group(function () {
 
     require __DIR__.'/students.php';
 });
-
 

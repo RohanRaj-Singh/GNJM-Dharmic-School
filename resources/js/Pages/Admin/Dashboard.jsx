@@ -7,6 +7,11 @@ function num(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function classLabel(cls) {
+  const name = String(cls?.name ?? "").trim();
+  return name.length ? name : `Class #${num(cls?.id)}`;
+}
+
 function StatTile({ label, value, sub, accent = "bg-slate-700" }) {
   return (
     <div className="bg-white border rounded-xl p-4">
@@ -49,6 +54,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [divisionType, setDivisionType] = useState("gurmukhi");
   const [classId, setClassId] = useState("all");
+  const [sectionId, setSectionId] = useState("all");
 
   useEffect(() => {
     setLoading(true);
@@ -84,6 +90,58 @@ export default function Dashboard() {
   }, [activeDivision, classId]);
 
   const sectionRows = activeClass ? activeClass.sections : [];
+  const visibleSectionRows =
+    sectionId === "all"
+      ? sectionRows
+      : sectionRows.filter((s) => String(s.id) === String(sectionId));
+
+  useEffect(() => {
+    if (!activeDivision) {
+      setClassId("all");
+      setSectionId("all");
+      return;
+    }
+
+    if (
+      classId !== "all" &&
+      !activeDivision.classes.some((c) => String(c.id) === String(classId))
+    ) {
+      setClassId("all");
+      setSectionId("all");
+    }
+  }, [activeDivision, classId]);
+
+  useEffect(() => {
+    if (!activeClass) {
+      setSectionId("all");
+      return;
+    }
+
+    if (
+      sectionId !== "all" &&
+      !activeClass.sections.some((s) => String(s.id) === String(sectionId))
+    ) {
+      setSectionId("all");
+    }
+  }, [activeClass, sectionId]);
+
+  const filteredAbsentees = useMemo(() => {
+    const rows = data?.insights?.top_absentees ?? [];
+    return rows
+      .filter((row) => row.division_type === divisionType)
+      .filter((row) => classId === "all" || String(row.class_id) === String(classId))
+      .filter((row) => sectionId === "all" || String(row.section_id) === String(sectionId))
+      .sort((a, b) => num(b.absent_days) - num(a.absent_days));
+  }, [data, divisionType, classId, sectionId]);
+
+  const filteredPendingFees = useMemo(() => {
+    const rows = data?.insights?.top_pending_fees ?? [];
+    return rows
+      .filter((row) => row.division_type === divisionType)
+      .filter((row) => classId === "all" || String(row.class_id) === String(classId))
+      .filter((row) => sectionId === "all" || String(row.section_id) === String(sectionId))
+      .sort((a, b) => num(b.pending_amount) - num(a.pending_amount));
+  }, [data, divisionType, classId, sectionId]);
 
   return (
     <AdminLayout title="Dashboard">
@@ -150,6 +208,7 @@ export default function Dashboard() {
                       onClick={() => {
                         setDivisionType(d.type);
                         setClassId("all");
+                        setSectionId("all");
                       }}
                       className={`px-3 py-1.5 rounded-md text-sm border ${
                         divisionType === d.type
@@ -163,18 +222,38 @@ export default function Dashboard() {
                 </div>
 
                 {activeDivision ? (
-                  <select
-                    value={classId}
-                    onChange={(e) => setClassId(e.target.value)}
-                    className="border rounded-md px-2 py-1.5 text-sm"
-                  >
-                    <option value="all">All Classes ({activeDivision.title})</option>
-                    {activeDivision.classes.map((cls) => (
-                      <option key={cls.id} value={String(cls.id)}>
-                        {cls.name}
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={classId}
+                      onChange={(e) => {
+                        setClassId(e.target.value);
+                        setSectionId("all");
+                      }}
+                      className="border rounded-md px-2 py-1.5 text-sm min-w-[220px] bg-white text-slate-800"
+                    >
+                      <option value="all">All Classes ({activeDivision.title})</option>
+                      {activeDivision.classes.map((cls) => (
+                        <option key={cls.id} value={String(cls.id)}>
+                          {classLabel(cls)}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={sectionId}
+                      onChange={(e) => setSectionId(e.target.value)}
+                      disabled={!activeClass}
+                      className="border rounded-md px-2 py-1.5 text-sm min-w-[220px] bg-white text-slate-800 disabled:bg-slate-100"
+                    >
+                      <option value="all">
+                        {activeClass ? `All Sections (${classLabel(activeClass)})` : "Select class first"}
                       </option>
-                    ))}
-                  </select>
+                      {(activeClass?.sections ?? []).map((sec) => (
+                        <option key={sec.id} value={String(sec.id)}>
+                          {sec.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 ) : null}
               </div>
 
@@ -227,7 +306,7 @@ export default function Dashboard() {
                               .filter((cls) => classId === "all" || String(cls.id) === String(classId))
                               .map((cls) => (
                                 <tr key={cls.id} className="border-b">
-                                  <td className="px-3 py-2 font-medium text-slate-800">{cls.name}</td>
+                                  <td className="px-3 py-2 font-medium text-slate-800">{classLabel(cls)}</td>
                                   <td className="px-3 py-2">{num(cls.students_count)}</td>
                                   <td className="px-3 py-2">{formatPKR(num(cls.fees.total))}</td>
                                   <td className="px-3 py-2">{num(cls.fees.percentage)}%</td>
@@ -242,7 +321,14 @@ export default function Dashboard() {
                     {classId !== "all" ? (
                       <div className="border rounded-lg overflow-hidden">
                         <div className="px-3 py-2 bg-slate-50 border-b text-sm font-medium text-slate-700">
-                          Section Summary {activeClass ? `- ${activeClass.name}` : ""}
+                          Section Summary{" "}
+                          {activeClass ? `- ${classLabel(activeClass)}` : ""}
+                          {sectionId !== "all"
+                            ? ` / ${
+                                activeClass?.sections.find((s) => String(s.id) === String(sectionId))
+                                  ?.name ?? "Selected Section"
+                              }`
+                            : ""}
                         </div>
                         <div className="overflow-x-auto">
                           <table className="min-w-full text-sm">
@@ -256,7 +342,7 @@ export default function Dashboard() {
                               </tr>
                             </thead>
                             <tbody>
-                              {sectionRows.map((sec) => (
+                              {visibleSectionRows.map((sec) => (
                                 <tr key={sec.id} className="border-b">
                                   <td className="px-3 py-2 font-medium text-slate-800">{sec.name}</td>
                                   <td className="px-3 py-2">{num(sec.students_count)}</td>
@@ -265,7 +351,7 @@ export default function Dashboard() {
                                   <td className="px-3 py-2">{num(sec.attendance.percentage)}%</td>
                                 </tr>
                               ))}
-                              {sectionRows.length === 0 ? (
+                              {visibleSectionRows.length === 0 ? (
                                 <tr>
                                   <td className="px-3 py-4 text-slate-400" colSpan={5}>
                                     No sections found for this class.
@@ -281,6 +367,54 @@ export default function Dashboard() {
                         Select a class to view section-level summaries.
                       </div>
                     )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="px-3 py-2 bg-slate-50 border-b text-sm font-medium text-slate-700">
+                          Most Absent Students
+                        </div>
+                        <div className="max-h-72 overflow-y-auto">
+                          {filteredAbsentees.length === 0 ? (
+                            <p className="px-3 py-4 text-sm text-slate-400">No absent-student data for this filter.</p>
+                          ) : (
+                            filteredAbsentees.slice(0, 20).map((row) => (
+                              <div key={`${row.enrollment_id}-abs`} className="px-3 py-2 border-b text-sm">
+                                <div className="font-medium text-slate-800">{row.student_name}</div>
+                                <div className="text-xs text-slate-500">
+                                  {row.class_name}{row.section_name ? ` / ${row.section_name}` : ""} {row.father_name ? `• Father: ${row.father_name}` : ""}
+                                </div>
+                                <div className="text-xs text-rose-700 font-semibold mt-1">
+                                  {num(row.absent_days)} absent day(s)
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="px-3 py-2 bg-slate-50 border-b text-sm font-medium text-slate-700">
+                          Highest Pending Fees
+                        </div>
+                        <div className="max-h-72 overflow-y-auto">
+                          {filteredPendingFees.length === 0 ? (
+                            <p className="px-3 py-4 text-sm text-slate-400">No pending-fee data for this filter.</p>
+                          ) : (
+                            filteredPendingFees.slice(0, 20).map((row) => (
+                              <div key={`${row.enrollment_id}-fee`} className="px-3 py-2 border-b text-sm">
+                                <div className="font-medium text-slate-800">{row.student_name}</div>
+                                <div className="text-xs text-slate-500">
+                                  {row.class_name}{row.section_name ? ` / ${row.section_name}` : ""} {row.father_name ? `• Father: ${row.father_name}` : ""}
+                                </div>
+                                <div className="text-xs text-amber-700 font-semibold mt-1">
+                                  {formatPKR(num(row.pending_amount))} pending ({num(row.pending_fee_count)} fee item(s))
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (

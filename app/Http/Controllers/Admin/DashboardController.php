@@ -14,10 +14,12 @@ class DashboardController extends Controller
 
         $overall = $this->buildOverall($year);
         $divisions = $this->buildDivisions($year);
+        $insights = $this->buildInsights($year);
 
         return response()->json([
             ...$overall,
             'divisions' => $divisions,
+            'insights' => $insights,
             'meta' => [
                 'year' => $year,
                 'generated_at' => now(config('app.timezone'))->toDateTimeString(),
@@ -84,11 +86,7 @@ class DashboardController extends Controller
         $classIdsByDivision = ['gurmukhi' => [], 'kirtan' => []];
         foreach ($classes as $class) {
             $rawType = strtolower(trim((string) ($class->type ?? '')));
-            $normalizedType = match ($rawType) {
-                'kirtan', 'kirtan class' => 'kirtan',
-                'gurmukhi', 'gurmukhi class' => 'gurmukhi',
-                default => str_contains(strtolower((string) $class->name), 'kirtan') ? 'kirtan' : 'gurmukhi',
-            };
+            $normalizedType = $this->normalizeDivisionType($rawType, (string) $class->name);
 
             $classIdsByDivision[$normalizedType][] = (int) $class->id;
         }
@@ -321,5 +319,137 @@ class DashboardController extends Controller
                     ->whereYear('fees.created_at', $year);
             });
         });
+    }
+
+    private function buildInsights(int $year): array
+    {
+        return [
+            'top_absentees' => $this->topAbsentees($year),
+            'top_pending_fees' => $this->topPendingFees($year),
+        ];
+    }
+
+    private function topAbsentees(int $year): array
+    {
+        $rows = DB::table('attendance')
+            ->join('student_sections', 'student_sections.id', '=', 'attendance.student_section_id')
+            ->join('students', 'students.id', '=', 'student_sections.student_id')
+            ->join('classes', 'classes.id', '=', 'student_sections.class_id')
+            ->leftJoin('sections', 'sections.id', '=', 'student_sections.section_id')
+            ->whereYear('attendance.date', $year)
+            ->whereRaw("LOWER(TRIM(attendance.status)) = 'absent'")
+            ->select(
+                'student_sections.id as enrollment_id',
+                'student_sections.class_id',
+                'student_sections.section_id',
+                'students.id as student_id',
+                'students.name as student_name',
+                'students.father_name',
+                'classes.name as class_name',
+                'classes.type as class_type',
+                'sections.name as section_name',
+                DB::raw('COUNT(*) as absent_days')
+            )
+            ->groupBy(
+                'student_sections.id',
+                'student_sections.class_id',
+                'student_sections.section_id',
+                'students.id',
+                'students.name',
+                'students.father_name',
+                'classes.name',
+                'classes.type',
+                'sections.name'
+            )
+            ->orderByDesc('absent_days')
+            ->orderBy('students.name')
+            ->limit(50)
+            ->get();
+
+        return $rows->map(function ($row) {
+            return [
+                'student_id' => (int) $row->student_id,
+                'enrollment_id' => (int) $row->enrollment_id,
+                'student_name' => (string) $row->student_name,
+                'father_name' => (string) ($row->father_name ?? ''),
+                'class_id' => (int) $row->class_id,
+                'section_id' => (int) ($row->section_id ?? 0),
+                'class_name' => (string) $row->class_name,
+                'section_name' => (string) ($row->section_name ?? ''),
+                'division_type' => $this->normalizeDivisionType((string) ($row->class_type ?? ''), (string) $row->class_name),
+                'absent_days' => (int) ($row->absent_days ?? 0),
+            ];
+        })->all();
+    }
+
+    private function topPendingFees(int $year): array
+    {
+        $rows = DB::table('fees')
+            ->join('student_sections', 'student_sections.id', '=', 'fees.student_section_id')
+            ->join('students', 'students.id', '=', 'student_sections.student_id')
+            ->join('classes', 'classes.id', '=', 'student_sections.class_id')
+            ->leftJoin('sections', 'sections.id', '=', 'student_sections.section_id')
+            ->where(function ($q) use ($year) {
+                $this->applyFeeYearFilter($q, $year);
+            })
+            ->whereNotExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('payments')
+                    ->whereColumn('payments.fee_id', 'fees.id')
+                    ->whereNull('payments.deleted_at');
+            })
+            ->select(
+                'student_sections.id as enrollment_id',
+                'student_sections.class_id',
+                'student_sections.section_id',
+                'students.id as student_id',
+                'students.name as student_name',
+                'students.father_name',
+                'classes.name as class_name',
+                'classes.type as class_type',
+                'sections.name as section_name',
+                DB::raw('SUM(fees.amount) as pending_amount'),
+                DB::raw('COUNT(fees.id) as pending_fee_count')
+            )
+            ->groupBy(
+                'student_sections.id',
+                'student_sections.class_id',
+                'student_sections.section_id',
+                'students.id',
+                'students.name',
+                'students.father_name',
+                'classes.name',
+                'classes.type',
+                'sections.name'
+            )
+            ->orderByDesc('pending_amount')
+            ->orderBy('students.name')
+            ->limit(50)
+            ->get();
+
+        return $rows->map(function ($row) {
+            return [
+                'student_id' => (int) $row->student_id,
+                'enrollment_id' => (int) $row->enrollment_id,
+                'student_name' => (string) $row->student_name,
+                'father_name' => (string) ($row->father_name ?? ''),
+                'class_id' => (int) $row->class_id,
+                'section_id' => (int) ($row->section_id ?? 0),
+                'class_name' => (string) $row->class_name,
+                'section_name' => (string) ($row->section_name ?? ''),
+                'division_type' => $this->normalizeDivisionType((string) ($row->class_type ?? ''), (string) $row->class_name),
+                'pending_amount' => (int) ($row->pending_amount ?? 0),
+                'pending_fee_count' => (int) ($row->pending_fee_count ?? 0),
+            ];
+        })->all();
+    }
+
+    private function normalizeDivisionType(string $rawType, string $className): string
+    {
+        return match (strtolower(trim($rawType))) {
+            'kirtan', 'kirtan class' => 'kirtan',
+            'gurmukhi', 'gurmukhi class' => 'gurmukhi',
+            default => str_contains(strtolower($className), 'kirtan') ? 'kirtan' : 'gurmukhi',
+        };
     }
 }

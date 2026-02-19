@@ -5,24 +5,12 @@ export default function Splash() {
   const { data, setData, post, processing, errors } = useForm({
     login: "",
     password: "",
+    remember: false,
   });
 
   function submit(e) {
     e.preventDefault();
-    post("/login", {
-  onStart: () => {
-    console.log("LOGIN: started");
-  },
-  onFinish: () => {
-    console.log("LOGIN: finished");
-  },
-  onSuccess: () => {
-    console.log("LOGIN: success");
-  },
-  onError: (errors) => {
-    console.log("LOGIN: errors", errors);
-  },
-});
+    post("/login");
 
   }
 
@@ -51,6 +39,12 @@ export default function Splash() {
         <h2 className="text-lg font-semibold text-gray-800 text-center">
           Login
         </h2>
+
+        {(errors.auth || errors.login) && (
+          <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {errors.auth || errors.login}
+          </div>
+        )}
 
         {/* Username / Email */}
         <div>
@@ -89,6 +83,15 @@ export default function Splash() {
             </p>
           )}
         </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={data.remember}
+            onChange={(e) => setData("remember", e.target.checked)}
+          />
+          Remember me
+        </label>
 
         {/* Submit */}
         <button

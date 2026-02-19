@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     // 🔑 Route middleware aliases (Laravel 12 way)
     $middleware->alias([
         'role' => \App\Http\Middleware\RoleMiddleware::class,
+        'session.cache_guard' => \App\Http\Middleware\EnsureSessionAfterCacheClear::class,
     ]);
 })
 
