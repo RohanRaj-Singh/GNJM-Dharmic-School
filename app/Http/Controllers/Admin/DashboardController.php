@@ -103,6 +103,11 @@ class DashboardController extends Controller
                 'classes_count' => count($classIds),
                 'sections_count' => (int) DB::table('sections')->whereIn('class_id', $classIds)->count(),
                 'students_count' => (int) DB::table('student_sections')->whereIn('class_id', $classIds)->distinct('student_id')->count('student_id'),
+                'free_students_count' => (int) DB::table('student_sections')
+                    ->whereIn('class_id', $classIds)
+                    ->where('student_type', 'free')
+                    ->distinct('student_id')
+                    ->count('student_id'),
                 'active_students_count' => (int) DB::table('student_sections')
                     ->join('students', 'students.id', '=', 'student_sections.student_id')
                     ->whereIn('student_sections.class_id', $classIds)
@@ -127,6 +132,7 @@ class DashboardController extends Controller
                         'name' => $class->name,
                         'sections_count' => 0,
                         'students_count' => 0,
+                        'free_students_count' => 0,
                         'enrollments_count' => 0,
                         'fees' => ['total' => 0, 'collected' => 0, 'pending' => 0, 'percentage' => 0],
                         'attendance' => ['present' => 0, 'absent' => 0, 'leave' => 0, 'percentage' => 0],
@@ -158,7 +164,8 @@ class DashboardController extends Controller
             ->select(
                 'section_id',
                 DB::raw('COUNT(*) as enrollments_count'),
-                DB::raw('COUNT(DISTINCT student_id) as students_count')
+                DB::raw('COUNT(DISTINCT student_id) as students_count'),
+                DB::raw("COUNT(DISTINCT CASE WHEN student_type = 'free' THEN student_id END) as free_students_count")
             )
             ->groupBy('section_id')
             ->get()
@@ -171,6 +178,7 @@ class DashboardController extends Controller
                     'id' => (int) $section->id,
                     'name' => $section->name,
                     'students_count' => (int) ($counts->students_count ?? 0),
+                    'free_students_count' => (int) ($counts->free_students_count ?? 0),
                     'enrollments_count' => (int) ($counts->enrollments_count ?? 0),
                     'fees' => $sectionFees[$section->id] ?? ['total' => 0, 'collected' => 0, 'pending' => 0, 'percentage' => 0],
                     'attendance' => $sectionAttendance[$section->id] ?? ['present' => 0, 'absent' => 0, 'leave' => 0, 'percentage' => 0],
@@ -183,7 +191,8 @@ class DashboardController extends Controller
             ->select(
                 'class_id',
                 DB::raw('COUNT(*) as enrollments_count'),
-                DB::raw('COUNT(DISTINCT student_id) as students_count')
+                DB::raw('COUNT(DISTINCT student_id) as students_count'),
+                DB::raw("COUNT(DISTINCT CASE WHEN student_type = 'free' THEN student_id END) as free_students_count")
             )
             ->groupBy('class_id')
             ->get()
@@ -200,6 +209,7 @@ class DashboardController extends Controller
                     'name' => (string) ($classNames[$classId] ?? ''),
                     'sections_count' => count($sectionsByClass[$classId] ?? []),
                     'students_count' => (int) ($counts->students_count ?? 0),
+                    'free_students_count' => (int) ($counts->free_students_count ?? 0),
                     'enrollments_count' => (int) ($counts->enrollments_count ?? 0),
                     'fees' => $classFees[$classId] ?? ['total' => 0, 'collected' => 0, 'pending' => 0, 'percentage' => 0],
                     'attendance' => $classAttendance[$classId] ?? ['present' => 0, 'absent' => 0, 'leave' => 0, 'percentage' => 0],

@@ -12,6 +12,10 @@ function classLabel(cls) {
   return name.length ? name : `Class #${num(cls?.id)}`;
 }
 
+function studentCountLabel(total, free) {
+  return `${num(total)} (Free: ${num(free)})`;
+}
+
 function StatTile({ label, value, sub, accent = "bg-slate-700" }) {
   return (
     <div className="bg-white border rounded-xl p-4">
@@ -94,6 +98,27 @@ export default function Dashboard() {
     sectionId === "all"
       ? sectionRows
       : sectionRows.filter((s) => String(s.id) === String(sectionId));
+
+  const selectedScopeCounts = useMemo(() => {
+    if (!activeClass) {
+      return { students: 0, freeStudents: 0 };
+    }
+
+    if (sectionId === "all") {
+      return {
+        students: num(activeClass.students_count),
+        freeStudents: num(activeClass.free_students_count),
+      };
+    }
+
+    const selectedSection =
+      activeClass.sections.find((s) => String(s.id) === String(sectionId)) ?? null;
+
+    return {
+      students: num(selectedSection?.students_count),
+      freeStudents: num(selectedSection?.free_students_count),
+    };
+  }, [activeClass, sectionId]);
 
   useEffect(() => {
     if (!activeDivision) {
@@ -295,7 +320,7 @@ export default function Dashboard() {
                           <thead className="bg-white border-b text-slate-500">
                             <tr>
                               <th className="text-left px-3 py-2">Class</th>
-                              <th className="text-left px-3 py-2">Students</th>
+                              <th className="text-left px-3 py-2">Students (Free)</th>
                               <th className="text-left px-3 py-2">Fees</th>
                               <th className="text-left px-3 py-2">Collection %</th>
                               <th className="text-left px-3 py-2">Attendance %</th>
@@ -307,7 +332,9 @@ export default function Dashboard() {
                               .map((cls) => (
                                 <tr key={cls.id} className="border-b">
                                   <td className="px-3 py-2 font-medium text-slate-800">{classLabel(cls)}</td>
-                                  <td className="px-3 py-2">{num(cls.students_count)}</td>
+                                  <td className="px-3 py-2">
+                                    {studentCountLabel(cls.students_count, cls.free_students_count)}
+                                  </td>
                                   <td className="px-3 py-2">{formatPKR(num(cls.fees.total))}</td>
                                   <td className="px-3 py-2">{num(cls.fees.percentage)}%</td>
                                   <td className="px-3 py-2">{num(cls.attendance.percentage)}%</td>
@@ -329,13 +356,20 @@ export default function Dashboard() {
                                   ?.name ?? "Selected Section"
                               }`
                             : ""}
+                          <span className="ml-2 text-xs font-normal text-slate-500">
+                            Students:{" "}
+                            {studentCountLabel(
+                              selectedScopeCounts.students,
+                              selectedScopeCounts.freeStudents
+                            )}
+                          </span>
                         </div>
                         <div className="overflow-x-auto">
                           <table className="min-w-full text-sm">
                             <thead className="bg-white border-b text-slate-500">
                               <tr>
                                 <th className="text-left px-3 py-2">Section</th>
-                                <th className="text-left px-3 py-2">Students</th>
+                                <th className="text-left px-3 py-2">Students (Free)</th>
                                 <th className="text-left px-3 py-2">Fees</th>
                                 <th className="text-left px-3 py-2">Collection %</th>
                                 <th className="text-left px-3 py-2">Attendance %</th>
@@ -345,7 +379,9 @@ export default function Dashboard() {
                               {visibleSectionRows.map((sec) => (
                                 <tr key={sec.id} className="border-b">
                                   <td className="px-3 py-2 font-medium text-slate-800">{sec.name}</td>
-                                  <td className="px-3 py-2">{num(sec.students_count)}</td>
+                                  <td className="px-3 py-2">
+                                    {studentCountLabel(sec.students_count, sec.free_students_count)}
+                                  </td>
                                   <td className="px-3 py-2">{formatPKR(num(sec.fees.total))}</td>
                                   <td className="px-3 py-2">{num(sec.fees.percentage)}%</td>
                                   <td className="px-3 py-2">{num(sec.attendance.percentage)}%</td>
