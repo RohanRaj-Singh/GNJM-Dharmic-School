@@ -1,23 +1,16 @@
-import { Head, Link, usePage } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import { useState } from "react";
 import SidebarGroup from "@/Components/SidebarGroup";
-import { Sidebar } from "lucide-react";
-import { router } from "@inertiajs/react";
 import Logo from "../../images/logo.png";
 
 export default function AdminLayout({ title, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [feesOpen, setFeesOpen] = useState(false);
-
-  const { url } = usePage(); // for active state (optional)
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen flex bg-gray-100">
-      <Head
-        title={title ? `${title} – GNJM Admin` : "GNJM Admin"}
-      />
+      <Head title={title ? `${title} - GNJM Admin` : "GNJM Admin"} />
 
-      {/* ================= Mobile Overlay ================= */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-30 z-30 md:hidden"
@@ -25,112 +18,89 @@ export default function AdminLayout({ title, children }) {
         />
       )}
 
-      {/* ================= Sidebar ================= */}
       <aside
-        className={`
-          fixed z-40 inset-y-0 left-0 w-auto bg-white border-r
-          transform transition-transform duration-200
-          md:static md:translate-x-0
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-        `}
+        className={[
+          "fixed z-40 inset-y-0 left-0 w-72 bg-white border-r",
+          "transform transition-all duration-200",
+          "md:static md:translate-x-0",
+          desktopSidebarCollapsed
+            ? "md:w-0 md:min-w-0 md:overflow-hidden md:border-r-0"
+            : "md:w-72 md:min-w-72",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
       >
-        {/* Logo */}
-        <div className="px-6 py-4 border-b">
-          <div className="flex items-center gap-3">
+        <div className="px-6 py-4 border-b min-w-[240px]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
             <img src={Logo} alt="GNJM Logo" className="h-10 w-10 object-contain" />
             <div>
               <h1 className="text-xl font-semibold text-gray-800">GNJM</h1>
               <p className="text-sm text-gray-500">Admin Panel</p>
             </div>
+            </div>
           </div>
-
-
-
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 min-w-[240px]">
           <SidebarLink href="/admin/dashboard" label="Dashboard" />
           <SidebarLink href="/admin/students" label="Students" />
           <SidebarLink href="/admin/classes" label="Classes" />
           <SidebarLink href="/admin/sections" label="Sections" />
           <SidebarLink href="/admin/attendance" label="Attendance" />
 
-
           <SidebarGroup label="Fees Management">
-                <SidebarSubLink
-                  href="/admin/fees/"
-                  label="Manage Fees"
-                />
-                <SidebarSubLink
-                  href="/admin/fees/custom"
-                  label="Fee Categories"
-                />
-              </SidebarGroup>
-          <SidebarGroup label="Reports">
-    <SidebarLink
-        href="/admin/reports/"
-        label="Fees Report"
-    />
-    <SidebarLink
-        href="/admin/reports/attendance"
-        label="Attendance Report"
-    />
-    <SidebarLink
-        href="/admin/reports/student"
-        label="Student Report"
-    />
-</SidebarGroup>
-<SidebarLink href="/admin/users" label="Users" />
+            <SidebarSubLink href="/admin/fees/" label="Manage Fees" />
+            <SidebarSubLink href="/admin/fees/custom" label="Fee Categories" />
+          </SidebarGroup>
 
-                    <SidebarLink href="/admin/utilities" label="Utilities" />
+          <SidebarGroup label="Reports">
+            <SidebarLink href="/admin/reports/" label="Fees Report" />
+            <SidebarLink href="/admin/reports/attendance" label="Attendance Report" />
+            <SidebarLink href="/admin/reports/student" label="Student Report" />
+          </SidebarGroup>
+
+          <SidebarLink href="/admin/users" label="Users" />
+          <SidebarLink href="/admin/utilities" label="Utilities" />
         </nav>
 
-        {/* Footer */}
-
-        <div className="px-4 py-3 border-t text-xs text-gray-400 d-flex flex-col justify-between items-center">
-        <div><button
-  onClick={() => router.post('/logout')}
-  className="button bg-red-100 text-red-600 px-2 py-1 rounded-lg text-sm"
->
-  Logout
-</button>
-
-</div>
+        <div className="px-4 py-3 border-t text-xs text-gray-400 min-w-[240px]">
+          <button
+            onClick={() => router.post("/logout")}
+            className="bg-red-100 text-red-600 px-2 py-1 rounded-lg text-sm"
+          >
+            Logout
+          </button>
         </div>
       </aside>
 
-      {/* ================= Main ================= */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
         <header className="bg-white border-b px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Mobile menu button */}
             <button
               className="md:hidden text-gray-700"
               onClick={() => setSidebarOpen(true)}
             >
-              ☰
+              Menu
             </button>
 
-            <h2 className="text-lg font-semibold text-gray-800">
-              {title}
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
           </div>
 
-          <div />
+          <div>
+            <button
+              className="hidden md:inline-flex items-center rounded-md border px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+              onClick={() => setDesktopSidebarCollapsed((prev) => !prev)}
+            >
+              {desktopSidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
+            </button>
+          </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
-          {children}
-        </main>
+        <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
       </div>
     </div>
   );
 }
-
-/* ---------------- Sidebar Links ---------------- */
 
 function SidebarLink({ href, label }) {
   return (

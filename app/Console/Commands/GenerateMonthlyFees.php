@@ -24,10 +24,13 @@ class GenerateMonthlyFees extends Command
         $month = Carbon::now(config('app.timezone'))->format('Y-m');
 
         $enrollments = StudentSection::with(['schoolClass', 'section'])
-            ->where('student_type', 'paid')
             ->get();
 
         foreach ($enrollments as $enrollment) {
+            if ($enrollment->student_type === 'free') {
+                $this->clearUnpaidMonthlyFeesForFreeEnrollment($enrollment);
+                continue;
+            }
 
             // Skip Kirtan
             if ($enrollment->schoolClass->type === 'kirtan') {
@@ -60,5 +63,13 @@ class GenerateMonthlyFees extends Command
         }
 
         $this->info('Monthly fees generated successfully.');
+    }
+
+    private function clearUnpaidMonthlyFeesForFreeEnrollment(StudentSection $enrollment): int
+    {
+        return Fee::where('student_section_id', $enrollment->id)
+            ->where('type', 'monthly')
+            ->whereDoesntHave('payments', fn ($q) => $q->whereNull('deleted_at'))
+            ->delete();
     }
 }

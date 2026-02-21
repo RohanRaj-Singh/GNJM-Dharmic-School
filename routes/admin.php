@@ -205,21 +205,15 @@ Route::prefix('students')->name('students.')->group(function () {
                         ['student_type' => $studentType]
                     );
 
-                    $previousType = $enrollment->student_type;
-
                     if ($enrollment->student_type !== $studentType) {
                         $enrollment->update(['student_type' => $studentType]);
                     }
 
                     if ($studentType === 'free') {
-                        if ($previousType === 'paid') {
-                            $currentMonth = now(config('app.timezone'))->format('Y-m');
-                            Fee::where('student_section_id', $enrollment->id)
-                                ->where('type', 'monthly')
-                                ->where('month', '>', $currentMonth)
-                                ->whereDoesntHave('payments', fn ($q) => $q->whereNull('deleted_at'))
-                                ->delete();
-                        }
+                        Fee::where('student_section_id', $enrollment->id)
+                            ->where('type', 'monthly')
+                            ->whereDoesntHave('payments', fn ($q) => $q->whereNull('deleted_at'))
+                            ->delete();
                         continue;
                     }
 
