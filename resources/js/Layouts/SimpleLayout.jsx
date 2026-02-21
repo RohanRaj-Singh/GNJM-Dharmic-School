@@ -5,6 +5,11 @@ import {router} from "@inertiajs/react";
 export default function SimpleLayout({title, children})
 {
   const {flash} = usePage().props;
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
     return (
         <div className="min-h-screen bg-gray-100">
             <Head title={title}></Head>
@@ -24,7 +29,7 @@ export default function SimpleLayout({title, children})
     {/* Title */}
     <div className="absolute inset-x-0 text-center pointer-events-none">
       <h1 className="text-base font-semibold text-gray-800">
-        {title ?? "GNJM"}
+        {title ?? "GNJM"} · {todayLabel}
       </h1>
     </div>
 
