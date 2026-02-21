@@ -20,16 +20,16 @@ export default function AdminLayout({ title, children }) {
 
       <aside
         className={[
-          "fixed z-40 inset-y-0 left-0 w-72 bg-white border-r",
+          "fixed z-40 inset-y-0 left-0 w-auto bg-white border-r",
           "transform transition-all duration-200",
           "md:static md:translate-x-0",
           desktopSidebarCollapsed
-            ? "md:w-0 md:min-w-0 md:overflow-hidden md:border-r-0"
-            : "md:w-72 md:min-w-72",
+            ? "md:w-0 md:overflow-hidden md:border-r-0"
+            : "md:w-auto",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
-        <div className="px-6 py-4 border-b min-w-[240px]">
+        <div className="px-6 py-4 border-b">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
             <img src={Logo} alt="GNJM Logo" className="h-10 w-10 object-contain" />
@@ -41,7 +41,7 @@ export default function AdminLayout({ title, children }) {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1 min-w-[240px]">
+        <nav className="flex-1 px-3 py-4 space-y-1">
           <SidebarLink href="/admin/dashboard" label="Dashboard" />
           <SidebarLink href="/admin/students" label="Students" />
           <SidebarLink href="/admin/classes" label="Classes" />
@@ -63,7 +63,7 @@ export default function AdminLayout({ title, children }) {
           <SidebarLink href="/admin/utilities" label="Utilities" />
         </nav>
 
-        <div className="px-4 py-3 border-t text-xs text-gray-400 min-w-[240px]">
+        <div className="px-4 py-3 border-t text-xs text-gray-400">
           <button
             onClick={() => router.post("/logout")}
             className="bg-red-100 text-red-600 px-2 py-1 rounded-lg text-sm"
