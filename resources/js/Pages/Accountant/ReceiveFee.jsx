@@ -81,7 +81,7 @@ export default function ReceiveFee({ student, fees = [] }) {
                 </span>
               </div>
               <span className="text-sm font-medium">
-                ₹{fee.amount}
+                Rs. {fee.amount}
               </span>
             </label>
           ))}
@@ -94,7 +94,7 @@ export default function ReceiveFee({ student, fees = [] }) {
               Total Amount
             </p>
             <p className="text-xl font-semibold">
-              ₹{totalAmount}
+              Rs. {totalAmount}
             </p>
           </div>
         )}
