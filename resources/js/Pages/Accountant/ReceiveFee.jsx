@@ -27,7 +27,7 @@ export default function ReceiveFee({ student, fees = [] }) {
 
   const totalAmount = fees
     .filter((f) => selectedFees.includes(f.id))
-    .reduce((sum, f) => sum + f.amount, 0);
+    .reduce((sum, f) => sum + Number(f.amount ?? 0), 0);
 
   const submitPayment = () => {
     if (selectedFees.length === 0) return;
