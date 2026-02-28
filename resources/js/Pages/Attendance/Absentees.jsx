@@ -33,28 +33,18 @@ export default function Absentees({
   const hasCustomFilter = filters.has_custom_filter || false;
 
   // Collapsible states
-  const [filterOpen, setFilterOpen] = useState(false); // Filters collapsible
+  const [filterOpen, setFilterOpen] = useState(false);
   const [absentOpen, setAbsentOpen] = useState(true);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [todayOpen, setTodayOpen] = useState(false);
 
-  // Track which category sections are expanded (absent_1, absent_2, etc.)
-  const [expandedCategories, setExpandedCategories] = useState({});
-  // Track which inner sections are expanded
-  const [expandedSections, setExpandedSections] = useState({});
+  // Track which students are expanded
+  const [expandedStudents, setExpandedStudents] = useState({});
 
-  const toggleCategory = (catKey) => {
-    setExpandedCategories(prev => {
+  const toggleStudent = (studentKey) => {
+    setExpandedStudents(prev => {
       const newState = {};
-      newState[catKey] = !prev[catKey];
-      return newState;
-    });
-  };
-
-  const toggleSection = (sectionKey) => {
-    setExpandedSections(prev => {
-      const newState = {};
-      newState[sectionKey] = !prev[sectionKey];
+      newState[studentKey] = !prev[studentKey];
       return newState;
     });
   };
@@ -97,69 +87,108 @@ export default function Absentees({
     return Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
   };
 
-  const categories = {
-    absent_1: { title: "Absent (1 Day)", icon: "❌", color: "red" },
-    absent_2: { title: "Absent (2 Days)", icon: "❌❌", color: "red" },
-    absent_3_plus: { title: "Absent (3+ Days)", icon: "❌❌❌", color: "red" },
-    leave_1: { title: "Leave (1 Day)", icon: "🟡", color: "yellow" },
-    leave_2_plus: { title: "Leave (2+ Days)", icon: "🟡🟡", color: "yellow" },
-    absent_today: { title: "Absent Today", icon: "🔴", color: "red" },
-  };
-
   // Filter sections by selected class
   const filteredSections = useMemo(() => {
     if (!classId) return sections;
     return sections.filter(s => String(s.class_id) === String(classId));
   }, [sections, classId]);
 
-  const grouped = {};
-  const todayGrouped = {};
+  // Group students by category (absent vs leave)
+  const absentStudents = [];
+  const leaveStudents = [];
 
   students.forEach((s) => {
-    if (!grouped[s.category]) grouped[s.category] = {};
-    if (!grouped[s.category][s.section]) {
-      grouped[s.category][s.section] = [];
+    const dates = [
+      ...(s.all_absent_dates || []).map(d => ({ date: d, type: 'Absent' })),
+      ...(s.all_leave_dates || []).map(d => ({ date: d, type: 'Leave' }))
+    ];
+
+    const hasAbsent = (s.all_absent_dates || []).length > 0;
+    const hasLeave = (s.all_leave_dates || []).length > 0;
+
+    if (hasAbsent) {
+      absentStudents.push({ ...s, all_dates: dates.filter(d => d.type === 'Absent') });
     }
-    grouped[s.category][s.section].push(s);
+    if (hasLeave) {
+      leaveStudents.push({ ...s, all_dates: dates.filter(d => d.type === 'Leave') });
+    }
   });
 
-  today_absentees.forEach((s) => {
-    if (!todayGrouped[s.section]) todayGrouped[s.section] = [];
-    todayGrouped[s.section].push(s);
-  });
+  // Sort by total days (ascending)
+  const sortByDays = (a, b) => {
+    const aDays = (a.all_absent_dates?.length || 0) + (a.all_leave_dates?.length || 0);
+    const bDays = (b.all_absent_dates?.length || 0) + (b.all_leave_dates?.length || 0);
+    return aDays - bDays;
+  };
+
+  absentStudents.sort(sortByDays);
+  leaveStudents.sort(sortByDays);
 
   // Days count for display
   const daysCount = getDaysCount(startDate, endDate);
 
-  // Get total student count
-  const getTotalCount = () => {
-    return [grouped.absent_1, grouped.absent_2, grouped.absent_3_plus]
-      .filter(g => g && Object.keys(g).length > 0)
-      .flatMap(g => Object.values(g))
-      .flat()
-      .length || 0;
+  // Get day name from date
+  const getDayName = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { weekday: 'short' });
   };
 
-  // Helper to render category section (Absent or Leave)
-  const renderCategorySection = (categoryKeys, groupKey, title, bgClass, iconColor) => {
-    const hasData = categoryKeys.some(k => grouped[k] && Object.keys(grouped[k]).length > 0);
+  // Render a student accordion
+  const renderStudentAccordion = (student, type) => {
+    const studentKey = `${student.id}-${type}`;
+    const isExpanded = expandedStudents[studentKey] === true;
+    const totalDays = student.all_dates.length;
+
+    return (
+      <div key={studentKey} className="border rounded-lg overflow-hidden mb-2">
+        <button
+          onClick={() => toggleStudent(studentKey)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50"
+        >
+          <div className="text-left">
+            <p className="text-sm font-medium text-gray-900">{student.name}</p>
+            <p className="text-xs text-gray-500">Father: {student.father_name || '—'}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs px-2 py-1 rounded-full ${type === 'Absent' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+              {totalDays} day{totalDays !== 1 ? 's' : ''}
+            </span>
+            <svg className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </button>
+
+        {isExpanded && (
+          <ul className="border-t bg-gray-50 divide-y">
+            {student.all_dates.map((item, idx) => (
+              <li key={idx} className="px-4 py-2 flex justify-between items-center">
+                <span className="text-sm text-gray-700">{item.date}</span>
+                <span className="text-xs text-gray-500">{getDayName(item.date)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
+  // Render student list section
+  const renderStudentList = (studentList, title, bgClass, iconColor) => {
+    const isOpen = title === 'Absent' ? absentOpen : leaveOpen;
+    const setOpen = title === 'Absent' ? setAbsentOpen : setLeaveOpen;
 
     return (
       <div className="bg-white border rounded-lg overflow-hidden">
         <button
           onClick={() => {
-            if (groupKey === 'absent') {
-              setAbsentOpen(!absentOpen);
+            setOpen(!isOpen);
+            if (title === 'Absent') {
               setLeaveOpen(false);
-              setTodayOpen(false);
-            } else if (groupKey === 'leave') {
-              setLeaveOpen(!leaveOpen);
-              setAbsentOpen(false);
               setTodayOpen(false);
             } else {
-              setTodayOpen(!todayOpen);
               setAbsentOpen(false);
-              setLeaveOpen(false);
+              setTodayOpen(false);
             }
           }}
           className={`w-full flex items-center justify-between px-4 py-3 ${bgClass} hover:opacity-90 transition-opacity`}
@@ -167,93 +196,25 @@ export default function Absentees({
           <div className="flex items-center gap-2">
             <span className={`font-medium ${iconColor}`}>{title}</span>
             <span className={`text-xs ${iconColor.replace('text-', 'bg-').replace('600', '200').replace('700', '200')} ${iconColor.replace('600', '700').replace('700', '700')} px-2 py-0.5 rounded-full`}>
-              {categoryKeys.reduce((sum, k) => sum + (grouped[k] ? Object.values(grouped[k]).flat().length : 0), 0)}
+              {studentList.length}
             </span>
           </div>
-          <svg className={`w-5 h-5 ${iconColor} transition-transform ${(groupKey === 'absent' ? absentOpen : groupKey === 'leave' ? leaveOpen : todayOpen) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-5 h-5 ${iconColor} transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
-        {(groupKey === 'absent' ? absentOpen : groupKey === 'leave' ? leaveOpen : todayOpen) && hasData && (
+        {isOpen && (
           <div className="p-4">
-            <div className="space-y-4">
-              {categoryKeys.map(catKey => {
-                if (!grouped[catKey] || Object.keys(grouped[catKey]).length === 0) return null;
-                const meta = categories[catKey];
-                const list = Object.values(grouped[catKey]).flat();
-
-                return (
-                  <div key={catKey} className="border rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => toggleCategory(catKey)}
-                      className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100"
-                    >
-                      <span className="font-medium text-gray-700">
-                        {meta.icon} {meta.title}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
-                          {list.length}
-                        </span>
-                        <svg className={`w-5 h-5 text-gray-500 transition-transform ${expandedCategories[catKey] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    </button>
-
-                    {expandedCategories[catKey] && (
-                      <div className="divide-y">
-                        {Object.entries(grouped[catKey] || {}).map(([sectionName, sectionList]) => {
-                          const sectionKey = `${catKey}-${sectionName}`;
-
-                          return (
-                            <div key={sectionKey}>
-                              <button
-                                onClick={() => toggleSection(sectionKey)}
-                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50"
-                              >
-                                <span className="text-sm text-gray-600">📂 {sectionName}</span>
-                                <span className="text-xs text-gray-400">{sectionList.length}</span>
-                              </button>
-
-                              {expandedSections[sectionKey] && (
-                                <ul className="border-t bg-gray-50">
-                                  {sectionList.map((s) => (
-                                    <li key={s.id} className="px-4 py-2 flex justify-between items-center">
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                                        <p className="text-xs text-gray-500">Father: {s.father_name || '—'}</p>
-                                      </div>
-                                      <div className="text-right">
-                                        <p className="text-xs text-gray-500">{s.date}</p>
-                                        {s.streak_days > 1 && (
-                                          <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
-                                            {s.streak_days} days
-                                          </span>
-                                        )}
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {(groupKey === 'absent' ? absentOpen : groupKey === 'leave' ? leaveOpen : todayOpen) && !hasData && (
-          <div className="p-4">
-            <p className="text-sm text-gray-500 text-center py-2">
-              {groupKey === 'absent' ? 'No absent students' : groupKey === 'leave' ? 'No students on leave' : 'No absent today'}
-            </p>
+            {studentList.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-2">
+                No {title.toLowerCase()} students
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {studentList.map(s => renderStudentAccordion(s, title))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -375,14 +336,47 @@ export default function Absentees({
         </div>
 
         {/* Absent Section */}
-        {renderCategorySection(['absent_1', 'absent_2', 'absent_3_plus'], 'absent', 'Absent', 'bg-red-50', 'text-red-600')}
+        {renderStudentList(absentStudents, 'Absent', 'bg-red-50', 'text-red-600')}
 
         {/* Leave Section */}
-        {renderCategorySection(['leave_1', 'leave_2_plus'], 'leave', 'Leave', 'bg-yellow-50', 'text-yellow-700')}
+        {renderStudentList(leaveStudents, 'Leave', 'bg-yellow-50', 'text-yellow-700')}
 
         {/* Absent Today Section */}
         {today_absentees && today_absentees.length > 0 && (
-          renderCategorySection(['absent_today'], 'today', '🔴 Absent Today', 'bg-red-100', 'text-red-700')
+          <div className="bg-white border-2 border-red-500 rounded-lg overflow-hidden">
+            <button
+              onClick={() => {
+                setTodayOpen(!todayOpen);
+                setAbsentOpen(false);
+                setLeaveOpen(false);
+              }}
+              className="w-full flex items-center justify-between px-4 py-3 bg-red-100 hover:bg-red-200 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-red-700 font-medium">🔴 Absent Today</span>
+                <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
+                  {today_absentees.length}
+                </span>
+              </div>
+              <svg className={`w-5 h-5 text-red-700 transition-transform ${todayOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {todayOpen && (
+              <ul className="divide-y">
+                {today_absentees.map((s) => (
+                  <li key={s.id} className="px-4 py-3 flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                      <p className="text-xs text-gray-500">Father: {s.father_name || '—'}</p>
+                    </div>
+                    <span className="text-xs bg-red-200 text-red-700 px-2 py-1 rounded">Today</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
 
         {students.length === 0 && (!today_absentees || today_absentees.length === 0) && (
