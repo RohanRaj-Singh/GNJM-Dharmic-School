@@ -118,6 +118,24 @@ Route::prefix('attendance')->group(function () {
             ? $user->sections->pluck('id')->all()
             : Section::pluck('id')->all();
 
+        // Get date range from request, default to yesterday and before
+        $today = Carbon::today();
+        $yesterday = $today->copy()->subDay();
+        $endDate = $yesterday; // By default, only show up to yesterday
+        $startDate = $endDate->copy()->subDays(30); // Last 30 days by default
+
+        $requestStart = request('start_date');
+        $requestEnd = request('end_date');
+        if ($requestStart) {
+            $startDate = Carbon::parse($requestStart);
+        }
+        if ($requestEnd) {
+            $endDate = Carbon::parse($requestEnd);
+        }
+
+        // Check if today is included in the filter
+        $includeToday = request('include_today', false);
+
         $enrollments = StudentSection::with([
             'student',
             'section',
@@ -128,14 +146,26 @@ Route::prefix('attendance')->group(function () {
             ->get();
 
         $students = [];
+        $todayAbsentees = []; // Track absent today separately
+
         foreach ($enrollments as $enrollment) {
             $isKirtanClass = $isClassType($enrollment->schoolClass->type ?? null, 'kirtan');
 
             $attendance = $enrollment->attendance
-                // Gurmukhi: Mon-Sat, Kirtan: Sunday only.
-                ->filter(function ($a) use ($isKirtanClass) {
-                    $isSunday = Carbon::parse($a->date)->dayOfWeek === Carbon::SUNDAY;
-                    return $isKirtanClass ? $isSunday : !$isSunday;
+                // Filter by date range
+                ->filter(function ($a) use ($startDate, $endDate, $includeToday, $today, $isKirtanClass) {
+                    $date = Carbon::parse($a->date);
+                    $isSunday = $date->dayOfWeek === Carbon::SUNDAY;
+                    $validDay = $isKirtanClass ? $isSunday : !$isSunday;
+
+                    if (!$validDay) return false;
+
+                    // If not including today, exclude today
+                    if (!$includeToday && $date->isSameDay($today)) {
+                        return false;
+                    }
+
+                    return $date->gte($startDate) && $date->lte($endDate);
                 })
                 ->values();
 
@@ -143,7 +173,37 @@ Route::prefix('attendance')->group(function () {
                 continue;
             }
 
-            // Use latest available non-Sunday record, not a fixed calendar day.
+            // Check if absent TODAY (separate category)
+            $todayAttendance = $enrollment->attendance
+                ->filter(function ($a) use ($today, $isKirtanClass) {
+                    $date = Carbon::parse($a->date);
+                    $isSunday = $date->dayOfWeek === Carbon::SUNDAY;
+                    $validDay = $isKirtanClass ? $isSunday : !$isSunday;
+                    return $validDay && $date->isSameDay($today);
+                })
+                ->first();
+
+            $todayStatus = $todayAttendance ? $normalizeStatus($todayAttendance->status) : null;
+
+            // If absent today, add to today category
+            if ($todayStatus === 'absent') {
+                $todayAbsentees[] = [
+                    'id' => $enrollment->student->id,
+                    'name' => $enrollment->student->name,
+                    'father_name' => $enrollment->student->father_name,
+                    'section' => $enrollment->schoolClass->name . ' - ' . $enrollment->section->name,
+                    'date' => $todayAttendance->date,
+                    'category' => 'absent_today',
+                ];
+                // Don't include in streak calculation
+                $attendance = $attendance->filter(fn($a) => $a->date !== $todayAttendance->date)->values();
+            }
+
+            if ($attendance->isEmpty()) {
+                continue;
+            }
+
+            // Use latest available record within date range (up to yesterday when not including today)
             $lastDayRecord = $attendance->first();
 
             $status = $normalizeStatus($lastDayRecord->status);
@@ -151,9 +211,16 @@ Route::prefix('attendance')->group(function () {
                 continue;
             }
 
+            // Calculate streak - count consecutive absent/leave days
+            // Start from the last day and go backwards
             $streak = 0;
+            $streakStartDate = null;
+
             foreach ($attendance as $record) {
                 if ($normalizeStatus($record->status) === $status) {
+                    if ($streak === 0) {
+                        $streakStartDate = Carbon::parse($record->date);
+                    }
                     $streak++;
                 } else {
                     break;
@@ -166,6 +233,12 @@ Route::prefix('attendance')->group(function () {
                 $category = $streak >= 2 ? 'leave_2_plus' : 'leave_1';
             }
 
+            // Calculate days count for display
+            $daysCount = $streak;
+            if ($streakStartDate && $streak > 1) {
+                $daysCount = $streakStartDate->diffInDays(Carbon::parse($lastDayRecord->date)) + 1;
+            }
+
             $students[] = [
                 'id' => $enrollment->student->id,
                 'name' => $enrollment->student->name,
@@ -173,11 +246,18 @@ Route::prefix('attendance')->group(function () {
                 'section' => $enrollment->schoolClass->name . ' - ' . $enrollment->section->name,
                 'date' => $lastDayRecord->date,
                 'category' => $category,
+                'streak_days' => $daysCount,
             ];
         }
 
         return Inertia::render('Attendance/Absentees', [
             'students' => $students,
+            'today_absentees' => $todayAbsentees,
+            'filters' => [
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $endDate->toDateString(),
+                'include_today' => $includeToday,
+            ],
         ]);
     })->name('attendance.absentees');
 });

@@ -77,11 +77,26 @@ Route::get('/', fn () =>
         $student = Student::with([
             'enrollments.fees' => fn ($q) =>
                 $q->whereDoesntHave('payments', fn ($qq) => $qq->whereNull('deleted_at')),
+            'enrollments.section.schoolClass',
         ])->findOrFail(request('student_id'));
+
+        // Flatten fees with class type info
+        $fees = $student->enrollments->flatMap(function ($enrollment) {
+            $classType = $enrollment->section?->schoolClass?->type ?? 'gurmukhi';
+            return $enrollment->fees->map(function ($fee) use ($classType) {
+                return [
+                    'id' => $fee->id,
+                    'month' => $fee->month,
+                    'amount' => $fee->amount,
+                    'class_type' => $classType,
+                    'section_name' => $enrollment->section?->name ?? '',
+                ];
+            });
+        });
 
         return Inertia::render('Accountant/ReceiveFee', [
             'student' => $student,
-            'fees' => $student->enrollments->flatMap->fees,
+            'fees' => $fees,
         ]);
     })->name('accountant.receive-fee');
 

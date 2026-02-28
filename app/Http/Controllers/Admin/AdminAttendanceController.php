@@ -8,6 +8,7 @@ use App\Models\Section;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Models\SchoolClass;
 
@@ -104,6 +105,15 @@ class AdminAttendanceController extends Controller
      --------------------------------------------- */
 public function save(Request $request)
 {
+    // DEBUG: Log incoming request
+    Log::info('[AdminAttendanceController::save] Request data:', [
+        'section_id' => $request->section_id,
+        'year' => $request->year,
+        'month' => $request->month,
+        'records_count' => is_array($request->records) ? count($request->records) : 0,
+        'records' => $request->records,
+    ]);
+
     $request->validate([
         'section_id' => 'required|exists:sections,id',
         'year'       => 'required|integer',
@@ -142,6 +152,7 @@ public function save(Request $request)
         }
 
         if (!preg_match('/^\d+$/', $studentSectionId) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            Log::warning('[AdminAttendanceController::save] Invalid format:', ['studentSectionId' => $studentSectionId, 'date' => $date]);
             continue;
         }
 

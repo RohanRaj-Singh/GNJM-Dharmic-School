@@ -155,6 +155,9 @@ export default function Index() {
    | Save attendance
    --------------------------------------- */
   function saveAttendance() {
+    // DEBUG: Log isKirtan value at save time to diagnose stale closure
+    console.log('[Attendance Save] isKirtan:', isKirtan, 'classId:', classId, 'selectedClass:', selectedClass);
+
     setLoading(true);
 
     const payload = Object.entries(draft)
@@ -171,13 +174,37 @@ export default function Index() {
       })
       .filter(Boolean);
 
+    // DEBUG: Log payload to diagnose what's being sent
+    console.log('[Attendance Save] Payload:', JSON.stringify({ section_id: sectionId, year, month: parseInt(month), records: payload }, null, 2));
+
+    // Helper to get CSRF token - tries meta tag first, then cookie
+    const getCsrfToken = () => {
+      // Try meta tag first
+      const metaEl = document.querySelector('meta[name="csrf-token"]');
+      const metaToken = metaEl?.getAttribute('content');
+      if (metaToken) {
+        console.log('[CSRF] From meta:', metaToken.substring(0, 20) + '...');
+        return metaToken;
+      }
+
+      // Fallback to cookie (Laravel sets XSRF-TOKEN cookie)
+      const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+      if (cookieMatch) {
+        const cookieToken = decodeURIComponent(cookieMatch[1]);
+        console.log('[CSRF] From cookie:', cookieToken.substring(0, 20) + '...');
+        return cookieToken;
+      }
+
+      console.error('[CSRF] Token NOT found! Meta exists:', !!metaEl, '| Cookies:', document.cookie);
+      return '';
+    };
+
     fetch("/admin/attendance/save", {
       method: "POST",
+      credentials: "same-origin", // Ensure cookies are sent with request
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-TOKEN": document
-          .querySelector('meta[name="csrf-token"]')
-          .getAttribute("content"),
+        "X-CSRF-TOKEN": getCsrfToken(),
       },
       body: JSON.stringify({
         section_id: sectionId,
