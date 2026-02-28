@@ -77,19 +77,23 @@ Route::get('/', fn () =>
         $student = Student::with([
             'enrollments.fees' => fn ($q) =>
                 $q->whereDoesntHave('payments', fn ($qq) => $qq->whereNull('deleted_at')),
-            'enrollments.section.schoolClass',
+            'enrollments.schoolClass',
+            'enrollments.section',
         ])->findOrFail(request('student_id'));
 
         // Flatten fees with class type info
+        // Use $enrollment->schoolClass->type directly (more reliable than through section)
         $fees = $student->enrollments->flatMap(function ($enrollment) {
-            $classType = $enrollment->section?->schoolClass?->type ?? 'gurmukhi';
+            $classType = $enrollment->schoolClass?->type ?? 'gurmukhi';
 
             // Debug logging
             \Log::info('[ReceiveFee] Enrollment:', [
                 'enrollment_id' => $enrollment->id,
+                'class_id' => $enrollment->class_id,
+                'section_id' => $enrollment->section_id,
                 'section_name' => $enrollment->section?->name ?? 'null',
-                'class_name' => $enrollment->section?->schoolClass?->name ?? 'null',
-                'class_type_raw' => $enrollment->section?->schoolClass?->type ?? 'NULL (defaulting to gurmukhi)',
+                'class_name' => $enrollment->schoolClass?->name ?? 'null',
+                'class_type_raw' => $enrollment->schoolClass?->type ?? 'NULL (defaulting to gurmukhi)',
             ]);
 
             return $enrollment->fees->map(function ($fee) use ($classType) {
