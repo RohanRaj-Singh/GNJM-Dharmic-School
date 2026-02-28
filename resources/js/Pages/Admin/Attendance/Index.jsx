@@ -199,12 +199,22 @@ export default function Index() {
       return '';
     };
 
+    const csrfToken = getCsrfToken();
+
+    if (!csrfToken) {
+      const errorMsg = 'CSRF token not found. Please refresh the page and try again.';
+      console.error('[Attendance Save] ERROR:', errorMsg);
+      toast.error(errorMsg);
+      setLoading(false);
+      return;
+    }
+
     fetch("/admin/attendance/save", {
       method: "POST",
       credentials: "same-origin", // Ensure cookies are sent with request
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-TOKEN": getCsrfToken(),
+        "X-CSRF-TOKEN": csrfToken,
       },
       body: JSON.stringify({
         section_id: sectionId,
@@ -214,15 +224,31 @@ export default function Index() {
       }),
     })
       .then(r => {
+        console.log('[Attendance Save] Response status:', r.status, r.statusText);
+
+        if (r.status === 419) {
+          // CSRF token mismatch - show clear error
+          const errorMsg = 'Session expired or CSRF token mismatch. Please refresh the page and try again.';
+          console.error('[Attendance Save] 419 Error - CSRF token mismatch. This usually means:', {
+            reason: 'The session has expired or the CSRF token is invalid',
+            solution: 'Refresh the page to get a new CSRF token',
+            csrfTokenFound: !!csrfToken,
+            csrfTokenPreview: csrfToken ? csrfToken.substring(0, 20) + '...' : 'N/A',
+          });
+          throw new Error(errorMsg);
+        }
+
         if (!r.ok) {
           return r.json().catch(() => ({})).then((err) => {
-            throw new Error(err?.message || "Failed to save attendance");
+            console.error('[Attendance Save] API Error:', err);
+            throw new Error(err?.message || `Server error: ${r.status} ${r.statusText}`);
           });
         }
         return r.json();
       })
-      .then(() => {
-        toast.success("Attendance saved");
+      .then((data) => {
+        console.log('[Attendance Save] Success! Response:', data);
+        toast.success("Attendance saved successfully!");
         setDraft({});
         setDraftLesson({});
         return fetch(
@@ -232,7 +258,10 @@ export default function Index() {
         ).then(r => r.json());
       })
       .then(setGrid)
-      .catch((err) => toast.error(err?.message || "Failed to save attendance"))
+      .catch((err) => {
+        console.error('[Attendance Save] FINAL ERROR:', err.message);
+        toast.error(err.message || "Failed to save attendance. Please try again.");
+      })
       .finally(() => setLoading(false));
   }
 
