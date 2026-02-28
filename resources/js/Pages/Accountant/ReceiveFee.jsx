@@ -18,8 +18,14 @@ export default function ReceiveFee({ student, fees = [] }) {
   const [processing, setProcessing] = useState(false);
 
   // Group fees by class type (kirtan vs gurmukhi)
-  const gurmukhiFees = fees.filter(f => !String(f.class_type ?? '').toLowerCase().includes('kirtan'));
-  const kirtanFees = fees.filter(f => String(f.class_type ?? '').toLowerCase().includes('kirtan'));
+  // Handle various case formats and null values
+  const isKirtan = (classType) => {
+    const type = String(classType ?? '').toLowerCase().trim();
+    return type === 'kirtan' || type.includes('kirtan');
+  };
+
+  const gurmukhiFees = fees.filter(f => !isKirtan(f.class_type));
+  const kirtanFees = fees.filter(f => isKirtan(f.class_type));
 
   // Collapsible section state - Gurmukhi open by default
   const [gurmukhiOpen, setGurmukhiOpen] = useState(true);

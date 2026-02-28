@@ -126,11 +126,15 @@ Route::prefix('attendance')->group(function () {
 
         $requestStart = request('start_date');
         $requestEnd = request('end_date');
+        $hasCustomFilter = false;
+
         if ($requestStart) {
             $startDate = Carbon::parse($requestStart);
+            $hasCustomFilter = true;
         }
         if ($requestEnd) {
             $endDate = Carbon::parse($requestEnd);
+            $hasCustomFilter = true;
         }
 
         // Check if today is included in the filter
@@ -203,6 +207,19 @@ Route::prefix('attendance')->group(function () {
                 continue;
             }
 
+            // Get all absent/leave dates for filtered view
+            $absentDates = [];
+            $leaveDates = [];
+
+            foreach ($attendance as $record) {
+                $status = $normalizeStatus($record->status);
+                if ($status === 'absent') {
+                    $absentDates[] = $record->date;
+                } elseif ($status === 'leave') {
+                    $leaveDates[] = $record->date;
+                }
+            }
+
             // Use latest available record within date range (up to yesterday when not including today)
             $lastDayRecord = $attendance->first();
 
@@ -247,6 +264,8 @@ Route::prefix('attendance')->group(function () {
                 'date' => $lastDayRecord->date,
                 'category' => $category,
                 'streak_days' => $daysCount,
+                'all_absent_dates' => $hasCustomFilter ? $absentDates : [],
+                'all_leave_dates' => $hasCustomFilter ? $leaveDates : [],
             ];
         }
 
@@ -257,6 +276,7 @@ Route::prefix('attendance')->group(function () {
                 'start_date' => $startDate->toDateString(),
                 'end_date' => $endDate->toDateString(),
                 'include_today' => $includeToday,
+                'has_custom_filter' => $hasCustomFilter,
             ],
         ]);
     })->name('attendance.absentees');

@@ -21,18 +21,29 @@ export default function Absentees({ students = [], today_absentees = [], filters
   const [endDate, setEndDate] = useState(filters.end_date || defaultEndDate);
   const [includeToday, setIncludeToday] = useState(filters.include_today || false);
 
-  // Collapsible states - Absent open by default
-  const [absentOpen, setAbsentOpen] = useState(true);
+  // Check if custom filter is applied
+  const hasCustomFilter = filters.has_custom_filter || false;
+
+  // Collapsible states - FIRST category (absent_1) open by default, others closed
+  const [absentOpen, setAbsentOpen] = useState(true); // First section open by default
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [todayOpen, setTodayOpen] = useState(false);
 
-  // Track which sections are expanded within each category
+  // Track which sections/students are expanded
   const [expandedSections, setExpandedSections] = useState({});
+  const [expandedStudents, setExpandedStudents] = useState({});
 
   const toggleSection = (sectionKey) => {
     setExpandedSections(prev => ({
       ...prev,
       [sectionKey]: !prev[sectionKey]
+    }));
+  };
+
+  const toggleStudent = (studentKey) => {
+    setExpandedStudents(prev => ({
+      ...prev,
+      [studentKey]: !prev[studentKey]
     }));
   };
 
@@ -42,6 +53,25 @@ export default function Absentees({ students = [], today_absentees = [], filters
       end_date: endDate,
       include_today: includeToday,
     }, { preserveState: true });
+  };
+
+  const resetFilter = () => {
+    const defaultStart = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      return d.toISOString().split('T')[0];
+    })();
+    const defaultEnd = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().split('T')[0];
+    })();
+
+    setStartDate(defaultStart);
+    setEndDate(defaultEnd);
+    setIncludeToday(false);
+
+    router.get('/attendance/absentees', {}, { preserveState: true });
   };
 
   // Calculate days between dates
@@ -78,6 +108,120 @@ export default function Absentees({ students = [], today_absentees = [], filters
 
   // Get days count for display
   const daysCount = getDaysCount(startDate, endDate);
+
+  // Helper to render student list - handles both filtered and non-filtered views
+  const renderStudentList = (list, sectionKey, category) => {
+    // If custom filter is applied, show each student as collapsible accordion
+    if (hasCustomFilter) {
+      return list.map((s) => {
+        const studentKey = `${s.id}-${s.category}`;
+        const isExpanded = expandedStudents[studentKey] === true;
+
+        // Combine and sort all dates (absent + leave) in descending order
+        const allDates = [
+          ...(s.all_absent_dates || []).map(d => ({ date: d, type: 'Absent' })),
+          ...(s.all_leave_dates || []).map(d => ({ date: d, type: 'Leave' }))
+        ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        return (
+          <div key={studentKey} className="border rounded-lg overflow-hidden mb-2">
+            <button
+              onClick={() => toggleStudent(studentKey)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 bg-white"
+            >
+              <div className="text-left">
+                <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                <p className="text-xs text-gray-500">Father: {s.father_name || "—"}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                  {allDates.length} day{allDates.length !== 1 ? 's' : ''}
+                </span>
+                <svg
+                  className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+
+            {isExpanded && (
+              <ul className="border-t bg-gray-50 divide-y">
+                {allDates.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className="px-4 py-2 flex justify-between items-center"
+                  >
+                    <span className="text-sm text-gray-700">{item.date}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      item.type === 'Absent'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {item.type}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      });
+    }
+
+    // Default view (no filter): show simple list with section headers
+    return (
+      <div>
+        {Object.entries(grouped[category] || {}).map(([sectionName, sectionList]) => {
+          const sectionExpandKey = `${category}-${sectionName}`;
+          const isSectionExpanded = expandedSections[sectionExpandKey] !== false;
+
+          return (
+            <div key={sectionExpandKey} className="mb-3">
+              <button
+                onClick={() => toggleSection(sectionExpandKey)}
+                className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded"
+              >
+                <span className="text-sm font-medium text-gray-600">
+                  📂 {sectionName}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {sectionList.length}
+                </span>
+              </button>
+
+              {isSectionExpanded && (
+                <ul className="border rounded mt-1">
+                  {sectionList.map((s) => (
+                    <li
+                      key={s.id}
+                      className="px-4 py-2 border-b last:border-b-0 flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                        <p className="text-xs text-gray-500">Father: {s.father_name || "—"}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">{s.date}</p>
+                        {s.streak_days > 1 && (
+                          <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                            {s.streak_days} days
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <SimpleLayout title="Attendance – Absent & Leave Register">
@@ -123,13 +267,22 @@ export default function Absentees({ students = [], today_absentees = [], filters
             >
               Apply Filter
             </button>
+            {hasCustomFilter && (
+              <button
+                onClick={resetFilter}
+                className="bg-gray-500 text-white px-4 py-2 rounded text-sm hover:bg-gray-600"
+              >
+                Reset
+              </button>
+            )}
           </div>
           <p className="text-xs text-gray-500 mt-2">
             Showing students absent in last {daysCount} day{daysCount !== 1 ? 's' : ''} ({startDate} to {endDate})
+            {hasCustomFilter && <span className="ml-2 text-blue-600">(Filtered View)</span>}
           </p>
         </div>
 
-        {/* Absent Section - Collapsible, open by default */}
+        {/* Absent Section - FIRST one open by default */}
         <div className="bg-white border rounded-lg overflow-hidden">
           <button
             onClick={() => setAbsentOpen(!absentOpen)}
@@ -161,6 +314,8 @@ export default function Absentees({ students = [], today_absentees = [], filters
                 if (!grouped[catKey] || Object.keys(grouped[catKey]).length === 0) return null;
                 const meta = categories[catKey];
 
+                const list = Object.values(grouped[catKey]).flat();
+
                 return (
                   <div key={catKey} className="border rounded-lg overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
@@ -168,59 +323,12 @@ export default function Absentees({ students = [], today_absentees = [], filters
                         {meta.icon} {meta.title}
                       </span>
                       <span className="text-xs text-gray-500">
-                        {Object.values(grouped[catKey]).flat().length} student{Object.values(grouped[catKey]).flat().length !== 1 ? 's' : ''}
+                        {list.length} student{list.length !== 1 ? 's' : ''}
                       </span>
                     </div>
 
-                    <div className="divide-y">
-                      {Object.entries(grouped[catKey]).map(([sectionName, list]) => {
-                        const sectionKey = `${catKey}-${sectionName}`;
-                        const isSectionExpanded = expandedSections[sectionKey] !== false;
-
-                        return (
-                          <div key={sectionKey}>
-                            <button
-                              onClick={() => toggleSection(sectionKey)}
-                              className="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50"
-                            >
-                              <span className="text-sm text-gray-600">
-                                📂 {sectionName}
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                {list.length} student{list.length !== 1 ? 's' : ''}
-                              </span>
-                            </button>
-
-                            {isSectionExpanded && (
-                              <ul className="border-t">
-                                {list.map((s) => (
-                                  <li
-                                    key={s.id}
-                                    className="px-4 py-2 flex justify-between items-center"
-                                  >
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-900">
-                                        {s.name}
-                                      </p>
-                                      <p className="text-xs text-gray-500">
-                                        Father: {s.father_name || "—"}
-                                      </p>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="text-xs text-gray-500">{s.date}</p>
-                                      {s.streak_days > 1 && (
-                                        <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
-                                          {s.streak_days} days
-                                        </span>
-                                      )}
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div className="p-3">
+                      {renderStudentList(list, catKey, catKey)}
                     </div>
                   </div>
                 );
@@ -233,7 +341,7 @@ export default function Absentees({ students = [], today_absentees = [], filters
           )}
         </div>
 
-        {/* Leave Section - Collapsible */}
+        {/* Leave Section - Closed by default */}
         <div className="bg-white border rounded-lg overflow-hidden">
           <button
             onClick={() => setLeaveOpen(!leaveOpen)}
@@ -265,6 +373,8 @@ export default function Absentees({ students = [], today_absentees = [], filters
                 if (!grouped[catKey] || Object.keys(grouped[catKey]).length === 0) return null;
                 const meta = categories[catKey];
 
+                const list = Object.values(grouped[catKey]).flat();
+
                 return (
                   <div key={catKey} className="border rounded-lg overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
@@ -272,59 +382,12 @@ export default function Absentees({ students = [], today_absentees = [], filters
                         {meta.icon} {meta.title}
                       </span>
                       <span className="text-xs text-gray-500">
-                        {Object.values(grouped[catKey]).flat().length} student{Object.values(grouped[catKey]).flat().length !== 1 ? 's' : ''}
+                        {list.length} student{list.length !== 1 ? 's' : ''}
                       </span>
                     </div>
 
-                    <div className="divide-y">
-                      {Object.entries(grouped[catKey]).map(([sectionName, list]) => {
-                        const sectionKey = `${catKey}-${sectionName}`;
-                        const isSectionExpanded = expandedSections[sectionKey] !== false;
-
-                        return (
-                          <div key={sectionKey}>
-                            <button
-                              onClick={() => toggleSection(sectionKey)}
-                              className="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50"
-                            >
-                              <span className="text-sm text-gray-600">
-                                📂 {sectionName}
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                {list.length} student{list.length !== 1 ? 's' : ''}
-                              </span>
-                            </button>
-
-                            {isSectionExpanded && (
-                              <ul className="border-t">
-                                {list.map((s) => (
-                                  <li
-                                    key={s.id}
-                                    className="px-4 py-2 flex justify-between items-center"
-                                  >
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-900">
-                                        {s.name}
-                                      </p>
-                                      <p className="text-xs text-gray-500">
-                                        Father: {s.father_name || "—"}
-                                      </p>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="text-xs text-gray-500">{s.date}</p>
-                                      {s.streak_days > 1 && (
-                                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
-                                          {s.streak_days} days
-                                        </span>
-                                      )}
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div className="p-3">
+                      {renderStudentList(list, catKey, catKey)}
                     </div>
                   </div>
                 );
@@ -337,7 +400,7 @@ export default function Absentees({ students = [], today_absentees = [], filters
           )}
         </div>
 
-        {/* Absent Today Section - Collapsible, at the end */}
+        {/* Absent Today Section - Closed by default, at the end */}
         {today_absentees && today_absentees.length > 0 && (
           <div className="bg-white border-2 border-red-500 rounded-lg overflow-hidden">
             <button
@@ -364,29 +427,29 @@ export default function Absentees({ students = [], today_absentees = [], filters
               <div className="p-4">
                 <div className="divide-y">
                   {Object.entries(todayGrouped).map(([sectionName, list]) => {
-                    const sectionKey = `today-${sectionName}`;
-                    const isSectionExpanded = expandedSections[sectionKey] !== false;
+                    const sectionExpandKey = `today-${sectionName}`;
+                    const isSectionExpanded = expandedSections[sectionExpandKey] !== false;
 
                     return (
-                      <div key={sectionKey}>
+                      <div key={sectionExpandKey} className="mb-3 last:mb-0">
                         <button
-                          onClick={() => toggleSection(sectionKey)}
-                          className="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50"
+                          onClick={() => toggleSection(sectionExpandKey)}
+                          className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded"
                         >
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm font-medium text-gray-600">
                             📂 {sectionName}
                           </span>
                           <span className="text-xs text-gray-400">
-                            {list.length} student{list.length !== 1 ? 's' : ''}
+                            {list.length}
                           </span>
                         </button>
 
                         {isSectionExpanded && (
-                          <ul className="border-t bg-red-50">
+                          <ul className="border rounded mt-1 bg-red-50">
                             {list.map((s) => (
                               <li
                                 key={s.id}
-                                className="px-4 py-2 flex justify-between items-center"
+                                className="px-4 py-2 border-b last:border-b-0 flex justify-between items-center"
                               >
                                 <div>
                                   <p className="text-sm font-medium text-gray-900">
