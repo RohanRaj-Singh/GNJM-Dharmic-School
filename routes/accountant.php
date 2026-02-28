@@ -82,27 +82,33 @@ Route::get('/', fn () =>
         ])->findOrFail(request('student_id'));
 
         // Flatten fees with class type info
-        // Use $enrollment->schoolClass->type directly (more reliable than through section)
+        // Use class NAME to determine kirtan vs gurmukhi (not type field)
         $fees = $student->enrollments->flatMap(function ($enrollment) {
-            $classType = $enrollment->schoolClass?->type ?? 'gurmukhi';
+            $className = $enrollment->schoolClass?->name ?? '';
+            $classTypeRaw = $enrollment->schoolClass?->type ?? '';
+
+            // Determine kirtan vs gurmukhi based on class NAME (more reliable)
+            // Class names typically contain "Kirtan" or "Gurmukhi"
+            $isKirtan = stripos($className, 'kirtan') !== false;
+            $classType = $isKirtan ? 'kirtan' : 'gurmukhi';
 
             // Debug logging
             \Log::info('[ReceiveFee] Enrollment:', [
                 'enrollment_id' => $enrollment->id,
                 'class_id' => $enrollment->class_id,
-                'section_id' => $enrollment->section_id,
-                'section_name' => $enrollment->section?->name ?? 'null',
-                'class_name' => $enrollment->schoolClass?->name ?? 'null',
-                'class_type_raw' => $enrollment->schoolClass?->type ?? 'NULL (defaulting to gurmukhi)',
+                'class_name' => $className,
+                'class_type_field' => $classTypeRaw,
+                'determined_type' => $classType,
             ]);
 
-            return $enrollment->fees->map(function ($fee) use ($classType) {
+            return $enrollment->fees->map(function ($fee) use ($classType, $className) {
                 return [
                     'id' => $fee->id,
                     'month' => $fee->month,
                     'amount' => $fee->amount,
                     'class_type' => $classType,
                     'section_name' => $enrollment->section?->name ?? '',
+                    'class_name' => $className,
                 ];
             });
         });
