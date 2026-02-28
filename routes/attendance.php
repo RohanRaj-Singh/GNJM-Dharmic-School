@@ -256,6 +256,9 @@ Route::prefix('attendance')->group(function () {
                 $daysCount = $streakStartDate->diffInDays(Carbon::parse($lastDayRecord->date)) + 1;
             }
 
+            // Total days (absent + leave) for sorting when filter is applied
+            $totalDays = count($absentDates) + count($leaveDates);
+
             $students[] = [
                 'id' => $enrollment->student->id,
                 'name' => $enrollment->student->name,
@@ -264,9 +267,17 @@ Route::prefix('attendance')->group(function () {
                 'date' => $lastDayRecord->date,
                 'category' => $category,
                 'streak_days' => $daysCount,
+                'total_days' => $totalDays, // For sorting when filter applied
                 'all_absent_dates' => $hasCustomFilter ? $absentDates : [],
                 'all_leave_dates' => $hasCustomFilter ? $leaveDates : [],
             ];
+        }
+
+        // Sort by total_days descending when custom filter is applied
+        if ($hasCustomFilter) {
+            usort($students, function ($a, $b) {
+                return $b['total_days'] - $a['total_days'];
+            });
         }
 
         return Inertia::render('Attendance/Absentees', [

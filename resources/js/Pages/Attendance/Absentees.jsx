@@ -92,14 +92,28 @@ export default function Absentees({ students = [], today_absentees = [], filters
 
   const grouped = {};
   const todayGrouped = {};
+  const filteredGrouped = {};
 
-  students.forEach((s) => {
-    if (!grouped[s.category]) grouped[s.category] = {};
-    if (!grouped[s.category][s.section]) {
-      grouped[s.category][s.section] = [];
-    }
-    grouped[s.category][s.section].push(s);
-  });
+  if (hasCustomFilter) {
+    // Group students by total days when filter is applied
+    students.forEach((s) => {
+      const days = (s.all_absent_dates?.length || 0) + (s.all_leave_dates?.length || 0);
+      const daysKey = `${days}_days`;
+
+      if (!filteredGrouped[daysKey]) {
+        filteredGrouped[daysKey] = [];
+      }
+      filteredGrouped[daysKey].push(s);
+    });
+  } else {
+    students.forEach((s) => {
+      if (!grouped[s.category]) grouped[s.category] = {};
+      if (!grouped[s.category][s.section]) {
+        grouped[s.category][s.section] = [];
+      }
+      grouped[s.category][s.section].push(s);
+    });
+  }
 
   today_absentees.forEach((s) => {
     if (!todayGrouped[s.section]) todayGrouped[s.section] = [];
@@ -109,118 +123,62 @@ export default function Absentees({ students = [], today_absentees = [], filters
   // Get days count for display
   const daysCount = getDaysCount(startDate, endDate);
 
-  // Helper to render student list - handles both filtered and non-filtered views
-  const renderStudentList = (list, sectionKey, category) => {
-    // If custom filter is applied, show each student as collapsible accordion
-    if (hasCustomFilter) {
-      return list.map((s) => {
-        const studentKey = `${s.id}-${s.category}`;
-        const isExpanded = expandedStudents[studentKey] === true;
+  // Helper to render a single student row
+  const renderStudentRow = (s) => {
+    const studentKey = `${s.id}-${s.category}`;
+    const isStudentExpanded = expandedStudents[studentKey] === true;
 
-        // Combine and sort all dates (absent + leave) in descending order
-        const allDates = [
-          ...(s.all_absent_dates || []).map(d => ({ date: d, type: 'Absent' })),
-          ...(s.all_leave_dates || []).map(d => ({ date: d, type: 'Leave' }))
-        ].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const allDates = [
+      ...(s.all_absent_dates || []).map(d => ({ date: d, type: 'Absent' })),
+      ...(s.all_leave_dates || []).map(d => ({ date: d, type: 'Leave' }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        return (
-          <div key={studentKey} className="border rounded-lg overflow-hidden mb-2">
-            <button
-              onClick={() => toggleStudent(studentKey)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 bg-white"
-            >
-              <div className="text-left">
-                <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                <p className="text-xs text-gray-500">Father: {s.father_name || "—"}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                  {allDates.length} day{allDates.length !== 1 ? 's' : ''}
-                </span>
-                <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </button>
-
-            {isExpanded && (
-              <ul className="border-t bg-gray-50 divide-y">
-                {allDates.map((item, idx) => (
-                  <li
-                    key={idx}
-                    className="px-4 py-2 flex justify-between items-center"
-                  >
-                    <span className="text-sm text-gray-700">{item.date}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      item.type === 'Absent'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {item.type}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        );
-      });
-    }
-
-    // Default view (no filter): show simple list with section headers
     return (
-      <div>
-        {Object.entries(grouped[category] || {}).map(([sectionName, sectionList]) => {
-          const sectionExpandKey = `${category}-${sectionName}`;
-          const isSectionExpanded = expandedSections[sectionExpandKey] !== false;
+      <div key={studentKey} className="bg-white">
+        <button
+          onClick={() => toggleStudent(studentKey)}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+        >
+          <div className="text-left">
+            <p className="text-sm font-medium text-gray-900">{s.name}</p>
+            <p className="text-xs text-gray-500">{s.section}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+              {allDates.length} day{allDates.length !== 1 ? 's' : ''}
+            </span>
+            <svg className={`w-5 h-5 text-gray-400 transition-transform ${isStudentExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </button>
 
-          return (
-            <div key={sectionExpandKey} className="mb-3">
-              <button
-                onClick={() => toggleSection(sectionExpandKey)}
-                className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded"
-              >
-                <span className="text-sm font-medium text-gray-600">
-                  📂 {sectionName}
+        {isStudentExpanded && (
+          <ul className="border-t bg-gray-50 divide-y px-4">
+            {allDates.map((item, idx) => (
+              <li key={idx} className="py-2 flex justify-between items-center">
+                <span className="text-sm text-gray-700">{item.date}</span>
+                <span className={`text-xs px-2 py-0.5 rounded ${item.type === 'Absent' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                  {item.type}
                 </span>
-                <span className="text-xs text-gray-400">
-                  {sectionList.length}
-                </span>
-              </button>
-
-              {isSectionExpanded && (
-                <ul className="border rounded mt-1">
-                  {sectionList.map((s) => (
-                    <li
-                      key={s.id}
-                      className="px-4 py-2 border-b last:border-b-0 flex justify-between items-center"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                        <p className="text-xs text-gray-500">Father: {s.father_name || "—"}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">{s.date}</p>
-                        {s.streak_days > 1 && (
-                          <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
-                            {s.streak_days} days
-                          </span>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          );
-        })}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     );
+  };
+
+  // Get total student count
+  const getTotalCount = () => {
+    if (hasCustomFilter) {
+      return students.length;
+    }
+    return [grouped.absent_1, grouped.absent_2, grouped.absent_3_plus]
+      .filter(g => g && Object.keys(g).length > 0)
+      .flatMap(g => Object.values(g))
+      .flat()
+      .length || 0;
   };
 
   return (
@@ -278,127 +236,238 @@ export default function Absentees({ students = [], today_absentees = [], filters
           </div>
           <p className="text-xs text-gray-500 mt-2">
             Showing students absent in last {daysCount} day{daysCount !== 1 ? 's' : ''} ({startDate} to {endDate})
-            {hasCustomFilter && <span className="ml-2 text-blue-600">(Filtered View)</span>}
+            {hasCustomFilter && <span className="ml-2 text-blue-600">(Filtered View - Sorted by Days)</span>}
           </p>
         </div>
 
-        {/* Absent Section - FIRST one open by default */}
+        {/* Main Absent Section - Shows ALL students when filtered, or just Absent categories when not */}
         <div className="bg-white border rounded-lg overflow-hidden">
           <button
             onClick={() => setAbsentOpen(!absentOpen)}
             className="w-full flex items-center justify-between px-4 py-3 bg-red-50 hover:bg-red-100 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <span className="text-red-600 font-medium">Absent</span>
+              <span className="text-red-600 font-medium">
+                {hasCustomFilter ? 'All Absent/Leave (Sorted by Days)' : 'Absent'}
+              </span>
               <span className="text-xs bg-red-200 text-red-700 px-2 py-0.5 rounded-full">
-                {[grouped.absent_1, grouped.absent_2, grouped.absent_3_plus]
-                  .filter(g => g && Object.keys(g).length > 0)
-                  .flatMap(g => Object.values(g))
-                  .flat()
-                  .length || 0}
+                {getTotalCount()}
               </span>
             </div>
-            <svg
-              className={`w-5 h-5 text-red-600 transition-transform ${absentOpen ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className={`w-5 h-5 text-red-600 transition-transform ${absentOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
 
           {absentOpen && (
-            <div className="p-4 space-y-4">
-              {['absent_1', 'absent_2', 'absent_3_plus'].map(catKey => {
-                if (!grouped[catKey] || Object.keys(grouped[catKey]).length === 0) return null;
-                const meta = categories[catKey];
+            <div className="p-4">
+              {hasCustomFilter ? (
+                // Filtered view: show students grouped by number of days
+                <div className="space-y-3">
+                  {Object.keys(filteredGrouped).length > 0 ? (
+                    Object.keys(filteredGrouped)
+                      .sort((a, b) => {
+                        const numA = Number(a.replace('_days', ''));
+                        const numB = Number(b.replace('_days', ''));
+                        return numB - numA;
+                      })
+                      .map(daysKey => {
+                        const isExpanded = expandedSections[daysKey] !== false;
 
-                const list = Object.values(grouped[catKey]).flat();
+                        return (
+                          <div key={daysKey} className="border rounded-lg overflow-hidden">
+                            <button
+                              onClick={() => toggleSection(daysKey)}
+                              className="w-full flex items-center justify-between px-4 py-3 bg-gray-100 hover:bg-gray-200"
+                            >
+                              <span className="font-medium text-gray-700">
+                                {daysKey.replace('_days', '')} Days Absent/Leave
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs bg-gray-300 text-gray-700 px-2 py-0.5 rounded-full">
+                                  {filteredGrouped[daysKey].length}
+                                </span>
+                                <svg className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </button>
 
-                return (
-                  <div key={catKey} className="border rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">
-                        {meta.icon} {meta.title}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {list.length} student{list.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
+                            {isExpanded && (
+                              <div className="divide-y">
+                                {filteredGrouped[daysKey].map(s => renderStudentRow(s))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-2">No absent/leave students</p>
+                  )}
+                </div>
+              ) : (
+                // Default view: show 1 day, 2 days, 3+ days categories
+                <div className="space-y-4">
+                  {['absent_1', 'absent_2', 'absent_3_plus'].map(catKey => {
+                    if (!grouped[catKey] || Object.keys(grouped[catKey]).length === 0) return null;
+                    const meta = categories[catKey];
 
-                    <div className="p-3">
-                      {renderStudentList(list, catKey, catKey)}
-                    </div>
-                  </div>
-                );
-              })}
+                    const list = Object.values(grouped[catKey]).flat();
 
-              {['absent_1', 'absent_2', 'absent_3_plus'].every(k => !grouped[k] || Object.keys(grouped[k]).length === 0) && (
-                <p className="text-sm text-gray-500 text-center py-2">No absent students</p>
+                    return (
+                      <div key={catKey} className="border rounded-lg overflow-hidden">
+                        <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">
+                            {meta.icon} {meta.title}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {list.length} student{list.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+
+                        <div className="divide-y">
+                          {Object.entries(grouped[catKey] || {}).map(([sectionName, sectionList]) => {
+                            const sectionExpandKey = `${catKey}-${sectionName}`;
+                            const isSectionExpanded = expandedSections[sectionExpandKey] !== false;
+
+                            return (
+                              <div key={sectionExpandKey}>
+                                <button
+                                  onClick={() => toggleSection(sectionExpandKey)}
+                                  className="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50"
+                                >
+                                  <span className="text-sm text-gray-600">📂 {sectionName}</span>
+                                  <span className="text-xs text-gray-400">{sectionList.length}</span>
+                                </button>
+
+                                {isSectionExpanded && (
+                                  <ul className="border-t">
+                                    {sectionList.map((s) => (
+                                      <li key={s.id} className="px-4 py-2 flex justify-between items-center">
+                                        <div>
+                                          <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                                          <p className="text-xs text-gray-500">Father: {s.father_name || '—'}</p>
+                                        </div>
+                                        <div className="text-right">
+                                          <p className="text-xs text-gray-500">{s.date}</p>
+                                          {s.streak_days > 1 && (
+                                            <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                                              {s.streak_days} days
+                                            </span>
+                                          )}
+                                        </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {['absent_1', 'absent_2', 'absent_3_plus'].every(k => !grouped[k] || Object.keys(grouped[k]).length === 0) && (
+                    <p className="text-sm text-gray-500 text-center py-2">No absent students</p>
+                  )}
+                </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Leave Section - Closed by default */}
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <button
-            onClick={() => setLeaveOpen(!leaveOpen)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-yellow-50 hover:bg-yellow-100 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-yellow-700 font-medium">Leave</span>
-              <span className="text-xs bg-yellow-200 text-yellow-700 px-2 py-0.5 rounded-full">
-                {[grouped.leave_1, grouped.leave_2_plus]
-                  .filter(g => g && Object.keys(g).length > 0)
-                  .flatMap(g => Object.values(g))
-                  .flat()
-                  .length || 0}
-              </span>
-            </div>
-            <svg
-              className={`w-5 h-5 text-yellow-700 transition-transform ${leaveOpen ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        {/* Leave Section - Only show when no filter applied */}
+        {!hasCustomFilter && (
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setLeaveOpen(!leaveOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-yellow-50 hover:bg-yellow-100 transition-colors"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+              <div className="flex items-center gap-2">
+                <span className="text-yellow-700 font-medium">Leave</span>
+                <span className="text-xs bg-yellow-200 text-yellow-700 px-2 py-0.5 rounded-full">
+                  {[grouped.leave_1, grouped.leave_2_plus]
+                    .filter(g => g && Object.keys(g).length > 0)
+                    .flatMap(g => Object.values(g))
+                    .flat()
+                    .length || 0}
+                </span>
+              </div>
+              <svg className={`w-5 h-5 text-yellow-700 transition-transform ${leaveOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-          {leaveOpen && (
-            <div className="p-4 space-y-4">
-              {['leave_1', 'leave_2_plus'].map(catKey => {
-                if (!grouped[catKey] || Object.keys(grouped[catKey]).length === 0) return null;
-                const meta = categories[catKey];
+            {leaveOpen && (
+              <div className="p-4 space-y-4">
+                {['leave_1', 'leave_2_plus'].map(catKey => {
+                  if (!grouped[catKey] || Object.keys(grouped[catKey]).length === 0) return null;
+                  const meta = categories[catKey];
 
-                const list = Object.values(grouped[catKey]).flat();
+                  const list = Object.values(grouped[catKey]).flat();
 
-                return (
-                  <div key={catKey} className="border rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">
-                        {meta.icon} {meta.title}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {list.length} student{list.length !== 1 ? 's' : ''}
-                      </span>
+                  return (
+                    <div key={catKey} className="border rounded-lg overflow-hidden">
+                      <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          {meta.icon} {meta.title}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {list.length} student{list.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      <div className="divide-y">
+                        {Object.entries(grouped[catKey] || {}).map(([sectionName, sectionList]) => {
+                          const sectionExpandKey = `${catKey}-${sectionName}`;
+                          const isSectionExpanded = expandedSections[sectionExpandKey] !== false;
+
+                          return (
+                            <div key={sectionExpandKey}>
+                              <button
+                                onClick={() => toggleSection(sectionExpandKey)}
+                                className="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50"
+                              >
+                                <span className="text-sm text-gray-600">📂 {sectionName}</span>
+                                <span className="text-xs text-gray-400">{sectionList.length}</span>
+                              </button>
+
+                              {isSectionExpanded && (
+                                <ul className="border-t">
+                                  {sectionList.map((s) => (
+                                    <li key={s.id} className="px-4 py-2 flex justify-between items-center">
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                                        <p className="text-xs text-gray-500">Father: {s.father_name || '—'}</p>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-xs text-gray-500">{s.date}</p>
+                                        {s.streak_days > 1 && (
+                                          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
+                                            {s.streak_days} days
+                                          </span>
+                                        )}
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
+                  );
+                })}
 
-                    <div className="p-3">
-                      {renderStudentList(list, catKey, catKey)}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {['leave_1', 'leave_2_plus'].every(k => !grouped[k] || Object.keys(grouped[k]).length === 0) && (
-                <p className="text-sm text-gray-500 text-center py-2">No students on leave</p>
-              )}
-            </div>
-          )}
-        </div>
+                {['leave_1', 'leave_2_plus'].every(k => !grouped[k] || Object.keys(grouped[k]).length === 0) && (
+                  <p className="text-sm text-gray-500 text-center py-2">No students on leave</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Absent Today Section - Closed by default, at the end */}
         {today_absentees && today_absentees.length > 0 && (
@@ -413,12 +482,7 @@ export default function Absentees({ students = [], today_absentees = [], filters
                   {today_absentees.length}
                 </span>
               </div>
-              <svg
-                className={`w-5 h-5 text-red-700 transition-transform ${todayOpen ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className={`w-5 h-5 text-red-700 transition-transform ${todayOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
@@ -436,32 +500,19 @@ export default function Absentees({ students = [], today_absentees = [], filters
                           onClick={() => toggleSection(sectionExpandKey)}
                           className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded"
                         >
-                          <span className="text-sm font-medium text-gray-600">
-                            📂 {sectionName}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {list.length}
-                          </span>
+                          <span className="text-sm font-medium text-gray-600">📂 {sectionName}</span>
+                          <span className="text-xs text-gray-400">{list.length}</span>
                         </button>
 
                         {isSectionExpanded && (
                           <ul className="border rounded mt-1 bg-red-50">
                             {list.map((s) => (
-                              <li
-                                key={s.id}
-                                className="px-4 py-2 border-b last:border-b-0 flex justify-between items-center"
-                              >
+                              <li key={s.id} className="px-4 py-2 border-b last:border-b-0 flex justify-between items-center">
                                 <div>
-                                  <p className="text-sm font-medium text-gray-900">
-                                    {s.name}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    Father: {s.father_name || "—"}
-                                  </p>
+                                  <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                                  <p className="text-xs text-gray-500">Father: {s.father_name || '—'}</p>
                                 </div>
-                                <span className="text-xs bg-red-200 text-red-700 px-2 py-0.5 rounded">
-                                  Today
-                                </span>
+                                <span className="text-xs bg-red-200 text-red-700 px-2 py-0.5 rounded">Today</span>
                               </li>
                             ))}
                           </ul>
@@ -476,9 +527,7 @@ export default function Absentees({ students = [], today_absentees = [], filters
         )}
 
         {students.length === 0 && (!today_absentees || today_absentees.length === 0) && (
-          <p className="text-center text-sm text-gray-500 py-8">
-            No absent or leave records found
-          </p>
+          <p className="text-center text-sm text-gray-500 py-8">No absent or leave records found</p>
         )}
 
       </div>
