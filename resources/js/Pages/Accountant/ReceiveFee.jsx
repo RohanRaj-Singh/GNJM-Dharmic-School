@@ -21,11 +21,23 @@ export default function ReceiveFee({ student, fees = [] }) {
   // Handle various case formats and null values
   const isKirtan = (classType) => {
     const type = String(classType ?? '').toLowerCase().trim();
+    console.log('[ReceiveFee] isKirtan check - raw:', classType, '-> normalized:', type, '-> result:', type === 'kirtan' || type.includes('kirtan'));
     return type === 'kirtan' || type.includes('kirtan');
   };
 
+  // Debug: Log all fees and their class_type values
+  console.log('[ReceiveFee] === DEBUG START ===');
+  console.log('[ReceiveFee] Total fees count:', fees.length);
+  fees.forEach((f, i) => {
+    console.log(`[ReceiveFee] Fee[${i}] id=${f.id}, month=${f.month}, class_type="${f.class_type}", section="${f.section_name}"`);
+  });
+
   const gurmukhiFees = fees.filter(f => !isKirtan(f.class_type));
   const kirtanFees = fees.filter(f => isKirtan(f.class_type));
+
+  console.log('[ReceiveFee] Gurmukhi fees count:', gurmukhiFees.length);
+  console.log('[ReceiveFee] Kirtan fees count:', kirtanFees.length);
+  console.log('[ReceiveFee] === DEBUG END ===');
 
   // Collapsible section state - Gurmukhi open by default
   const [gurmukhiOpen, setGurmukhiOpen] = useState(true);

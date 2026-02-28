@@ -83,6 +83,15 @@ Route::get('/', fn () =>
         // Flatten fees with class type info
         $fees = $student->enrollments->flatMap(function ($enrollment) {
             $classType = $enrollment->section?->schoolClass?->type ?? 'gurmukhi';
+
+            // Debug logging
+            \Log::info('[ReceiveFee] Enrollment:', [
+                'enrollment_id' => $enrollment->id,
+                'section_name' => $enrollment->section?->name ?? 'null',
+                'class_name' => $enrollment->section?->schoolClass?->name ?? 'null',
+                'class_type_raw' => $enrollment->section?->schoolClass?->type ?? 'NULL (defaulting to gurmukhi)',
+            ]);
+
             return $enrollment->fees->map(function ($fee) use ($classType) {
                 return [
                     'id' => $fee->id,
@@ -93,6 +102,9 @@ Route::get('/', fn () =>
                 ];
             });
         });
+
+        // Debug: Log all fees before returning
+        \Log::info('[ReceiveFee] Final fees array:', $fees->toArray());
 
         return Inertia::render('Accountant/ReceiveFee', [
             'student' => $student,
