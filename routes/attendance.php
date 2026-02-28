@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Models\Section;
 use App\Models\StudentSection;
+use App\Models\SchoolClass;
 use App\Http\Controllers\AttendanceController;
 use Carbon\Carbon;
 
@@ -118,11 +119,16 @@ Route::prefix('attendance')->group(function () {
             ? $user->sections->pluck('id')->all()
             : Section::pluck('id')->all();
 
+        // Get class and section filters
+        $classFilter = request('class_id');
+        $sectionFilter = request('section_id');
+        $studentSearch = request('search', '');
+
         // Get date range from request, default to yesterday and before
         $today = Carbon::today();
         $yesterday = $today->copy()->subDay();
-        $endDate = $yesterday; // By default, only show up to yesterday
-        $startDate = $endDate->copy()->subDays(30); // Last 30 days by default
+        $endDate = $yesterday;
+        $startDate = $endDate->copy()->subDays(30);
 
         $requestStart = request('start_date');
         $requestEnd = request('end_date');
@@ -140,6 +146,13 @@ Route::prefix('attendance')->group(function () {
         // Check if today is included in the filter
         $includeToday = request('include_today', false);
 
+        // Get available classes and sections for filters
+        $classes = SchoolClass::select('id', 'name', 'type')->orderBy('name')->get();
+        $sections = Section::with('schoolClass')
+            ->whereIn('id', $allowedSectionIds)
+            ->orderBy('name')
+            ->get();
+
         $enrollments = StudentSection::with([
             'student',
             'section',
@@ -153,6 +166,22 @@ Route::prefix('attendance')->group(function () {
         $todayAbsentees = []; // Track absent today separately
 
         foreach ($enrollments as $enrollment) {
+            // Apply class filter
+            if ($classFilter && $enrollment->section->schoolClass->id != $classFilter) {
+                continue;
+            }
+            // Apply section filter
+            if ($sectionFilter && $enrollment->section->id != $sectionFilter) {
+                continue;
+            }
+            // Apply student search
+            if ($studentSearch) {
+                $studentName = strtolower($enrollment->student->name ?? '');
+                if (!str_contains($studentName, strtolower($studentSearch))) {
+                    continue;
+                }
+            }
+
             $isKirtanClass = $isClassType($enrollment->schoolClass->type ?? null, 'kirtan');
 
             $attendance = $enrollment->attendance
@@ -273,21 +302,29 @@ Route::prefix('attendance')->group(function () {
             ];
         }
 
-        // Sort by total_days descending when custom filter is applied
-        if ($hasCustomFilter) {
-            usort($students, function ($a, $b) {
-                return $b['total_days'] - $a['total_days'];
-            });
-        }
+        // Sort by total_days ASCENDING (least days first)
+        usort($students, function ($a, $b) {
+            return $a['total_days'] - $b['total_days'];
+        });
 
         return Inertia::render('Attendance/Absentees', [
             'students' => $students,
             'today_absentees' => $todayAbsentees,
+            'classes' => $classes,
+            'sections' => $sections->map(fn($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'class_id' => $s->schoolClass->id ?? null,
+                'class_name' => $s->schoolClass->name ?? '',
+            ]),
             'filters' => [
                 'start_date' => $startDate->toDateString(),
                 'end_date' => $endDate->toDateString(),
                 'include_today' => $includeToday,
                 'has_custom_filter' => $hasCustomFilter,
+                'class_id' => $classFilter,
+                'section_id' => $sectionFilter,
+                'search' => $studentSearch,
             ],
         ]);
     })->name('attendance.absentees');
