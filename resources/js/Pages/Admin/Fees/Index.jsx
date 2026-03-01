@@ -93,33 +93,6 @@ export default function FeesIndex() {
     return date.toLocaleString("en-US", { month: "short", year: "numeric" });
   }
 
-  function normalizeClassType(value) {
-    const raw = String(value ?? "").trim().toLowerCase();
-    if (!raw) return "gurmukhi";
-    if (raw.includes("kirtan")) return "kirtan";
-    return raw.replace(/\s+/g, "_");
-  }
-
-  function formatClassTypeLabel(value) {
-    return String(value)
-      .split(/[_-]+/)
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ");
-  }
-
-  function classTypePriority(value) {
-    if (value === "gurmukhi") return 0;
-    if (value === "kirtan") return 1;
-    return 2;
-  }
-
-  function classTypeTitleColor(value) {
-    if (value === "gurmukhi") return "text-blue-700";
-    if (value === "kirtan") return "text-purple-700";
-    return "text-amber-700";
-  }
-
   /* -------------------------------------------------
    | Columns
    ------------------------------------------------- */
@@ -322,8 +295,6 @@ export default function FeesIndex() {
               const item = row.original;
               const isOpen = expandedId === row.id;
               const fees = item.fees ?? [];
-              const unpaid = fees.filter((f) => !f.is_paid);
-              const paid = fees.filter((f) => f.is_paid);
 
               return (
                 <Fragment key={row.id}>
@@ -340,130 +311,133 @@ export default function FeesIndex() {
                   {isOpen && (
                     <tr className="border-b bg-gray-50">
                       <td colSpan={8} className="px-3 py-3">
-                        {/* Group fees by class type */}
+                        {/* Group by Gurmukhi/Kirtan, then by Paid/Unpaid */}
                         {(() => {
                           const sortByMonthDesc = (a, b) => {
-                            if (a.type === "monthly" && b.type === "monthly") {
-                              return (b.month ?? "").localeCompare(a.month ?? "");
+                            if (a.type === 'monthly' && b.type === 'monthly') {
+                              return (b.month ?? '').localeCompare(a.month ?? '');
                             }
-                            if (a.type === "monthly") return -1;
-                            if (b.type === "monthly") return 1;
+                            if (a.type === 'monthly') return -1;
+                            if (b.type === 'monthly') return 1;
                             return 0;
                           };
 
-                          const feesByType = fees.reduce((acc, fee) => {
-                            const key = normalizeClassType(fee.class_type);
-                            if (!acc[key]) acc[key] = [];
-                            acc[key].push(fee);
-                            return acc;
-                          }, {});
+                          // Separate fees by class type (Gurmukhi vs Kirtan)
+                          const gurmukhiFees = fees.filter((f) => (f.class_type ?? 'gurmukhi') !== 'kirtan');
+                          const kirtanFees = fees.filter((f) => f.class_type === 'kirtan');
 
-                          const classTypeEntries = Object.entries(feesByType).sort(
-                            ([a], [b]) => {
-                              const priorityDiff =
-                                classTypePriority(a) - classTypePriority(b);
-                              if (priorityDiff !== 0) return priorityDiff;
-                              return a.localeCompare(b);
-                            }
-                          );
+                          const gurmukhiUnpaid = gurmukhiFees.filter((f) => !f.is_paid).sort(sortByMonthDesc);
+                          const gurmukhiPaid = gurmukhiFees.filter((f) => f.is_paid).sort(sortByMonthDesc);
+                          const kirtanUnpaid = kirtanFees.filter((f) => !f.is_paid).sort(sortByMonthDesc);
+                          const kirtanPaid = kirtanFees.filter((f) => f.is_paid).sort(sortByMonthDesc);
 
                           return (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                              {classTypeEntries.map(([classType, typeFees]) => {
-                                const unpaidTypeFees = typeFees
-                                  .filter((f) => !f.is_paid)
-                                  .sort(sortByMonthDesc);
-                                const paidTypeFees = typeFees
-                                  .filter((f) => f.is_paid)
-                                  .sort(sortByMonthDesc);
-
-                                return (
-                                  <div
-                                    key={classType}
-                                    className="border rounded-lg p-3 bg-white"
-                                  >
-                                    <div
-                                      className={`text-xs font-bold mb-2 uppercase tracking-wide ${classTypeTitleColor(
-                                        classType
-                                      )}`}
-                                    >
-                                      {formatClassTypeLabel(classType)}
-                                    </div>
-                                    <div className="mb-3">
-                                      <div className="text-xs font-semibold text-gray-600 mb-2">
-                                        Unpaid Fees
-                                      </div>
-                                      {unpaidTypeFees.length === 0 ? (
-                                        <div className="text-xs text-gray-500">
-                                          No unpaid fees.
-                                        </div>
-                                      ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                          {unpaidTypeFees.map((fee) => (
-                                            <div
-                                              key={fee.id}
-                                              className="flex items-center justify-between border rounded px-3 py-2 bg-white"
-                                            >
-                                              <div>
-                                                <div className="text-sm font-medium">
-                                                  {fee.type === "monthly"
-                                                    ? formatMonthLabel(fee.month)
-                                                    : fee.title}
-                                                </div>
-                                                <div className="text-xs text-gray-500">
-                                                  Rs {fee.amount}
-                                                </div>
-                                              </div>
-                                              <button
-                                                onClick={() => collectFee(fee.id)}
-                                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs"
-                                              >
-                                                Collect
-                                              </button>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div>
-                                      <div className="text-xs font-semibold text-gray-600 mb-2">
-                                        Paid Fees (Un-collect)
-                                      </div>
-                                      {paidTypeFees.length === 0 ? (
-                                        <div className="text-xs text-gray-500">
-                                          No paid fees.
-                                        </div>
-                                      ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                          {paidTypeFees.map((fee) => (
-                                            <div
-                                              key={fee.id}
-                                              className="flex items-center justify-between border rounded px-3 py-2 bg-white"
-                                            >
-                                              <div>
-                                                <div className="text-sm font-medium">
-                                                  {fee.type === "monthly"
-                                                    ? formatMonthLabel(fee.month)
-                                                    : fee.title}
-                                                </div>
-                                                <div className="text-xs text-gray-500">
-                                                  Rs {fee.amount}
-                                                </div>
-                                              </div>
-                                              <button
-                                                onClick={() => deCollectFee(fee.id)}
-                                                className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-3 py-1.5 rounded text-xs"
-                                              >
-                                                Un-collect
-                                              </button>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
+                              {/* Gurmukhi Column */}
+                              <div className="border rounded-lg p-3 bg-white">
+                                <div className="text-xs font-bold text-blue-700 mb-2 uppercase tracking-wide">
+                                  Gurmukhi
+                                </div>
+                                <div className="mb-3">
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">
+                                    Unpaid Fees
                                   </div>
-                                );
-                              })}
+                                  {gurmukhiUnpaid.length === 0 ? (
+                                    <div className="text-xs text-gray-500">No unpaid fees.</div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {gurmukhiUnpaid.map((fee) => (
+                                        <div key={fee.id} className="flex items-center justify-between border rounded px-3 py-2 bg-white">
+                                          <div>
+                                            <div className="text-sm font-medium">
+                                              {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">Rs {fee.amount}</div>
+                                          </div>
+                                          <button onClick={() => collectFee(fee.id)} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs">
+                                            Collect
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">Paid Fees (Un-collect)</div>
+                                  {gurmukhiPaid.length === 0 ? (
+                                    <div className="text-xs text-gray-500">No paid fees.</div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {gurmukhiPaid.map((fee) => (
+                                        <div key={fee.id} className="flex items-center justify-between border rounded px-3 py-2 bg-white">
+                                          <div>
+                                            <div className="text-sm font-medium">
+                                              {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">Rs {fee.amount}</div>
+                                          </div>
+                                          <button onClick={() => deCollectFee(fee.id)} className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-3 py-1.5 rounded text-xs">
+                                            Un-collect
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Kirtan Column */}
+                              <div className="border rounded-lg p-3 bg-white">
+                                <div className="text-xs font-bold text-purple-700 mb-2 uppercase tracking-wide">
+                                  Kirtan
+                                </div>
+                                <div className="mb-3">
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">
+                                    Unpaid Fees
+                                  </div>
+                                  {kirtanUnpaid.length === 0 ? (
+                                    <div className="text-xs text-gray-500">No unpaid fees.</div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {kirtanUnpaid.map((fee) => (
+                                        <div key={fee.id} className="flex items-center justify-between border rounded px-3 py-2 bg-white">
+                                          <div>
+                                            <div className="text-sm font-medium">
+                                              {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">Rs {fee.amount}</div>
+                                          </div>
+                                          <button onClick={() => collectFee(fee.id)} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs">
+                                            Collect
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">Paid Fees (Un-collect)</div>
+                                  {kirtanPaid.length === 0 ? (
+                                    <div className="text-xs text-gray-500">No paid fees.</div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {kirtanPaid.map((fee) => (
+                                        <div key={fee.id} className="flex items-center justify-between border rounded px-3 py-2 bg-white">
+                                          <div>
+                                            <div className="text-sm font-medium">
+                                              {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">Rs {fee.amount}</div>
+                                          </div>
+                                          <button onClick={() => deCollectFee(fee.id)} className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-3 py-1.5 rounded text-xs">
+                                            Un-collect
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           );
                         })()}
