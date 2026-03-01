@@ -317,10 +317,21 @@ export default function FeesIndex() {
                         {(() => {
                           const gurmukhiFees = fees.filter((f) => (f.class_type ?? 'gurmukhi') === 'gurmukhi');
                           const kirtanFees = fees.filter((f) => f.class_type === 'kirtan');
-                          const unpaidGurmukhi = gurmukhiFees.filter((f) => !f.is_paid);
-                          const paidGurmukhi = gurmukhiFees.filter((f) => f.is_paid);
-                          const unpaidKirtan = kirtanFees.filter((f) => !f.is_paid);
-                          const paidKirtan = kirtanFees.filter((f) => f.is_paid);
+
+                          // Sort unpaid fees by month descending (most recent first)
+                          const sortByMonthDesc = (a, b) => {
+                            if (a.type === 'monthly' && b.type === 'monthly') {
+                              return (b.month ?? '').localeCompare(a.month ?? '');
+                            }
+                            if (a.type === 'monthly') return -1;
+                            if (b.type === 'monthly') return 1;
+                            return 0;
+                          };
+
+                          const unpaidGurmukhi = gurmukhiFees.filter((f) => !f.is_paid).sort(sortByMonthDesc);
+                          const paidGurmukhi = gurmukhiFees.filter((f) => f.is_paid).sort(sortByMonthDesc);
+                          const unpaidKirtan = kirtanFees.filter((f) => !f.is_paid).sort(sortByMonthDesc);
+                          const paidKirtan = kirtanFees.filter((f) => f.is_paid).sort(sortByMonthDesc);
 
                           return (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
