@@ -63,9 +63,12 @@ class FeesController extends Controller
             $q->where('student_sections.section_id', $sectionId)
         )
 
-        ->when($request->search, fn ($q, $search) =>
-            $q->where('students.name', 'like', "%{$search}%")
-        )
+        ->when($request->search, function ($q, $search) {
+            $q->where(function ($qq) use ($search) {
+                $qq->where('students.name', 'like', "%{$search}%")
+                   ->orWhere('students.father_name', 'like', "%{$search}%");
+            });
+        })
         ->when($request->status === 'paid', function ($q) {
     $q->whereNotNull('payments.id');
 })
@@ -89,9 +92,14 @@ class FeesController extends Controller
         $paid = $items->where('is_paid', true);
         $unpaid = $items->where('is_paid', false);
 
-        // Get unique class names and types for this student
+        // Get unique class names and normalized types for this student
         $classNames = $items->pluck('class_name')->filter()->unique()->values()->toArray();
-        $classTypes = $items->pluck('class_type')->filter()->unique()->values()->toArray();
+        $classTypes = $items
+            ->map(fn ($f) => $this->normalizeDivisionType((string) ($f->class_type ?? ''), (string) ($f->class_name ?? '')))
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
         $sectionNames = $items->pluck('section_name')->filter()->unique()->values()->toArray();
 
         $combinedClass = implode(', ', $classNames);
@@ -102,7 +110,9 @@ class FeesController extends Controller
             'student_name' => $first->student_name,
             'father_name' => $first->father_name ?? '',
             'class_name' => $combinedClass,
-            'class_type' => $hasKirtan ? 'kirtan' : ($first->class_type ?? 'gurmukhi'),
+            'class_type' => $hasKirtan
+                ? 'kirtan'
+                : $this->normalizeDivisionType((string) ($first->class_type ?? ''), (string) ($first->class_name ?? '')),
             'section_name' => implode(', ', $sectionNames),
             'paid_count' => $paid->count(),
             'paid_amount' => $paid->sum('amount'),
@@ -117,7 +127,10 @@ class FeesController extends Controller
                     'month' => $f->month,
                     'title' => $f->title,
                     'amount' => $f->amount,
-                    'class_type' => $f->class_type ?? 'gurmukhi',
+                    'class_type' => $this->normalizeDivisionType(
+                        (string) ($f->class_type ?? ''),
+                        (string) ($f->class_name ?? '')
+                    ),
                     'is_paid' => (bool) $f->is_paid,
                 ];
             })->values(),
@@ -136,6 +149,38 @@ class FeesController extends Controller
         ]),
     ]);
 }
+
+    private function normalizeDivisionType(string $rawType, string $className): string
+    {
+        $normalizedRaw = strtolower(trim($rawType));
+        $normalizedClassName = strtolower(trim($className));
+
+        if (
+            in_array($normalizedRaw, ['kirtan', 'kirtan class'], true) ||
+            str_contains($normalizedRaw, 'kirtan') ||
+            str_contains($normalizedClassName, 'kirtan')
+        ) {
+            return 'kirtan';
+        }
+
+        if (
+            in_array($normalizedRaw, ['gurmukhi', 'gurmukhi class'], true) ||
+            str_contains($normalizedRaw, 'gurmukhi') ||
+            str_contains($normalizedClassName, 'gurmukhi')
+        ) {
+            return 'gurmukhi';
+        }
+
+        if ($normalizedRaw !== '') {
+            return preg_replace('/\s+/', '_', $normalizedRaw);
+        }
+
+        if ($normalizedClassName !== '') {
+            return preg_replace('/\s+/', '_', $normalizedClassName);
+        }
+
+        return 'gurmukhi';
+    }
 
     public function collect(Fee $fee)
 {
