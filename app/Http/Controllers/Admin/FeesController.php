@@ -39,7 +39,9 @@ class FeesController extends Controller
             'student_sections.section_id',
             'students.id as student_id',
             'students.name as student_name',
+            'students.father_name as father_name',
             'classes.name as class_name',
+            'classes.type as class_type',
             'sections.name as section_name',
             DB::raw('payments.id IS NOT NULL as is_paid'),
         ])
@@ -81,21 +83,27 @@ class FeesController extends Controller
         });
 
     $grouped = $fees->groupBy(function ($f) {
-        return implode('|', [
-            $f->student_id,
-            $f->class_id ?? '',
-            $f->section_id ?? '',
-        ]);
+        return $f->student_id;
     })->map(function ($items) {
         $first = $items->first();
         $paid = $items->where('is_paid', true);
         $unpaid = $items->where('is_paid', false);
 
+        // Get unique class names and types for this student
+        $classNames = $items->pluck('class_name')->filter()->unique()->values()->toArray();
+        $classTypes = $items->pluck('class_type')->filter()->unique()->values()->toArray();
+        $sectionNames = $items->pluck('section_name')->filter()->unique()->values()->toArray();
+
+        $combinedClass = implode(', ', $classNames);
+        $hasKirtan = in_array('kirtan', $classTypes);
+
         return [
             'student_id' => $first->student_id,
             'student_name' => $first->student_name,
-            'class_name' => $first->class_name,
-            'section_name' => $first->section_name,
+            'father_name' => $first->father_name ?? '',
+            'class_name' => $combinedClass,
+            'class_type' => $hasKirtan ? 'kirtan' : ($first->class_type ?? 'gurmukhi'),
+            'section_name' => implode(', ', $sectionNames),
             'paid_count' => $paid->count(),
             'paid_amount' => $paid->sum('amount'),
             'unpaid_count' => $unpaid->count(),
@@ -109,6 +117,7 @@ class FeesController extends Controller
                     'month' => $f->month,
                     'title' => $f->title,
                     'amount' => $f->amount,
+                    'class_type' => $f->class_type ?? 'gurmukhi',
                     'is_paid' => (bool) $f->is_paid,
                 ];
             })->values(),

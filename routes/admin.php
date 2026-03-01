@@ -262,6 +262,12 @@ Route::prefix('classes')->name('classes.')->group(function () {
     )->name('index');
 
     Route::get(
+        '/options',
+        fn() =>
+        SchoolClass::orderBy('name')->distinct()->get(['id', 'name'])
+    )->name('options');
+
+    Route::get(
         '/data',
         fn() =>
         SchoolClass::withCount('sections')

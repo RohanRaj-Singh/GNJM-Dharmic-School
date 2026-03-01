@@ -43,6 +43,69 @@ export default function Index() {
   const studentHeaderRef = useRef(null);
 
   /* ---------------------------------------
+   | Draft persistence helpers (localStorage)
+   --------------------------------------- */
+  const getDraftKey = () => `attendance_draft_${sectionId}_${year}_${month}`;
+
+  // Load draft from localStorage on mount or when section/month changes
+  useEffect(() => {
+    if (!sectionId) return;
+
+    const key = getDraftKey();
+    try {
+      const savedDraft = localStorage.getItem(key + '_attendance');
+      const savedLesson = localStorage.getItem(key + '_lesson');
+
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (Object.keys(parsed).length > 0) {
+          console.log('[Attendance] Restored draft from localStorage:', parsed);
+          setDraft(parsed);
+        }
+      }
+      if (savedLesson) {
+        const parsed = JSON.parse(savedLesson);
+        if (Object.keys(parsed).length > 0) {
+          console.log('[Attendance] Restored lesson draft from localStorage');
+          setDraftLesson(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('[Attendance] Error loading draft from localStorage:', e);
+    }
+  }, [sectionId, year, month]);
+
+  // Save draft to localStorage whenever it changes
+  useEffect(() => {
+    if (!sectionId || Object.keys(draft).length === 0) return;
+
+    const key = getDraftKey();
+    try {
+      localStorage.setItem(key + '_attendance', JSON.stringify(draft));
+    } catch (e) {
+      console.error('[Attendance] Error saving draft to localStorage:', e);
+    }
+  }, [draft, sectionId, year, month]);
+
+  useEffect(() => {
+    if (!sectionId || Object.keys(draftLesson).length === 0) return;
+
+    const key = getDraftKey();
+    try {
+      localStorage.setItem(key + '_lesson', JSON.stringify(draftLesson));
+    } catch (e) {
+      console.error('[Attendance] Error saving lesson draft to localStorage:', e);
+    }
+  }, [draftLesson, sectionId, year, month]);
+
+  // Clear localStorage on successful save
+  const clearDraftFromStorage = () => {
+    const key = getDraftKey();
+    localStorage.removeItem(key + '_attendance');
+    localStorage.removeItem(key + '_lesson');
+  };
+
+  /* ---------------------------------------
    | Derived
    --------------------------------------- */
   const selectedClass = useMemo(
@@ -248,6 +311,8 @@ export default function Index() {
       })
       .then((data) => {
         console.log('[Attendance Save] Success! Response:', data);
+        // Clear localStorage after successful save
+        clearDraftFromStorage();
         toast.success("Attendance saved successfully!");
         setDraft({});
         setDraftLesson({});

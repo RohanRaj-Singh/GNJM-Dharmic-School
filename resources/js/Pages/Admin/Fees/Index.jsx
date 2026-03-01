@@ -100,7 +100,7 @@ export default function FeesIndex() {
     () => [
       { header: "#", cell: ({ row }) => row.index + 1 },
       { accessorKey: "student_name", header: "Student" },
-      { accessorKey: "class_name", header: "Class" },
+      { accessorKey: "father_name", header: "Father Name" },
       { accessorKey: "section_name", header: "Section" },
       {
         header: "Unpaid",
@@ -313,81 +313,177 @@ export default function FeesIndex() {
                   {isOpen && (
                     <tr className="border-b bg-gray-50">
                       <td colSpan={8} className="px-3 py-3">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-xs font-semibold text-gray-600 mb-2">
-                              Unpaid Fees
-                            </div>
-                            {unpaid.length === 0 ? (
-                              <div className="text-xs text-gray-500">
-                                No unpaid fees.
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {unpaid.map((fee) => (
-                                  <div
-                                    key={fee.id}
-                                    className="flex items-center justify-between border rounded px-3 py-2 bg-white"
-                                  >
-                                    <div>
-                                      <div className="text-sm font-medium">
-                                        {fee.type === "monthly"
-                                          ? formatMonthLabel(fee.month)
-                                          : fee.title}
-                                      </div>
-                                      <div className="text-xs text-gray-500">
-                                        Rs {fee.amount}
-                                      </div>
-                                    </div>
-                                    <button
-                                      onClick={() => collectFee(fee.id)}
-                                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs"
-                                    >
-                                      Collect
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                        {/* Group fees by class type (Kirtan vs Gurmukhi) */}
+                        {(() => {
+                          const gurmukhiFees = fees.filter((f) => (f.class_type ?? 'gurmukhi') === 'gurmukhi');
+                          const kirtanFees = fees.filter((f) => f.class_type === 'kirtan');
+                          const unpaidGurmukhi = gurmukhiFees.filter((f) => !f.is_paid);
+                          const paidGurmukhi = gurmukhiFees.filter((f) => f.is_paid);
+                          const unpaidKirtan = kirtanFees.filter((f) => !f.is_paid);
+                          const paidKirtan = kirtanFees.filter((f) => f.is_paid);
 
-                          <div>
-                            <div className="text-xs font-semibold text-gray-600 mb-2">
-                              Paid Fees (Un-collect)
-                            </div>
-                            {paid.length === 0 ? (
-                              <div className="text-xs text-gray-500">
-                                No paid fees.
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {paid.map((fee) => (
-                                  <div
-                                    key={fee.id}
-                                    className="flex items-center justify-between border rounded px-3 py-2 bg-white"
-                                  >
-                                    <div>
-                                      <div className="text-sm font-medium">
-                                        {fee.type === "monthly"
-                                          ? formatMonthLabel(fee.month)
-                                          : fee.title}
-                                      </div>
-                                      <div className="text-xs text-gray-500">
-                                        Rs {fee.amount}
-                                      </div>
-                                    </div>
-                                    <button
-                                      onClick={() => deCollectFee(fee.id)}
-                                      className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-3 py-1.5 rounded text-xs"
-                                    >
-                                      Un-collect
-                                    </button>
+                          return (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              {/* Gurmukhi Column */}
+                              <div className="border rounded-lg p-3 bg-white">
+                                <div className="text-xs font-bold text-blue-700 mb-2 uppercase tracking-wide">
+                                  Gurmukhi
+                                </div>
+                                <div className="mb-3">
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">
+                                    Unpaid Fees
                                   </div>
-                                ))}
+                                  {unpaidGurmukhi.length === 0 ? (
+                                    <div className="text-xs text-gray-500">
+                                      No unpaid fees.
+                                    </div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {unpaidGurmukhi.map((fee) => (
+                                        <div
+                                          key={fee.id}
+                                          className="flex items-center justify-between border rounded px-3 py-2 bg-white"
+                                        >
+                                          <div>
+                                            <div className="text-sm font-medium">
+                                              {fee.type === "monthly"
+                                                ? formatMonthLabel(fee.month)
+                                                : fee.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                              Rs {fee.amount}
+                                            </div>
+                                          </div>
+                                          <button
+                                            onClick={() => collectFee(fee.id)}
+                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs"
+                                          >
+                                            Collect
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">
+                                    Paid Fees (Un-collect)
+                                  </div>
+                                  {paidGurmukhi.length === 0 ? (
+                                    <div className="text-xs text-gray-500">
+                                      No paid fees.
+                                    </div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {paidGurmukhi.map((fee) => (
+                                        <div
+                                          key={fee.id}
+                                          className="flex items-center justify-between border rounded px-3 py-2 bg-white"
+                                        >
+                                          <div>
+                                            <div className="text-sm font-medium">
+                                              {fee.type === "monthly"
+                                                ? formatMonthLabel(fee.month)
+                                                : fee.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                              Rs {fee.amount}
+                                            </div>
+                                          </div>
+                                          <button
+                                            onClick={() => deCollectFee(fee.id)}
+                                            className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-3 py-1.5 rounded text-xs"
+                                          >
+                                            Un-collect
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
+
+                              {/* Kirtan Column */}
+                              <div className="border rounded-lg p-3 bg-white">
+                                <div className="text-xs font-bold text-purple-700 mb-2 uppercase tracking-wide">
+                                  Kirtan
+                                </div>
+                                <div className="mb-3">
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">
+                                    Unpaid Fees
+                                  </div>
+                                  {unpaidKirtan.length === 0 ? (
+                                    <div className="text-xs text-gray-500">
+                                      No unpaid fees.
+                                    </div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {unpaidKirtan.map((fee) => (
+                                        <div
+                                          key={fee.id}
+                                          className="flex items-center justify-between border rounded px-3 py-2 bg-white"
+                                        >
+                                          <div>
+                                            <div className="text-sm font-medium">
+                                              {fee.type === "monthly"
+                                                ? formatMonthLabel(fee.month)
+                                                : fee.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                              Rs {fee.amount}
+                                            </div>
+                                          </div>
+                                          <button
+                                            onClick={() => collectFee(fee.id)}
+                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs"
+                                          >
+                                            Collect
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">
+                                    Paid Fees (Un-collect)
+                                  </div>
+                                  {paidKirtan.length === 0 ? (
+                                    <div className="text-xs text-gray-500">
+                                      No paid fees.
+                                    </div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {paidKirtan.map((fee) => (
+                                        <div
+                                          key={fee.id}
+                                          className="flex items-center justify-between border rounded px-3 py-2 bg-white"
+                                        >
+                                          <div>
+                                            <div className="text-sm font-medium">
+                                              {fee.type === "monthly"
+                                                ? formatMonthLabel(fee.month)
+                                                : fee.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                              Rs {fee.amount}
+                                            </div>
+                                          </div>
+                                          <button
+                                            onClick={() => deCollectFee(fee.id)}
+                                            className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-3 py-1.5 rounded text-xs"
+                                          >
+                                            Un-collect
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   )}
