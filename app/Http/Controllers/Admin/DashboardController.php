@@ -10,27 +10,39 @@ class DashboardController extends Controller
 {
     public function summary(Request $request)
     {
-        $year = (int) ($request->input('year') ?: now(config('app.timezone'))->year);
+        $yearInput = $request->input('years', $request->input('year', now(config('app.timezone'))->year));
 
-        $overall = $this->buildOverall($year);
-        $divisions = $this->buildDivisions($year);
-        $insights = $this->buildInsights($year);
+        // Handle both single year (string/number) and multiple years (array)
+        if (is_array($yearInput)) {
+            $years = array_map('intval', $yearInput);
+        } else {
+            $years = [(int) $yearInput];
+        }
+
+        // Sort years descending for display
+        rsort($years);
+        $year = $years[0]; // Primary year for backward compatibility
+
+        $overall = $this->buildOverall($years);
+        $divisions = $this->buildDivisions($years);
+        $insights = $this->buildInsights($years);
 
         return response()->json([
             ...$overall,
             'divisions' => $divisions,
             'insights' => $insights,
             'meta' => [
+                'years' => $years,
                 'year' => $year,
                 'generated_at' => now(config('app.timezone'))->toDateTimeString(),
             ],
         ]);
     }
 
-    private function buildOverall(int $year): array
+    private function buildOverall(array $years): array
     {
         $fees = DB::table('fees');
-        $this->applyFeeYearFilter($fees, $year);
+        $this->applyFeeYearFilter($fees, $years);
 
         $totalFees = (int) (clone $fees)->sum('fees.amount');
         $collectedFees = (int) (clone $fees)
@@ -44,7 +56,17 @@ class DashboardController extends Controller
         $pendingFees = $totalFees - $collectedFees;
 
         $attendanceCounts = DB::table('attendance')
-            ->whereYear('date', $year)
+            ->where(function ($q) use ($years) {
+                $first = true;
+                foreach ($years as $y) {
+                    if ($first) {
+                        $q->whereYear('date', $y);
+                        $first = false;
+                    } else {
+                        $q->orWhereYear('date', $y);
+                    }
+                }
+            })
             ->selectRaw('LOWER(TRIM(status)) as normalized_status, COUNT(*) as total')
             ->groupBy('normalized_status')
             ->get()
@@ -76,7 +98,7 @@ class DashboardController extends Controller
         ];
     }
 
-    private function buildDivisions(int $year): array
+    private function buildDivisions(array $years): array
     {
         $classes = DB::table('classes')
             ->select('id', 'name', 'type')
@@ -91,11 +113,11 @@ class DashboardController extends Controller
             $classIdsByDivision[$normalizedType][] = (int) $class->id;
         }
 
-        return collect($classIdsByDivision)->map(function (array $classIds, string $type) use ($year, $classes) {
+        return collect($classIdsByDivision)->map(function (array $classIds, string $type) use ($years, $classes) {
             $divisionClasses = $classes->whereIn('id', $classIds)->values();
             $classRows = $this->buildClassRows(
                 $classIds,
-                $year,
+                $years,
                 $divisionClasses->pluck('name', 'id')->all()
             );
 
@@ -117,8 +139,8 @@ class DashboardController extends Controller
                 'enrollments_count' => (int) DB::table('student_sections')->whereIn('class_id', $classIds)->count(),
             ];
 
-            $fees = $this->feesSummaryForScope('class', $classIds, $year);
-            $attendance = $this->attendanceSummaryForScope('class', $classIds, $year);
+            $fees = $this->feesSummaryForScope('class', $classIds, $years);
+            $attendance = $this->attendanceSummaryForScope('class', $classIds, $years);
 
             return [
                 'type' => $type,
@@ -143,7 +165,7 @@ class DashboardController extends Controller
         })->values()->all();
     }
 
-    private function buildClassRows(array $classIds, int $year, array $classNames): array
+    private function buildClassRows(array $classIds, array $years, array $classNames): array
     {
         if (empty($classIds)) {
             return [];
@@ -157,8 +179,8 @@ class DashboardController extends Controller
 
         $sectionIds = $sectionRows->pluck('id')->all();
 
-        $sectionFees = $this->feesSummaryForScope('section', $sectionIds, $year, keyed: true);
-        $sectionAttendance = $this->attendanceSummaryForScope('section', $sectionIds, $year, keyed: true);
+        $sectionFees = $this->feesSummaryForScope('section', $sectionIds, $years, keyed: true);
+        $sectionAttendance = $this->attendanceSummaryForScope('section', $sectionIds, $years, keyed: true);
         $sectionCounts = DB::table('student_sections')
             ->whereIn('section_id', $sectionIds)
             ->select(
@@ -198,8 +220,8 @@ class DashboardController extends Controller
             ->get()
             ->keyBy('class_id');
 
-        $classFees = $this->feesSummaryForScope('class', $classIds, $year, keyed: true);
-        $classAttendance = $this->attendanceSummaryForScope('class', $classIds, $year, keyed: true);
+        $classFees = $this->feesSummaryForScope('class', $classIds, $years, keyed: true);
+        $classAttendance = $this->attendanceSummaryForScope('class', $classIds, $years, keyed: true);
 
         return collect($classIds)->mapWithKeys(function ($classId) use ($classCounts, $classFees, $classAttendance, $sectionsByClass) {
             $counts = $classCounts[$classId] ?? null;
@@ -219,7 +241,7 @@ class DashboardController extends Controller
         })->all();
     }
 
-    private function feesSummaryForScope(string $scope, array $ids, int $year, bool $keyed = false): array
+    private function feesSummaryForScope(string $scope, array $ids, array $years, bool $keyed = false): array
     {
         if (empty($ids)) {
             return $keyed ? [] : ['total' => 0, 'collected' => 0, 'pending' => 0, 'percentage' => 0];
@@ -230,8 +252,8 @@ class DashboardController extends Controller
         $rows = DB::table('fees')
             ->join('student_sections', 'student_sections.id', '=', 'fees.student_section_id')
             ->whereIn($column, $ids)
-            ->where(function ($q) use ($year) {
-                $this->applyFeeYearFilter($q, $year);
+            ->where(function ($q) use ($years) {
+                $this->applyFeeYearFilter($q, $years);
             })
             ->select(
                 DB::raw($column . ' as scope_id'),
@@ -266,7 +288,7 @@ class DashboardController extends Controller
         })->all();
     }
 
-    private function attendanceSummaryForScope(string $scope, array $ids, int $year, bool $keyed = false): array
+    private function attendanceSummaryForScope(string $scope, array $ids, array $years, bool $keyed = false): array
     {
         if (empty($ids)) {
             return $keyed
@@ -279,7 +301,17 @@ class DashboardController extends Controller
         $rows = DB::table('attendance')
             ->join('student_sections', 'student_sections.id', '=', 'attendance.student_section_id')
             ->whereIn($column, $ids)
-            ->whereYear('attendance.date', $year)
+            ->where(function ($q) use ($years) {
+                $first = true;
+                foreach ($years as $y) {
+                    if ($first) {
+                        $q->whereYear('attendance.date', $y);
+                        $first = false;
+                    } else {
+                        $q->orWhereYear('attendance.date', $y);
+                    }
+                }
+            })
             ->select(
                 DB::raw($column . ' as scope_id'),
                 DB::raw("SUM(CASE WHEN LOWER(attendance.status) = 'present' THEN 1 ELSE 0 END) as present"),
@@ -318,35 +350,86 @@ class DashboardController extends Controller
         })->all();
     }
 
-    private function applyFeeYearFilter($query, int $year): void
+    private function applyFeeYearFilter($query, array $years): void
     {
-        $query->where(function ($q) use ($year) {
-            $q->where(function ($qq) use ($year) {
-                $qq->where('fees.type', 'monthly')
-                    ->where('fees.month', 'like', $year . '-%');
-            })->orWhere(function ($qq) use ($year) {
-                $qq->where('fees.type', 'custom')
-                    ->whereYear('fees.created_at', $year);
+        if (count($years) === 1) {
+            // Single year
+            $year = $years[0];
+            $query->where(function ($q) use ($year) {
+                // Monthly fees - check month column (source = 'monthly' or NULL for legacy data)
+                $q->where(function ($qq) use ($year) {
+                    $qq->where('fees.source', 'monthly')
+                        ->where('fees.month', 'like', $year . '-%');
+                })->orWhere(function ($qq) use ($year) {
+                    // Handle legacy data where source might be null
+                    $qq->whereNull('fees.source')
+                        ->where('fees.month', 'like', $year . '-%');
+                })->orWhere(function ($qq) use ($year) {
+                    // Custom fees - check created_at year
+                    $qq->where('fees.source', 'custom')
+                        ->whereYear('fees.created_at', $year);
+                });
             });
-        });
+        } else {
+            // Multiple years
+            $query->where(function ($q) use ($years) {
+                $first = true;
+                foreach ($years as $year) {
+                    if ($first) {
+                        $q->where(function ($qq) use ($year) {
+                            $qq->where('fees.source', 'monthly')
+                                ->where('fees.month', 'like', $year . '-%');
+                        })->orWhere(function ($qq) use ($year) {
+                            $qq->whereNull('fees.source')
+                                ->where('fees.month', 'like', $year . '-%');
+                        })->orWhere(function ($qq) use ($year) {
+                            $qq->where('fees.source', 'custom')
+                                ->whereYear('fees.created_at', $year);
+                        });
+                        $first = false;
+                    } else {
+                        $q->orWhere(function ($qq) use ($year) {
+                            $qq->where('fees.source', 'monthly')
+                                ->where('fees.month', 'like', $year . '-%');
+                        })->orWhere(function ($qq) use ($year) {
+                            $qq->whereNull('fees.source')
+                                ->where('fees.month', 'like', $year . '-%');
+                        })->orWhere(function ($qq) use ($year) {
+                            $qq->where('fees.source', 'custom')
+                                ->whereYear('fees.created_at', $year);
+                        });
+                    }
+                }
+            });
+        }
     }
 
-    private function buildInsights(int $year): array
+    private function buildInsights(array $years): array
     {
         return [
-            'top_absentees' => $this->topAbsentees($year),
-            'top_pending_fees' => $this->topPendingFees($year),
+            'top_absentees' => $this->topAbsentees($years),
+            'top_pending_fees' => $this->topPendingFees($years),
         ];
     }
 
-    private function topAbsentees(int $year): array
+    private function topAbsentees(array $years): array
     {
         $rows = DB::table('attendance')
             ->join('student_sections', 'student_sections.id', '=', 'attendance.student_section_id')
             ->join('students', 'students.id', '=', 'student_sections.student_id')
             ->join('classes', 'classes.id', '=', 'student_sections.class_id')
             ->leftJoin('sections', 'sections.id', '=', 'student_sections.section_id')
-            ->whereYear('attendance.date', $year)
+            ->where(function ($q) use ($years) {
+                $first = true;
+                foreach ($years as $y) {
+                    if ($first) {
+                        $q->whereYear('attendance.date', $y);
+                        $first = false;
+                    } else {
+                        $q->orWhereYear('attendance.date', $y);
+                    }
+                }
+            })
             ->whereRaw("LOWER(TRIM(attendance.status)) = 'absent'")
             ->select(
                 'student_sections.id as enrollment_id',
@@ -392,15 +475,15 @@ class DashboardController extends Controller
         })->all();
     }
 
-    private function topPendingFees(int $year): array
+    private function topPendingFees(array $years): array
     {
         $rows = DB::table('fees')
             ->join('student_sections', 'student_sections.id', '=', 'fees.student_section_id')
             ->join('students', 'students.id', '=', 'student_sections.student_id')
             ->join('classes', 'classes.id', '=', 'student_sections.class_id')
             ->leftJoin('sections', 'sections.id', '=', 'student_sections.section_id')
-            ->where(function ($q) use ($year) {
-                $this->applyFeeYearFilter($q, $year);
+            ->where(function ($q) use ($years) {
+                $this->applyFeeYearFilter($q, $years);
             })
             ->whereNotExists(function ($q) {
                 $q->selectRaw('1')

@@ -1,0 +1,22 @@
+
+   Psy\Exception\ParseErrorException 
+
+  PHP Parse error: Syntax error, unexpected T_NS_SEPARATOR, expecting T_VARIABLE on line 1
+
+  at C:\Users\Rohan Raj Singh\Desktop\GNJM Dharmic School\vendor\psy\psysh\src\Exception\ParseErrorException.php:44
+     40▕      * @param \PhpParser\Error $e
+     41▕      */
+     42▕     public static function fromParseError(\PhpParser\Error $e): self
+     43▕     {
+  ➜  44▕         return new self($e->getRawMessage(), $e->getAttributes());
+     45▕     }
+     46▕ }
+     47▕
+
+  1   C:\Users\Rohan Raj Singh\Desktop\GNJM Dharmic School\vendor\psy\psysh\src\CodeCleaner.php:488
+      Psy\Exception\ParseErrorException::fromParseError(Object(PhpParser\Error))
+
+  2   C:\Users\Rohan Raj Singh\Desktop\GNJM Dharmic School\vendor\psy\psysh\src\CodeCleaner.php:269
+      Psy\CodeCleaner::parse("<?php DB::table('attendance')->latest('id')->limit(5)->get()->each(function(\$r) { echo "ID: \$r-, StudentSectionID: \$r-, Date: \$r-, Status: \$r-, LessonLearned: " . (\$r->lesson_learned ? 'true' : 'false') . "\n"; });
+")
+

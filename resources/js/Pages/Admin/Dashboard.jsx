@@ -52,7 +52,7 @@ function Meter({ label, value, total, tone = "bg-blue-600", suffix = "" }) {
 
 export default function Dashboard() {
   const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(String(currentYear));
+  const [years, setYears] = useState([String(currentYear)]);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -63,7 +63,8 @@ export default function Dashboard() {
   useEffect(() => {
     setLoading(true);
     setError("");
-    fetch(`/admin/dashboard/summary?year=${year}`)
+    const params = years.map(y => `years[]=${y}`).join('&');
+    fetch(`/admin/dashboard/summary?${params}`)
       .then(async (r) => {
         if (!r.ok) {
           throw new Error("Failed to load dashboard summary");
@@ -80,7 +81,7 @@ export default function Dashboard() {
         setError(err.message || "Unable to load dashboard data");
       })
       .finally(() => setLoading(false));
-  }, [year]);
+  }, [years]);
 
   const activeDivision = useMemo(
     () => (data?.divisions ?? []).find((d) => d.type === divisionType) ?? null,
@@ -180,18 +181,34 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs uppercase text-slate-500">Year</span>
-              <select
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className="border rounded-md px-2 py-1.5 text-sm"
-              >
+              <span className="text-xs uppercase text-slate-500">Years</span>
+              <div className="flex flex-wrap gap-1">
                 {[currentYear - 2, currentYear - 1, currentYear, currentYear + 1].map((y) => (
-                  <option key={y} value={String(y)}>
+                  <label
+                    key={y}
+                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-sm cursor-pointer border transition-colors ${
+                      years.includes(String(y))
+                        ? "bg-emerald-600 border-emerald-600 text-white"
+                        : "bg-white border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={years.includes(String(y))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setYears([...years, String(y)].sort((a, b) => Number(b) - Number(a)));
+                        } else {
+                          const newYears = years.filter((yr) => yr !== String(y));
+                          setYears(newYears.length ? newYears : [String(currentYear)]);
+                        }
+                      }}
+                      className="sr-only"
+                    />
                     {y}
-                  </option>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
           </div>
         </div>

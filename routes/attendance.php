@@ -90,6 +90,24 @@ Route::prefix('attendance')->group(function () {
                     ->with('studentSection.student')
                     ->whereDate('date', today())
                     ->get()
+                    ->map(function ($attendance) {
+                        // Ensure lesson_learned is explicitly included
+                        return [
+                            'id' => $attendance->id,
+                            'student_section_id' => $attendance->student_section_id,
+                            'date' => $attendance->date,
+                            'status' => $attendance->status,
+                            'lesson_learned' => $attendance->lesson_learned,
+                            'student_section' => $attendance->studentSection ? [
+                                'id' => $attendance->studentSection->id,
+                                'student' => $attendance->studentSection->student ? [
+                                    'id' => $attendance->studentSection->student->id,
+                                    'name' => $attendance->studentSection->student->name,
+                                    'father_name' => $attendance->studentSection->student->father_name,
+                                ] : null,
+                            ] : null,
+                        ];
+                    })
                 : [],
         ]);
     })->name('attendance.mark');

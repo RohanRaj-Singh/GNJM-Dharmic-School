@@ -74,6 +74,7 @@ export default function FeesIndex() {
   function collectFee(feeId) {
     router.post(route("admin.fees.collect", feeId), {}, {
       preserveScroll: true,
+      preserveState: true,
       onSuccess: () => toast.success("Fee collected"),
     });
   }
@@ -82,6 +83,7 @@ export default function FeesIndex() {
     if (!confirm("Un-collect this fee?")) return;
     router.post(route("admin.fees.deCollect", feeId), {}, {
       preserveScroll: true,
+      preserveState: true,
       onSuccess: () => toast.success("Fee un-collected"),
     });
   }
