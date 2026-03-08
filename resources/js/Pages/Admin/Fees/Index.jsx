@@ -335,7 +335,7 @@ export default function FeesIndex() {
                           const kirtanPaid = kirtanFees.filter((f) => f.is_paid).sort(sortByMonthDesc);
 
                           return (
-                            <div className="grid grid-cols-1 gap-3">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                               {/* Gurmukhi Column */}
                               <div className="border rounded-lg p-2 sm:p-3 bg-white">
                                 <div className="text-xs font-bold text-blue-700 mb-2 uppercase tracking-wide">
@@ -348,7 +348,7 @@ export default function FeesIndex() {
                                   {gurmukhiUnpaid.length === 0 ? (
                                     <div className="text-xs text-gray-500">No unpaid fees.</div>
                                   ) : (
-                                    <div className="grid grid-cols-1 gap-2">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                                       {gurmukhiUnpaid.map((fee) => (
                                         <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
                                           <div className="truncate min-w-0">
@@ -370,7 +370,7 @@ export default function FeesIndex() {
                                   {gurmukhiPaid.length === 0 ? (
                                     <div className="text-xs text-gray-500">No paid fees.</div>
                                   ) : (
-                                    <div className="grid grid-cols-1 gap-2">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                                       {gurmukhiPaid.map((fee) => (
                                         <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
                                           <div className="truncate min-w-0">
@@ -401,7 +401,7 @@ export default function FeesIndex() {
                                   {kirtanUnpaid.length === 0 ? (
                                     <div className="text-xs text-gray-500">No unpaid fees.</div>
                                   ) : (
-                                    <div className="grid grid-cols-1 gap-2">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                                       {kirtanUnpaid.map((fee) => (
                                         <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
                                           <div className="truncate min-w-0">
@@ -423,7 +423,7 @@ export default function FeesIndex() {
                                   {kirtanPaid.length === 0 ? (
                                     <div className="text-xs text-gray-500">No paid fees.</div>
                                   ) : (
-                                    <div className="grid grid-cols-1 gap-2">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                                       {kirtanPaid.map((fee) => (
                                         <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
                                           <div className="truncate min-w-0">
