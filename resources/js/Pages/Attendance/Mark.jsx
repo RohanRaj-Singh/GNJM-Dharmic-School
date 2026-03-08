@@ -10,6 +10,16 @@ export default function Mark({
   hasAttendanceToday,
   existingAttendance = [],
 }) {
+  const parseLessonLearned = (value) => {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value === 1;
+    if (typeof value === "string") {
+      const v = value.trim().toLowerCase();
+      return v === "1" || v === "true";
+    }
+    return false;
+  };
+
   const classTypeToken = (cls) => {
     const typeText = String(cls?.type ?? "").trim().toLowerCase();
     const nameText = String(cls?.name ?? "").trim().toLowerCase();
@@ -33,7 +43,7 @@ export default function Mark({
     name: r.student_section?.student?.name ?? "Unknown",
     father_name: r.student_section?.student?.father_name ?? null,
     status: r.status ?? "present",
-    lesson_learned: !!r.lesson_learned,
+    lesson_learned: parseLessonLearned(r.lesson_learned),
   });
 
   const normalizeFresh = (ss) => ({
