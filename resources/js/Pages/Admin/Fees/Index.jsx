@@ -312,9 +312,9 @@ export default function FeesIndex() {
                   </tr>
                   {isOpen && (
                     <tr className="border-b bg-gray-50">
-                      <td colSpan={8} className="px-1 sm:px-3 py-2 sm:py-3">
+                      <td colSpan={8} className="p-0">
                         {/* Group by Gurmukhi/Kirtan, then by Paid/Unpaid */}
-                        <div className="max-w-5xl mx-auto">
+                        <div className="overflow-x-auto min-w-full px-2 py-3">
                         {(() => {
                           const sortByMonthDesc = (a, b) => {
                             if (a.type === 'monthly' && b.type === 'monthly') {
@@ -335,7 +335,7 @@ export default function FeesIndex() {
                           const kirtanPaid = kirtanFees.filter((f) => f.is_paid).sort(sortByMonthDesc);
 
                           return (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 gap-3">
                               {/* Gurmukhi Column */}
                               <div className="border rounded-lg p-2 sm:p-3 bg-white">
                                 <div className="text-xs font-bold text-blue-700 mb-2 uppercase tracking-wide">
@@ -348,16 +348,16 @@ export default function FeesIndex() {
                                   {gurmukhiUnpaid.length === 0 ? (
                                     <div className="text-xs text-gray-500">No unpaid fees.</div>
                                   ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-1 gap-2">
                                       {gurmukhiUnpaid.map((fee) => (
-                                        <div key={fee.id} className="flex items-center flex-start gap-1 border rounded px-2 py-1.5 bg-white min-w-0">
+                                        <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
                                           <div className="truncate min-w-0">
                                             <div className="text-xs font-medium truncate">
                                               {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
                                             </div>
                                             <div className="text-xs text-gray-500">Rs {fee.amount}</div>
                                           </div>
-                                          <button onClick={() => collectFee(fee.id)} className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 ml-[200px]">
+                                          <button onClick={() => collectFee(fee.id)} className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start">
                                             Collect
                                           </button>
                                         </div>
@@ -370,16 +370,16 @@ export default function FeesIndex() {
                                   {gurmukhiPaid.length === 0 ? (
                                     <div className="text-xs text-gray-500">No paid fees.</div>
                                   ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-1 gap-2">
                                       {gurmukhiPaid.map((fee) => (
-                                        <div key={fee.id} className="flex items-center justify-between gap-1 border rounded px-2 py-1.5 bg-white min-w-0">
+                                        <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
                                           <div className="truncate min-w-0">
                                             <div className="text-xs font-medium truncate">
                                               {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
                                             </div>
                                             <div className="text-xs text-gray-500">Rs {fee.amount}</div>
                                           </div>
-                                          <button onClick={() => deCollectFee(fee.id)} className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0">
+                                          <button onClick={() => deCollectFee(fee.id)} className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start">
                                             Un-collect
                                           </button>
                                         </div>
@@ -401,16 +401,16 @@ export default function FeesIndex() {
                                   {kirtanUnpaid.length === 0 ? (
                                     <div className="text-xs text-gray-500">No unpaid fees.</div>
                                   ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-1 gap-2">
                                       {kirtanUnpaid.map((fee) => (
-                                        <div key={fee.id} className="flex items-center justify-between gap-1 border rounded px-2 py-1.5 bg-white min-w-0">
+                                        <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
                                           <div className="truncate min-w-0">
                                             <div className="text-xs font-medium truncate">
                                               {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
                                             </div>
                                             <div className="text-xs text-gray-500">Rs {fee.amount}</div>
                                           </div>
-                                          <button onClick={() => collectFee(fee.id)} className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0">
+                                          <button onClick={() => collectFee(fee.id)} className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start">
                                             Collect
                                           </button>
                                         </div>
@@ -423,16 +423,16 @@ export default function FeesIndex() {
                                   {kirtanPaid.length === 0 ? (
                                     <div className="text-xs text-gray-500">No paid fees.</div>
                                   ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-1 gap-2">
                                       {kirtanPaid.map((fee) => (
-                                        <div key={fee.id} className="flex items-center justify-between gap-1 border rounded px-2 py-1.5 bg-white min-w-0">
+                                        <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
                                           <div className="truncate min-w-0">
                                             <div className="text-xs font-medium truncate">
                                               {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
                                             </div>
                                             <div className="text-xs text-gray-500">Rs {fee.amount}</div>
                                           </div>
-                                          <button onClick={() => deCollectFee(fee.id)} className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0">
+                                          <button onClick={() => deCollectFee(fee.id)} className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start">
                                             Un-collect
                                           </button>
                                         </div>
