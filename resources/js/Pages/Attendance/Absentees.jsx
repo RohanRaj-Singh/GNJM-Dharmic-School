@@ -60,6 +60,10 @@ export default function Absentees({
   };
 
   const applyFilter = () => {
+    setSearchTerm("");
+    setSortBy("days_desc");
+    setHideZeroAbsentees(false);
+    setHideZeroLeaves(false);
     setExpandedStudents({});
 
     router.get(
@@ -93,6 +97,10 @@ export default function Absentees({
     setIncludeToday(false);
     setClassId("");
     setSectionId("");
+    setSearchTerm("");
+    setSortBy("days_desc");
+    setHideZeroAbsentees(false);
+    setHideZeroLeaves(false);
     setExpandedStudents({});
 
     router.get("/attendance/absentees", {}, { preserveScroll: true });
