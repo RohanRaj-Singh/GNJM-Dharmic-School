@@ -142,6 +142,7 @@ export default function Absentees({
 
         return {
           ...student,
+          recordKey: `${student.id}-${student.section || "no-section"}`,
           absentCount: absentDates.length,
           leaveCount: leaveDates.length,
           totalCount: absentDates.length + leaveDates.length,
@@ -441,12 +442,12 @@ export default function Absentees({
                 ) : (
               <div className="space-y-2">
                 {visibleStudentRecords.map((student) => {
-                  const isExpanded = expandedStudents[student.id] === true;
+                  const isExpanded = expandedStudents[student.recordKey] === true;
 
                   return (
-                    <div key={student.id} className="border rounded-lg overflow-hidden">
+                    <div key={student.recordKey} className="border rounded-lg overflow-hidden">
                       <button
-                        onClick={() => toggleStudent(student.id)}
+                        onClick={() => toggleStudent(student.recordKey)}
                         className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50"
                       >
                         <div className="text-left">
@@ -477,7 +478,7 @@ export default function Absentees({
                       {isExpanded && (
                         <ul className="border-t bg-gray-50 divide-y">
                           {student.allDates.map((item, index) => (
-                            <li key={`${student.id}-${item.date}-${item.type}-${index}`} className="px-4 py-2 flex items-center justify-between">
+                            <li key={`${student.recordKey}-${item.date}-${item.type}-${index}`} className="px-4 py-2 flex items-center justify-between">
                               <div>
                                 <p className="text-sm text-gray-700">{item.date}</p>
                                 <p className="text-xs text-gray-500">{getDayName(item.date)}</p>
