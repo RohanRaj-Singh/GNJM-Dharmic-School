@@ -1,5 +1,5 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { router } from "@inertiajs/react";
 
 export default function Absentees({
@@ -36,6 +36,22 @@ export default function Absentees({
 
   const hasCustomFilter = filters.has_custom_filter || false;
 
+  useEffect(() => {
+    setStartDate(filters.start_date || defaultStartDate);
+    setEndDate(filters.end_date || defaultEndDate);
+    setIncludeToday(!!filters.include_today);
+    setClassId(filters.class_id || "");
+    setSectionId(filters.section_id || "");
+  }, [
+    defaultEndDate,
+    defaultStartDate,
+    filters.class_id,
+    filters.end_date,
+    filters.include_today,
+    filters.section_id,
+    filters.start_date,
+  ]);
+
   const toggleStudent = (studentKey) => {
     setExpandedStudents((prev) => ({
       ...prev,
@@ -44,6 +60,8 @@ export default function Absentees({
   };
 
   const applyFilter = () => {
+    setExpandedStudents({});
+
     router.get(
       "/attendance/absentees",
       {
@@ -53,7 +71,7 @@ export default function Absentees({
         class_id: classId || undefined,
         section_id: sectionId || undefined,
       },
-      { preserveState: true }
+      { preserveScroll: true }
     );
   };
 
@@ -75,8 +93,9 @@ export default function Absentees({
     setIncludeToday(false);
     setClassId("");
     setSectionId("");
+    setExpandedStudents({});
 
-    router.get("/attendance/absentees", {}, { preserveState: true });
+    router.get("/attendance/absentees", {}, { preserveScroll: true });
   };
 
   const getDaysCount = (start, end) => {
@@ -86,8 +105,15 @@ export default function Absentees({
   };
 
   const filteredSections = useMemo(() => {
-    if (!classId) return sections;
-    return sections.filter((section) => String(section.class_id) === String(classId));
+    const pool = !classId
+      ? sections
+      : sections.filter((section) => String(section.class_id) === String(classId));
+
+    return [...pool].sort((a, b) =>
+      String(a.name || "").localeCompare(String(b.name || ""), undefined, {
+        sensitivity: "base",
+      })
+    );
   }, [sections, classId]);
 
   const studentRecords = useMemo(() => {
@@ -294,7 +320,6 @@ export default function Absentees({
                     value={sectionId}
                     onChange={(e) => setSectionId(e.target.value)}
                     className="border rounded px-3 py-2 text-sm w-full"
-                    disabled={!classId && sections.length > 0}
                   >
                     <option value="">All Sections</option>
                     {filteredSections.map((section) => (
