@@ -1,5 +1,6 @@
 import { Head } from "@inertiajs/react";
 import { router } from "@inertiajs/react";
+import { usePage } from "@inertiajs/react";
 import { useState, useEffect, useRef } from "react";
 import LogoutModal from "@/Components/LogoutModal";
 
@@ -83,7 +84,7 @@ export function LogoutConfirmationDialog({ isOpen, onConfirm, onCancel }) {
  * @param {boolean} [alwaysConfirmLeave=false] - Whether back/home should always show the leave dialog
  * @param {Function} [onLogout] - Custom logout handler (optional)
  * @param {string|null} [backRoute=null] - Explicit route for the back action
- * @param {string} [homeRoute] - Custom home route (optional, defaults to /accountant)
+ * @param {string|null} [homeRoute=null] - Custom home route override
  */
 export default function SimpleLayout({
   title,
@@ -93,8 +94,9 @@ export default function SimpleLayout({
   alwaysConfirmLeave = false,
   onLogout,
   backRoute = null,
-  homeRoute = '/accountant'
+  homeRoute = null
 }) {
+  const { auth } = usePage().props;
   const todayLabel = new Date().toLocaleDateString(undefined, {
     day: "2-digit",
     month: "short",
@@ -112,6 +114,15 @@ export default function SimpleLayout({
   const showNavConfirm = pendingNav !== null;
   const shouldConfirmLeave = showLeavePageDialog && (alwaysConfirmLeave || hasUnsavedChanges);
   const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+  const role = auth?.user?.role ?? null;
+
+  const resolvedHomeRoute = (() => {
+    if (homeRoute) return homeRoute;
+    if (role === "teacher") return "/teacher";
+    if (role === "accountant") return "/accountant";
+    if (role === "admin") return "/admin/dashboard";
+    return "/";
+  })();
 
   const readProtectedHistory = () => {
     try {
@@ -164,7 +175,19 @@ export default function SimpleLayout({
   };
 
   const navigateToHome = () => {
-    router.visit(homeRoute);
+    router.visit(resolvedHomeRoute);
+  };
+
+  const navigateBackFromStack = () => {
+    if (goToPreviousProtectedPage()) {
+      return true;
+    }
+
+    if (navigateToBackRoute()) {
+      return true;
+    }
+
+    return false;
   };
 
   const handleBack = (e) => {
@@ -178,11 +201,7 @@ export default function SimpleLayout({
     if (shouldConfirmLeave) {
       setPendingNav({ type: 'back' });
     } else {
-      if (navigateToBackRoute()) {
-        return;
-      }
-
-      if (!goToPreviousProtectedPage()) {
+      if (!navigateBackFromStack()) {
         setShowLogoutConfirm(true);
       }
     }
@@ -212,12 +231,7 @@ export default function SimpleLayout({
     
     setTimeout(() => {
       if (nextNav?.type === 'back') {
-        if (navigateToBackRoute()) {
-          setIsNavigating(false);
-          return;
-        }
-
-        if (!goToPreviousProtectedPage()) {
+        if (!navigateBackFromStack()) {
           setShowLogoutConfirm(true);
         }
       } else if (nextNav?.type === 'home') {
@@ -279,7 +293,7 @@ export default function SimpleLayout({
 
       if (!showNavConfirm) {
         window.history.pushState({ protectedRouteGuard: true }, "", window.location.href);
-        if (!goToPreviousProtectedPage()) {
+        if (!navigateBackFromStack()) {
           setShowLogoutConfirm(true);
         }
       }

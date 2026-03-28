@@ -133,6 +133,7 @@ return (
       title="Mark Attendance"
       hasUnsavedChanges={hasUnsavedChanges}
       alwaysConfirmLeave={true}
+      backRoute="/attendance/sections"
       homeRoute="/attendance/sections"
     >
       <h2 className="font-semibold text-gray-800 mb-2 text-center">
