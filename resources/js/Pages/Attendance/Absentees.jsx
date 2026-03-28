@@ -30,7 +30,7 @@ export default function Absentees({
   const [todayOpen, setTodayOpen] = useState(false);
   const [expandedStudents, setExpandedStudents] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("days_asc");
+  const [sortBy, setSortBy] = useState("days_desc");
   const [hideZeroAbsentees, setHideZeroAbsentees] = useState(false);
   const [hideZeroLeaves, setHideZeroLeaves] = useState(false);
 
@@ -91,15 +91,19 @@ export default function Absentees({
   }, [sections, classId]);
 
   const studentRecords = useMemo(() => {
+    const toDateValue = (value) => new Date(value).getTime();
+
     return [...students]
       .map((student) => {
         const absentDates = (student.all_absent_dates || []).map((date) => ({
           date,
           type: "Absent",
+          sortValue: toDateValue(date),
         }));
         const leaveDates = (student.all_leave_dates || []).map((date) => ({
           date,
           type: "Leave",
+          sortValue: toDateValue(date),
         }));
 
         return {
@@ -107,7 +111,12 @@ export default function Absentees({
           absentCount: absentDates.length,
           leaveCount: leaveDates.length,
           totalCount: absentDates.length + leaveDates.length,
-          allDates: [...absentDates, ...leaveDates].sort((a, b) => a.date.localeCompare(b.date)),
+          latestDateValue: Math.max(
+            0,
+            ...absentDates.map((item) => item.sortValue),
+            ...leaveDates.map((item) => item.sortValue)
+          ),
+          allDates: [...absentDates, ...leaveDates].sort((a, b) => b.sortValue - a.sortValue),
         };
       });
   }, [students]);
@@ -138,44 +147,73 @@ export default function Absentees({
       return haystack.includes(needle);
     });
 
+    const compareNames = (a, b) =>
+      String(a.name || "").localeCompare(String(b.name || ""), undefined, {
+        sensitivity: "base",
+      });
+
     return filtered.sort((a, b) => {
       if (sortBy === "name_asc") {
-        return String(a.name || "").localeCompare(String(b.name || ""), undefined, {
-          sensitivity: "base",
-        });
+        return compareNames(a, b);
       }
 
       if (sortBy === "name_desc") {
-        return String(b.name || "").localeCompare(String(a.name || ""), undefined, {
-          sensitivity: "base",
-        });
+        return compareNames(b, a);
       }
 
       if (sortBy === "absent_desc") {
         if (b.absentCount !== a.absentCount) {
           return b.absentCount - a.absentCount;
         }
+
+        if (b.leaveCount !== a.leaveCount) {
+          return b.leaveCount - a.leaveCount;
+        }
+
+        if (b.latestDateValue !== a.latestDateValue) {
+          return b.latestDateValue - a.latestDateValue;
+        }
+
+        return compareNames(a, b);
       }
 
       if (sortBy === "leave_desc") {
         if (b.leaveCount !== a.leaveCount) {
           return b.leaveCount - a.leaveCount;
         }
+
+        if (b.absentCount !== a.absentCount) {
+          return b.absentCount - a.absentCount;
+        }
+
+        if (b.latestDateValue !== a.latestDateValue) {
+          return b.latestDateValue - a.latestDateValue;
+        }
+
+        return compareNames(a, b);
       }
 
       if (sortBy === "days_desc") {
         if (b.totalCount !== a.totalCount) {
           return b.totalCount - a.totalCount;
         }
+
+        if (b.latestDateValue !== a.latestDateValue) {
+          return b.latestDateValue - a.latestDateValue;
+        }
+
+        return compareNames(a, b);
       }
 
       if (a.totalCount !== b.totalCount) {
         return a.totalCount - b.totalCount;
       }
 
-      return String(a.name || "").localeCompare(String(b.name || ""), undefined, {
-        sensitivity: "base",
-      });
+      if (b.latestDateValue !== a.latestDateValue) {
+        return b.latestDateValue - a.latestDateValue;
+      }
+
+      return compareNames(a, b);
     });
   }, [hideZeroAbsentees, hideZeroLeaves, searchTerm, sortBy, studentRecords]);
 
@@ -185,8 +223,6 @@ export default function Absentees({
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-US", { weekday: "short" });
   };
-
-  const shouldShowCombinedList = hasCustomFilter || !!classId || !!sectionId;
 
   return (
     <SimpleLayout title="Attendance - Absent & Leave Register">
@@ -320,12 +356,7 @@ export default function Absentees({
           </div>
 
           <div className="p-4">
-            {!shouldShowCombinedList ? (
-              <p className="text-sm text-gray-500 text-center py-4">
-                Apply a filter to view the combined student list.
-              </p>
-            ) : (
-              <div className="space-y-3">
+            <div className="space-y-3">
                 <div className="flex flex-col gap-3 md:flex-row">
                   <input
                     type="text"
@@ -339,8 +370,8 @@ export default function Absentees({
                     onChange={(e) => setSortBy(e.target.value)}
                     className="border rounded px-3 py-2 text-sm w-full md:w-56"
                   >
-                    <option value="days_asc">Sort: Total Days Low to High</option>
                     <option value="days_desc">Sort: Total Days High to Low</option>
+                    <option value="days_asc">Sort: Total Days Low to High</option>
                     <option value="name_asc">Sort: Name A to Z</option>
                     <option value="name_desc">Sort: Name Z to A</option>
                     <option value="absent_desc">Sort: Most Absents</option>
@@ -437,7 +468,6 @@ export default function Absentees({
               </div>
                 )}
               </div>
-            )}
           </div>
         </div>
 
