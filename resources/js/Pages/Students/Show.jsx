@@ -20,6 +20,13 @@ import { usePage } from "@inertiajs/react";
 export default function StudentShow({ student, summary = [] }) {
     const { isTeacher, isAccountant, isAdmin } = useRoles();
     const { auth } = usePage().props;
+    const toDateKey = (value) => {
+        const date = new Date(value);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
 
     const days = Array.from({ length: 28 }).map((_, i) => {
         const d = new Date();
@@ -78,7 +85,7 @@ export default function StudentShow({ student, summary = [] }) {
 
                     const recentMap = Object.fromEntries(
                         recentAttendance.map((record) => [
-                            record.date,
+                            toDateKey(record.date),
                             record.status,
                         ])
                     );
@@ -129,9 +136,7 @@ export default function StudentShow({ student, summary = [] }) {
 
                                 <div className="grid grid-cols-7 gap-2 text-center text-xs">
                                     {days.map((day, i) => {
-                                        const dateStr = day
-                                            .toISOString()
-                                            .slice(0, 10);
+                                        const dateStr = toDateKey(day);
 
                                         const status = recentMap?.[dateStr];
 

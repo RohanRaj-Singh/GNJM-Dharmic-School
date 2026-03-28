@@ -31,6 +31,8 @@ export default function Absentees({
   const [expandedStudents, setExpandedStudents] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("days_asc");
+  const [hideZeroAbsentees, setHideZeroAbsentees] = useState(false);
+  const [hideZeroLeaves, setHideZeroLeaves] = useState(false);
 
   const hasCustomFilter = filters.has_custom_filter || false;
 
@@ -114,6 +116,14 @@ export default function Absentees({
     const needle = searchTerm.trim().toLowerCase();
 
     const filtered = studentRecords.filter((student) => {
+      if (hideZeroAbsentees && student.absentCount === 0) {
+        return false;
+      }
+
+      if (hideZeroLeaves && student.leaveCount === 0) {
+        return false;
+      }
+
       if (!needle) return true;
 
       const haystack = [
@@ -167,7 +177,7 @@ export default function Absentees({
         sensitivity: "base",
       });
     });
-  }, [searchTerm, sortBy, studentRecords]);
+  }, [hideZeroAbsentees, hideZeroLeaves, searchTerm, sortBy, studentRecords]);
 
   const daysCount = getDaysCount(startDate, endDate);
 
@@ -336,6 +346,28 @@ export default function Absentees({
                     <option value="absent_desc">Sort: Most Absents</option>
                     <option value="leave_desc">Sort: Most Leaves</option>
                   </select>
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={hideZeroAbsentees}
+                      onChange={(e) => setHideZeroAbsentees(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    Hide 0 Absentees
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={hideZeroLeaves}
+                      onChange={(e) => setHideZeroLeaves(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    Hide 0 Leaves
+                  </label>
                 </div>
 
                 {visibleStudentRecords.length === 0 ? (

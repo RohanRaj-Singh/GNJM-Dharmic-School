@@ -309,8 +309,8 @@ Route::get('/', fn () =>
                 'category' => $category,
                 'streak_days' => $daysCount,
                 'total_days' => $totalDays, // For sorting when filter applied
-                'all_absent_dates' => $hasCustomFilter ? $absentDates : [],
-                'all_leave_dates' => $hasCustomFilter ? $leaveDates : [],
+                'all_absent_dates' => $absentDates,
+                'all_leave_dates' => $leaveDates,
             ];
         }
 

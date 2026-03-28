@@ -1,1 +1,0 @@
-import{j as e}from"./app-C--yv6RX.js";import{S as r}from"./SimpleLayout-SOCVdsHA.js";import"./LogoutModal-BA4MDd_I.js";function i(){return e.jsx(r,{title:"Reports",children:e.jsx("div",{className:"bg-white rounded-xl shadow p-6",children:"Reports will be here"})})}export{i as default};
