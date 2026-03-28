@@ -222,10 +222,6 @@ Route::get('/', fn () =>
                 })
                 ->values();
 
-            if ($attendance->isEmpty()) {
-                continue;
-            }
-
             // Check if absent TODAY (separate category)
             $todayAttendance = $enrollment->attendance
                 ->filter(function ($a) use ($today, $isKirtanClass) {
@@ -252,10 +248,6 @@ Route::get('/', fn () =>
                 $attendance = $attendance->filter(fn($a) => $a->date !== $todayAttendance->date)->values();
             }
 
-            if ($attendance->isEmpty()) {
-                continue;
-            }
-
             // Get all absent/leave dates for filtered view
             $absentDates = [];
             $leaveDates = [];
@@ -271,32 +263,32 @@ Route::get('/', fn () =>
 
             // Use latest available record within date range (up to yesterday when not including today)
             $lastDayRecord = $attendance->first();
-
-            $status = $normalizeStatus($lastDayRecord->status);
-            if (!in_array($status, ['absent', 'leave'], true)) {
-                continue;
-            }
+            $status = $lastDayRecord ? $normalizeStatus($lastDayRecord->status) : null;
 
             // Calculate streak - count consecutive absent/leave days
             // Start from the last day and go backwards
             $streak = 0;
             $streakStartDate = null;
 
-            foreach ($attendance as $record) {
-                if ($normalizeStatus($record->status) === $status) {
-                    if ($streak === 0) {
-                        $streakStartDate = Carbon::parse($record->date);
+            if (in_array($status, ['absent', 'leave'], true)) {
+                foreach ($attendance as $record) {
+                    if ($normalizeStatus($record->status) === $status) {
+                        if ($streak === 0) {
+                            $streakStartDate = Carbon::parse($record->date);
+                        }
+                        $streak++;
+                    } else {
+                        break;
                     }
-                    $streak++;
-                } else {
-                    break;
                 }
             }
 
             if ($status === 'absent') {
                 $category = $streak >= 3 ? 'absent_3_plus' : ($streak === 2 ? 'absent_2' : 'absent_1');
-            } else {
+            } elseif ($status === 'leave') {
                 $category = $streak >= 2 ? 'leave_2_plus' : 'leave_1';
+            } else {
+                $category = 'clear';
             }
 
             // Calculate days count for display
@@ -313,7 +305,7 @@ Route::get('/', fn () =>
                 'name' => $enrollment->student->name,
                 'father_name' => $enrollment->student->father_name,
                 'section' => $enrollment->schoolClass->name . ' - ' . $enrollment->section->name,
-                'date' => $lastDayRecord->date,
+                'date' => $lastDayRecord?->date,
                 'category' => $category,
                 'streak_days' => $daysCount,
                 'total_days' => $totalDays, // For sorting when filter applied

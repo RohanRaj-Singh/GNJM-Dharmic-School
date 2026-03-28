@@ -21,15 +21,11 @@ export default function StudentShow({ student, summary = [] }) {
     const { isTeacher, isAccountant, isAdmin } = useRoles();
     const { auth } = usePage().props;
 
-    /* ================= RECENT DAYS (28) ================= */
-
     const days = Array.from({ length: 28 }).map((_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (27 - i));
         return d;
     });
-
-    /* ================= FILTER SUMMARY ================= */
 
     let visibleSummary = [];
 
@@ -51,8 +47,6 @@ export default function StudentShow({ student, summary = [] }) {
     return (
         <SimpleLayout title="Student Summary">
             <div className="space-y-5">
-
-                {/* ================= STUDENT INFO ================= */}
                 <div className="bg-white rounded-xl shadow p-5">
                     <h2 className="text-xl font-semibold text-gray-800">
                         {student.name}
@@ -62,7 +56,6 @@ export default function StudentShow({ student, summary = [] }) {
                     </p>
                 </div>
 
-                {/* ================= CONTACT ================= */}
                 <div className="bg-white rounded-xl shadow p-5 space-y-4">
                     <h3 className="text-md font-semibold text-gray-700">
                         Parent Contact
@@ -78,20 +71,20 @@ export default function StudentShow({ student, summary = [] }) {
                     />
                 </div>
 
-                {/* ================= ENROLLMENTS ================= */}
                 {visibleSummary.map((item, index) => {
-                    /* 🔒 SAFE RECENT MAP PER ITEM */
+                    const recentAttendance = Array.isArray(item.attendance?.recent)
+                        ? item.attendance.recent
+                        : Object.values(item.attendance?.recent ?? {});
+
                     const recentMap = Object.fromEntries(
-                        (item.attendance?.recent ?? []).map((r) => [
-                            r.date,
-                            r.status,
+                        recentAttendance.map((record) => [
+                            record.date,
+                            record.status,
                         ])
                     );
 
                     return (
                         <div key={`${item.class}-${item.section}-${index}`} className="space-y-4">
-
-                            {/* CLASS / SECTION */}
                             <div className="bg-white rounded-xl shadow p-5">
                                 <div className="flex flex-wrap gap-2">
                                     <Pill
@@ -107,7 +100,6 @@ export default function StudentShow({ student, summary = [] }) {
                                 </div>
                             </div>
 
-                            {/* ATTENDANCE SUMMARY */}
                             <div className="bg-white rounded-xl shadow p-5 space-y-2">
                                 <h3 className="text-md font-semibold text-gray-700">
                                     Attendance Summary
@@ -130,7 +122,6 @@ export default function StudentShow({ student, summary = [] }) {
                                 />
                             </div>
 
-                            {/* ================= MINI CALENDAR ================= */}
                             <div className="bg-white rounded-xl shadow p-5">
                                 <h3 className="text-md font-semibold text-gray-700 mb-3">
                                     Last 4 Weeks Attendance
@@ -142,8 +133,7 @@ export default function StudentShow({ student, summary = [] }) {
                                             .toISOString()
                                             .slice(0, 10);
 
-                                        const status =
-                                            recentMap?.[dateStr];
+                                        const status = recentMap?.[dateStr];
 
                                         const color =
                                             status === "present"
@@ -170,8 +160,8 @@ export default function StudentShow({ student, summary = [] }) {
                                                     className={`w-8 h-8 rounded-lg ${color}`}
                                                     title={
                                                         status
-                                                            ? `${dateStr} — ${status}`
-                                                            : `${dateStr} — No record`
+                                                            ? `${dateStr} - ${status}`
+                                                            : `${dateStr} - No record`
                                                     }
                                                 />
 
@@ -190,7 +180,6 @@ export default function StudentShow({ student, summary = [] }) {
                                 )}
                             </div>
 
-                            {/* ================= FEES ================= */}
                             {(isAccountant || isAdmin) &&
                                 item.class?.toLowerCase() === "gurmukhi" && (
                                     <FeeSection
@@ -202,7 +191,6 @@ export default function StudentShow({ student, summary = [] }) {
                     );
                 })}
 
-                {/* EMPTY STATE */}
                 {visibleSummary.length === 0 && (
                     <div className="text-center text-gray-400 text-sm">
                         No accessible records
@@ -212,10 +200,6 @@ export default function StudentShow({ student, summary = [] }) {
         </SimpleLayout>
     );
 }
-
-/* =========================================================
-   UI HELPERS
-========================================================= */
 
 function Pill({ children, color = "gray" }) {
     const map = {
@@ -247,10 +231,6 @@ function StatRow({ label, value, color }) {
     );
 }
 
-/* =========================================================
-   CONTACT HELPERS
-========================================================= */
-
 function formatWhatsappNumber(number) {
     if (!number) return null;
 
@@ -280,7 +260,7 @@ function ContactRow({ label, number }) {
                         href={`tel:${number}`}
                         className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs"
                     >
-                        📞 Call
+                        Call
                     </a>
 
                     {waNumber ? (
@@ -290,11 +270,11 @@ function ContactRow({ label, number }) {
                             rel="noopener noreferrer"
                             className="px-3 py-1 rounded-lg bg-green-600 text-white text-xs"
                         >
-                            💬 WhatsApp
+                            WhatsApp
                         </a>
                     ) : (
                         <span className="px-3 py-1 rounded-lg bg-gray-200 text-gray-500 text-xs">
-                            💬 WhatsApp
+                            WhatsApp
                         </span>
                     )}
                 </div>
