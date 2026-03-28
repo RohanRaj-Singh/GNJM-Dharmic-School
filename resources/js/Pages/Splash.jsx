@@ -1,17 +1,57 @@
 import { useForm } from "@inertiajs/react";
+import { useState, useEffect } from "react";
 import Logo from "../../images/logo.png";
+import LogoutModal from "@/Components/LogoutModal";
 
-export default function Splash() {
+/**
+ * Splash - Login page component
+ * 
+ * If user is already logged in, shows a modal asking if they want to:
+ * - Logout and login as different user
+ * - Stay on current session
+ */
+export default function Splash({ user }) {
   const { data, setData, post, processing, errors } = useForm({
     login: "",
     password: "",
     remember: false,
   });
 
+  const [showSwitchAccountModal, setShowSwitchAccountModal] = useState(false);
+
+  // If user is already logged in, show modal to switch accounts
+  useEffect(() => {
+    if (user) {
+      setShowSwitchAccountModal(true);
+    }
+  }, [user]);
+
+  const handleLogoutAndSwitch = async () => {
+    try {
+      // Post to logout
+      await window.axios.post('/logout');
+      // Reload to show fresh login
+      window.location.reload();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Force reload anyway
+      window.location.reload();
+    }
+  };
+
+  const handleStayOnCurrentSession = () => {
+    // Redirect to user's dashboard based on role
+    const routes = {
+      admin: '/admin/dashboard',
+      accountant: '/accountant',
+      teacher: '/teacher',
+    };
+    window.location.href = routes[user?.role] || '/';
+  };
+
   function submit(e) {
     e.preventDefault();
     post("/login");
-
   }
 
   return (
@@ -107,6 +147,18 @@ export default function Splash() {
       <p className="text-xs text-gray-400 mt-6">
         © {new Date().getFullYear()} Guru Nanak Ji Mission
       </p>
+
+      {/* Modal for logged-in user trying to access login page */}
+      <LogoutModal
+        isOpen={showSwitchAccountModal}
+        onConfirm={handleLogoutAndSwitch}
+        onCancel={handleStayOnCurrentSession}
+        title="Already Logged In"
+        message={`You are currently logged in as ${user?.name || 'a user'}. Do you want to logout and login as a different user?`}
+        confirmLabel="Logout & Switch"
+        cancelLabel="Stay Logged In"
+        preventBackButton={false}
+      />
     </div>
   );
 }

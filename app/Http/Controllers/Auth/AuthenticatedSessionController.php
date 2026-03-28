@@ -15,9 +15,24 @@ class AuthenticatedSessionController extends Controller
     /**
      * Show login page
      */
-    public function create()
+    public function create(Request $request)
     {
-        return Inertia::render('Splash');
+        // If user is already logged in, pass their info to show logout modal
+        $user = null;
+        if (auth()->check()) {
+            $authUser = auth()->user();
+            $user = [
+                'id' => $authUser->id,
+                'name' => $authUser->name,
+                'username' => $authUser->username,
+                'email' => $authUser->email,
+                'role' => $authUser->role,
+            ];
+        }
+        
+        return Inertia::render('Splash', [
+            'user' => $user,
+        ]);
     }
 
     /**
@@ -55,14 +70,37 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
 
-        return redirect()->intended(
+        // Always redirect to role-appropriate dashboard - no user-controlled redirect
+        return redirect()->to(
             match ($user->role) {
-                'admin' => route('admin.dashboard'),
+                'admin' => '/admin/dashboard',
                 'accountant' => '/accountant',
-                'teacher' => route('teacher.dashboard'),
+                'teacher' => '/teacher',
                 default => '/',
             }
         );
+    }
+
+    /**
+     * Check if redirect URL is safe (no open redirect vulnerability)
+     */
+    private function isSafeRedirect(?string $url): bool
+    {
+        if (!$url) return false;
+        
+        $url = trim($url);
+        
+        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
+            $blocked = ['http://', 'https://', 'ftp://', 'javascript:'];
+            foreach ($blocked as $blockedPrefix) {
+                if (str_starts_with(strtolower($url), $blockedPrefix)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        
+        return false;
     }
 
     /**
@@ -70,12 +108,29 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request)
     {
+        $user = Auth::user();
+        $userId = $user?->id;
+        $userRole = $user?->role;
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // Log the logout event
+        \Illuminate\Support\Facades\Log::info('User logged out', [
+            'user_id' => $userId,
+            'user_role' => $userRole,
+            'ip' => $request->ip(),
+        ]);
+
+        // Return redirect with no-cache headers
+        return redirect('/')
+            ->withHeaders([
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, private',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+            ]);
     }
 
     private function ensureIsNotRateLimited(Request $request): void

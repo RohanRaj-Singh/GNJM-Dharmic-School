@@ -8,19 +8,21 @@ use App\Models\SchoolClass;
 use App\Http\Controllers\AttendanceController;
 use Carbon\Carbon;
 
-Route::prefix('attendance')->group(function () {
-    $isClassType = function (?string $type, string $needle): bool {
-        $normalized = strtolower(trim((string) $type));
-        if ($normalized === '') {
-            return false;
-        }
+// Note: prefix 'attendance' is already added in web.php
+// Don't add prefix here to avoid duplicate /attendance/attendance
 
-        return $normalized === $needle || str_contains($normalized, $needle);
-    };
+$isClassType = function (?string $type, string $needle): bool {
+    $normalized = strtolower(trim((string) $type));
+    if ($normalized === '') {
+        return false;
+    }
 
-    Route::get('/', fn () =>
-        Inertia::render('Attendance/Dashboard')
-    )->name('attendance.dashboard');
+    return $normalized === $needle || str_contains($normalized, $needle);
+};
+
+Route::get('/', fn () =>
+    Inertia::render('Attendance/Dashboard')
+)->name('attendance.dashboard');
 
     /* ===============================
        SECTIONS LIST
@@ -346,4 +348,3 @@ Route::prefix('attendance')->group(function () {
             ],
         ]);
     })->name('attendance.absentees');
-});

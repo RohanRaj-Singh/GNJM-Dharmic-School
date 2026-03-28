@@ -21,11 +21,11 @@ export default function StudentShow({ student, summary = [] }) {
     const { isTeacher, isAccountant, isAdmin } = useRoles();
     const { auth } = usePage().props;
 
-    /* ================= RECENT DAYS (14) ================= */
+    /* ================= RECENT DAYS (28) ================= */
 
-    const days = Array.from({ length: 14 }).map((_, i) => {
+    const days = Array.from({ length: 28 }).map((_, i) => {
         const d = new Date();
-        d.setDate(d.getDate() - (13 - i));
+        d.setDate(d.getDate() - (27 - i));
         return d;
     });
 
@@ -133,7 +133,7 @@ export default function StudentShow({ student, summary = [] }) {
                             {/* ================= MINI CALENDAR ================= */}
                             <div className="bg-white rounded-xl shadow p-5">
                                 <h3 className="text-md font-semibold text-gray-700 mb-3">
-                                    Recent Attendance
+                                    Last 4 Weeks Attendance
                                 </h3>
 
                                 <div className="grid grid-cols-7 gap-2 text-center text-xs">

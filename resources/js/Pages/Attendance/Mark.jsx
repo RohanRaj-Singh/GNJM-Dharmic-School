@@ -1,6 +1,6 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
 import { router } from "@inertiajs/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import AttendanceMarkPage from "./AttendanceMarkPage";
 import AttendanceSummaryPage from "./AttendanceSummaryPage";
@@ -61,17 +61,41 @@ export default function Mark({
     return changes;
   };
 
-  const [records, setRecords] = useState(() =>
-    hasAttendanceToday
-      ? existingAttendance
-          .map(normalizeExisting)
-          .filter((r) => r.student_id)
-      : section.student_sections.map(normalizeFresh)
-  );
+  const sortRecordsByName = (rows) =>
+    [...rows].sort((a, b) =>
+      String(a.name ?? "").localeCompare(String(b.name ?? ""), undefined, {
+        sensitivity: "base",
+      })
+    );
 
-  const [mode, setMode] = useState(
+  const serializeRecords = (rows) =>
+    JSON.stringify(
+      rows.map((row) => ({
+        student_id: row.student_id,
+        status: row.status,
+        lesson_learned: !!row.lesson_learned,
+      }))
+    );
+
+  const initialRecords = hasAttendanceToday
+    ? sortRecordsByName(
+        existingAttendance
+        .map(normalizeExisting)
+        .filter((r) => r.student_id)
+      )
+    : sortRecordsByName(section.student_sections.map(normalizeFresh));
+
+  const [records, setRecords] = useState(() =>
+    initialRecords
+  );
+  const initialSnapshotRef = useRef(serializeRecords(initialRecords));
+
+const [mode, setMode] = useState(
     hasAttendanceToday ? "summary" : "mark"
   );
+
+  const hasUnsavedChanges =
+    serializeRecords(records) !== initialSnapshotRef.current;
 
   const [index, setIndex] = useState(0);
 
@@ -104,8 +128,13 @@ export default function Mark({
     );
   };
 
-  return (
-    <SimpleLayout title="Mark Attendance">
+return (
+    <SimpleLayout
+      title="Mark Attendance"
+      hasUnsavedChanges={hasUnsavedChanges}
+      alwaysConfirmLeave={true}
+      homeRoute="/attendance/sections"
+    >
       <h2 className="font-semibold text-gray-800 mb-2 text-center">
         {section.school_class.name} - {section.name}
       </h2>

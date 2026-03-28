@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Carbon\Carbon;
 use App\Models\{
     Student,
     SchoolClass
@@ -75,6 +76,7 @@ Route::prefix('students')->group(function () {
     // summary logic (unchanged)
 
     $summary = $student->enrollments->map(function ($enrollment) {
+    $attendanceWindowStart = Carbon::today()->subDays(27);
 
     // Attendance counts
     $present = $enrollment->attendance->where('status', 'present')->count();
@@ -96,7 +98,8 @@ return [
         'absent'  => $absent,
         'leave'   => $leave,
         'recent'  => $enrollment->attendance
-            ->take(5)
+            ->filter(fn ($a) => Carbon::parse($a->date)->greaterThanOrEqualTo($attendanceWindowStart))
+            ->sortBy('date')
             ->map(fn ($a) => [
                 'date'   => $a->date,
                 'status' => $a->status,

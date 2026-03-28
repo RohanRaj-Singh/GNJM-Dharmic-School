@@ -21,7 +21,8 @@ use App\Http\Middleware\RedirectIfAuthenticated;
 /* -------- Auth -------- */
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\TrimStrings;
-//use App\Http\Middleware\DebugAuthMiddleware;
+use App\Http\Middleware\DebugAuthMiddleware;
+use App\Http\Middleware\PreventCacheMiddleware;
 
 /* -------- Custom -------- */
 use App\Http\Middleware\RoleMiddleware;
@@ -44,8 +45,8 @@ class Kernel extends HttpKernel
             ShareErrorsFromSession::class,
             VerifyCsrfToken::class,
             SubstituteBindings::class,
-           // Authenticate::class,
-           DebugAuthMiddleware::class,
+            \App\Http\Middleware\SecurityHeaders::class, // Add security headers
+            // DebugAuthMiddleware::class, // Disabled for production
         ],
 
         'api' => [

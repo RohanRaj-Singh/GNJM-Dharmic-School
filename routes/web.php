@@ -34,7 +34,12 @@ require __DIR__.'/auth.php';
 
 Route::middleware(['auth', 'session.cache_guard'])->group(function () {
 
-    require __DIR__.'/attendance.php';
+    // Attendance routes - teacher and accountant only (NOT admin)
+    Route::middleware('role:teacher,accountant')
+        ->prefix('attendance')
+        ->group(function () {
+            require __DIR__.'/attendance.php';
+        });
 
     Route::middleware('role:admin')
         ->prefix('admin')
