@@ -1,4 +1,4 @@
-import { useForm } from "@inertiajs/react";
+import { useForm, usePage } from "@inertiajs/react";
 import { useState, useEffect } from "react";
 import Logo from "../../images/logo.png";
 import LogoutModal from "@/Components/LogoutModal";
@@ -11,6 +11,7 @@ import LogoutModal from "@/Components/LogoutModal";
  * - Stay on current session
  */
 export default function Splash({ user }) {
+  const { flash = {} } = usePage().props;
   const { data, setData, post, processing, errors } = useForm({
     login: "",
     password: "",
@@ -80,9 +81,9 @@ export default function Splash({ user }) {
           Login
         </h2>
 
-        {(errors.auth || errors.login) && (
+        {(flash.error || errors.auth || errors.login) && (
           <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {errors.auth || errors.login}
+            {flash.error || errors.auth || errors.login}
           </div>
         )}
 

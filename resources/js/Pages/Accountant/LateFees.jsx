@@ -1,4 +1,5 @@
-﻿import SimpleLayout from "@/Layouts/SimpleLayout";
+import SimpleLayout from "@/Layouts/SimpleLayout";
+import SearchInput from "@/Components/SearchInput";
 import { useMemo, useState } from "react";
 
 /**
@@ -110,7 +111,7 @@ export default function LateFees({
               ))}
             </select>
 
-            <input
+            <SearchInput
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}

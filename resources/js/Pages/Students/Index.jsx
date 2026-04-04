@@ -1,4 +1,5 @@
 import AccountantLayout from "@/Layouts/SimpleLayout";
+import SearchInput from "@/Components/SearchInput";
 import { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import useRoles from "@/Hooks/useRoles";
@@ -68,11 +69,10 @@ export default function StudentsIndex({ students = [] }) {
                     </Link>
                 </div>
 
-                <input
-                    type="text"
-                    placeholder="Search student..."
+                <SearchInput
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={setSearch}
+                    placeholder="Search student..."
                     className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring"
                 />
 

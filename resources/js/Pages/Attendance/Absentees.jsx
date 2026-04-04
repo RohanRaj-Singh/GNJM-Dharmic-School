@@ -1,4 +1,5 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
+import SearchInput from "@/Components/SearchInput";
 import { useEffect, useMemo, useState } from "react";
 import { router } from "@inertiajs/react";
 
@@ -390,12 +391,11 @@ export default function Absentees({
           </div>
 
           <div className="p-4">
-            <div className="space-y-3">
+              <div className="space-y-3">
                 <div className="flex flex-col gap-3 md:flex-row">
-                  <input
-                    type="text"
+                  <SearchInput
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={setSearchTerm}
                     placeholder="Search student, father, or section"
                     className="border rounded px-3 py-2 text-sm w-full"
                   />

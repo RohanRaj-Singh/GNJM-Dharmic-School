@@ -26,7 +26,6 @@ use App\Http\Middleware\PreventCacheMiddleware;
 
 /* -------- Custom -------- */
 use App\Http\Middleware\RoleMiddleware;
-use Symfony\Component\ErrorHandler\Debug;
 
 class Kernel extends HttpKernel
 {
@@ -60,4 +59,3 @@ class Kernel extends HttpKernel
     'role' => \App\Http\Middleware\RoleMiddleware::class,
 ];
 }
-

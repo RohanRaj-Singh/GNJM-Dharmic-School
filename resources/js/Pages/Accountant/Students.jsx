@@ -1,4 +1,5 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
+import SearchInput from "@/Components/SearchInput";
 import { Link } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 
@@ -51,10 +52,9 @@ export default function Students({ students = [] }) {
           </button>
         </div>
 
-        <input
-          type="text"
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
           placeholder="Search by student or father"
           className="w-full border rounded-lg px-3 py-2"
         />

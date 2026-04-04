@@ -59,16 +59,12 @@ export default function LogoutModal({
   useEffect(() => {
     if (!isOpen || !preventBackButton) return;
 
+    // Just prevent default on popstate without pushing state (which causes focus issues)
     const handlePopState = (e) => {
-      // Prevent the back navigation - push state back
       e.preventDefault();
-      window.history.pushState(null, '', window.location.href);
     };
 
     window.addEventListener('popstate', handlePopState, { passive: false });
-    
-    // Also push state initially when modal opens to prevent back
-    window.history.pushState({ modalOpen: true }, '', window.location.href);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);

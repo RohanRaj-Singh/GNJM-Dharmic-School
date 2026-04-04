@@ -14,7 +14,8 @@ class Authenticate extends Middleware
     protected function redirectTo($request): ?string
     {
         if (!$request->expectsJson()) {
-            // Return redirect to login - this is the proper way
+            $request->session()->flash('error', 'Your session has expired. Please log in again.');
+
             return route('login');
         }
         

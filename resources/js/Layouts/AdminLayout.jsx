@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import SidebarGroup from "@/Components/SidebarGroup";
 import Logo from "../../images/logo.png";
 import LogoutModal from "@/Components/LogoutModal";
+import TabSessionTimeout from "@/Components/TabSessionTimeout";
 
 const PROTECTED_HISTORY_KEY = "gnjm.protected.history";
 
@@ -254,6 +255,8 @@ export default function AdminLayout({ title, children }) {
         closeButtonRef={logoutButtonRef}
         preventBackButton={true}
       />
+
+      <TabSessionTimeout />
     </div>
   );
 }
