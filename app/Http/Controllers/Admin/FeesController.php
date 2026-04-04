@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Fee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use App\Models\Payment;
@@ -149,6 +150,15 @@ class FeesController extends Controller
         ]),
     ]);
 }
+
+    public function generateMonthlyFees()
+    {
+        Artisan::call('fees:generate-monthly', [
+            '--no-interaction' => true,
+        ]);
+
+        return back()->with('success', 'Monthly fees generated successfully.');
+    }
 
     private function normalizeDivisionType(string $rawType, string $className): string
     {

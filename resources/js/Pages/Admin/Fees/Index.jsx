@@ -26,6 +26,7 @@ export default function FeesIndex() {
   const [sections, setSections] = useState([]);
   const [searchInput, setSearchInput] = useState(filters?.search ?? "");
   const [expandedId, setExpandedId] = useState(null);
+  const [isGeneratingMonthlyFees, setIsGeneratingMonthlyFees] = useState(false);
 
   /* -------------------------------------------------
    | Dynamic years (2025 → current year)
@@ -86,6 +87,28 @@ export default function FeesIndex() {
       preserveState: true,
       onSuccess: () => toast.success("Fee un-collected"),
     });
+  }
+
+  function generateMonthlyFees() {
+    if (
+      !confirm(
+        "Generate monthly fees now? Existing fees for the same month will not be duplicated."
+      )
+    ) {
+      return;
+    }
+
+    setIsGeneratingMonthlyFees(true);
+    router.post(
+      route("admin.fees.generate-monthly"),
+      {},
+      {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => toast.success("Monthly fees generated"),
+        onFinish: () => setIsGeneratingMonthlyFees(false),
+      }
+    );
   }
 
   function formatMonthLabel(value) {
@@ -205,6 +228,23 @@ export default function FeesIndex() {
    ------------------------------------------------- */
   return (
     <AdminLayout title="Fees">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-4 py-3">
+        <div>
+          <h1 className="text-base font-semibold text-gray-800">Fees</h1>
+          <p className="text-sm text-gray-500">
+            If auto-generation misses a run, you can manually generate this month&apos;s fees here.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={generateMonthlyFees}
+          disabled={isGeneratingMonthlyFees}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isGeneratingMonthlyFees ? "Generating..." : "Generate Monthly Fees"}
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">
         <select

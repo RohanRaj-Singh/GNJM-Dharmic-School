@@ -414,6 +414,7 @@ Route::prefix('attendance')->name('attendance.')->group(function () {
 Route::prefix('fees')->name('fees.')->group(function () {
 
     Route::get('/', [FeesController::class, 'index'])->name('index');
+    Route::post('/generate-monthly', [FeesController::class, 'generateMonthlyFees'])->name('generate-monthly');
     Route::post('/{fee}/collect', [FeesController::class, 'collect'])->name('collect');
     Route::post('/{fee}/de-collect', [FeesController::class, 'deCollect'])->name('deCollect');
 
