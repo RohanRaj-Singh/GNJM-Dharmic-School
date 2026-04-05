@@ -9,28 +9,200 @@ import {
 } from "@tanstack/react-table";
 import toast from "react-hot-toast";
 
+function getTodayDateInput() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatMonthLabel(value) {
+  if (!value) return "";
+  const date = new Date(`${value}-01`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-US", { month: "short", year: "numeric" });
+}
+
+function formatCollectionDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function FeeActionCard({
+  fee,
+  isPaid,
+  onCollect,
+  onDeCollect,
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
+      <div className="truncate min-w-0">
+        <div className="text-xs font-medium truncate">
+          {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
+        </div>
+        <div className="text-xs text-gray-500">Rs {fee.amount}</div>
+        {isPaid && fee.paid_at ? (
+          <div className="text-xs text-gray-500">
+            Collected on {formatCollectionDate(fee.paid_at)}
+          </div>
+        ) : null}
+      </div>
+
+      {isPaid ? (
+        <button
+          type="button"
+          onClick={() => onDeCollect(fee.id)}
+          className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start"
+        >
+          Un-collect
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onCollect(fee)}
+          className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start"
+        >
+          Collect
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FeeGroupColumn({
+  title,
+  titleClassName,
+  unpaidFees,
+  paidFees,
+  onCollect,
+  onDeCollect,
+}) {
+  return (
+    <div className="border rounded-lg p-2 sm:p-3 bg-white">
+      <div className={`text-xs font-bold mb-2 uppercase tracking-wide ${titleClassName}`}>
+        {title}
+      </div>
+
+      <div className="mb-3">
+        <div className="text-xs font-semibold text-gray-600 mb-2">
+          Unpaid Fees
+        </div>
+        {unpaidFees.length === 0 ? (
+          <div className="text-xs text-gray-500">No unpaid fees.</div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            {unpaidFees.map((fee) => (
+              <FeeActionCard
+                key={fee.id}
+                fee={fee}
+                isPaid={false}
+                onCollect={onCollect}
+                onDeCollect={onDeCollect}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold text-gray-600 mb-2">
+          Paid Fees
+        </div>
+        {paidFees.length === 0 ? (
+          <div className="text-xs text-gray-500">No paid fees.</div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            {paidFees.map((fee) => (
+              <FeeActionCard
+                key={fee.id}
+                fee={fee}
+                isPaid={true}
+                onCollect={onCollect}
+                onDeCollect={onDeCollect}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CollectFeeModal({
+  fee,
+  collectionDate,
+  onCollectionDateChange,
+  onClose,
+  onConfirm,
+}) {
+  if (!fee) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+        <div className="border-b px-5 py-4">
+          <h2 className="text-base font-semibold text-gray-800">Collect Fee</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title} • Rs {fee.amount}
+          </p>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              Collection Date
+            </label>
+            <input
+              type="date"
+              value={collectionDate}
+              onChange={(e) => onCollectionDateChange(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!collectionDate}
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Confirm Collection
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FeesIndex() {
   const { fees, filters } = usePage().props;
 
-
-  /* -------------------------------------------------
-   | Data (single source of truth)
-   ------------------------------------------------- */
   const data = fees ?? [];
-
-  /* -------------------------------------------------
-   | Local state (UI only)
-   ------------------------------------------------- */
   const [sorting, setSorting] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [searchInput, setSearchInput] = useState(filters?.search ?? "");
   const [expandedId, setExpandedId] = useState(null);
   const [isGeneratingMonthlyFees, setIsGeneratingMonthlyFees] = useState(false);
+  const [collectingFee, setCollectingFee] = useState(null);
+  const [collectionDate, setCollectionDate] = useState(getTodayDateInput());
 
-  /* -------------------------------------------------
-   | Dynamic years (2025 → current year)
-   ------------------------------------------------- */
   const START_YEAR = 2025;
   const CURRENT_YEAR = new Date().getFullYear();
   const years = Array.from(
@@ -39,15 +211,11 @@ export default function FeesIndex() {
   );
 
   const statusPills = [
-  { label: "All", value: "" },
-  { label: "Paid", value: "paid" },
-  { label: "Unpaid", value: "unpaid" },
-];
+    { label: "All", value: "" },
+    { label: "Paid", value: "paid" },
+    { label: "Unpaid", value: "unpaid" },
+  ];
 
-
-  /* -------------------------------------------------
-   | Load class & section options
-   ------------------------------------------------- */
   useEffect(() => {
     fetch("/admin/classes/options")
       .then((r) => r.json())
@@ -69,16 +237,56 @@ export default function FeesIndex() {
     setSearchInput(filters?.search ?? "");
   }, [filters?.search]);
 
-  /* -------------------------------------------------
-   | Actions
-   ------------------------------------------------- */
-  function collectFee(feeId) {
-    router.post(route("admin.fees.collect", feeId), {}, {
-      preserveScroll: true,
-      preserveState: true,
-      onSuccess: () => toast.success("Fee collected"),
-    });
-  }
+  const applyFilter = useCallback((key, value, options = {}) => {
+    router.get(
+      route("admin.fees.index"),
+      {
+        ...filters,
+        [key]: value,
+        ...(key === "class_id" ? { section_id: "" } : {}),
+      },
+      {
+        preserveState: options.preserveState ?? false,
+        replace: true,
+      }
+    );
+  }, [filters]);
+
+  const applySearchLive = useCallback(
+    (value) => {
+      if ((filters?.search ?? "") !== value) {
+        applyFilter("search", value, { preserveState: true });
+      }
+    },
+    [applyFilter, filters?.search]
+  );
+
+  const closeCollectModal = () => {
+    setCollectingFee(null);
+    setCollectionDate(getTodayDateInput());
+  };
+
+  const openCollectModal = (fee) => {
+    setCollectingFee(fee);
+    setCollectionDate(getTodayDateInput());
+  };
+
+  const confirmCollectFee = () => {
+    if (!collectingFee || !collectionDate) return;
+
+    router.post(
+      route("admin.fees.collect", collectingFee.id),
+      { collection_date: collectionDate },
+      {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+          toast.success("Fee collected");
+          closeCollectModal();
+        },
+      }
+    );
+  };
 
   function deCollectFee(feeId) {
     if (!confirm("Un-collect this fee?")) return;
@@ -111,16 +319,6 @@ export default function FeesIndex() {
     );
   }
 
-  function formatMonthLabel(value) {
-    if (!value) return "";
-    const date = new Date(`${value}-01`);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleString("en-US", { month: "short", year: "numeric" });
-  }
-
-  /* -------------------------------------------------
-   | Columns
-   ------------------------------------------------- */
   const columns = useMemo(
     () => [
       { header: "#", cell: ({ row }) => row.index + 1 },
@@ -162,12 +360,12 @@ export default function FeesIndex() {
         cell: ({ row }) => {
           const item = row.original;
           const unpaidCount = item.unpaid_count ?? 0;
-
           const isOpen = expandedId === row.id;
 
           return (
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setExpandedId(isOpen ? null : row.id)}
                 className="text-blue-600 text-sm"
               >
@@ -184,9 +382,6 @@ export default function FeesIndex() {
     [expandedId]
   );
 
-/* -------------------------------------------------
-   | Table
-   ------------------------------------------------- */
   const table = useReactTable({
     data,
     columns,
@@ -196,36 +391,6 @@ export default function FeesIndex() {
     getSortedRowModel: getSortedRowModel(),
   });
 
-  /* -------------------------------------------------
-   | Filter helper (server-side only)
-   ------------------------------------------------- */
-  const applyFilter = useCallback((key, value, options = {}) => {
-    router.get(
-      route("admin.fees.index"),
-      {
-        ...filters,
-        [key]: value,
-        ...(key === "class_id" ? { section_id: "" } : {}),
-      },
-      {
-        preserveState: options.preserveState ?? false,
-        replace: true,
-      }
-    );
-  }, [filters]);
-
-  const applySearchLive = useCallback(
-    (value) => {
-      if ((filters?.search ?? "") !== value) {
-        applyFilter("search", value, { preserveState: true });
-      }
-    },
-    [applyFilter, filters?.search]
-  );
-
-  /* -------------------------------------------------
-   | Render
-   ------------------------------------------------- */
   return (
     <AdminLayout title="Fees">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-4 py-3">
@@ -245,7 +410,6 @@ export default function FeesIndex() {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">
         <select
           className="border px-3 py-2 rounded text-sm"
@@ -257,6 +421,13 @@ export default function FeesIndex() {
             <option key={y} value={y}>{y}</option>
           ))}
         </select>
+
+        <input
+          type="month"
+          className="border px-3 py-2 rounded text-sm"
+          value={filters?.month ?? ""}
+          onChange={(e) => applyFilter("month", e.target.value)}
+        />
 
         <select
           className="border px-3 py-2 rounded text-sm"
@@ -280,28 +451,41 @@ export default function FeesIndex() {
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
-        {/* Paid / Unpaid pills */}
-<div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-  {statusPills.map((pill) => {
-    const active = (filters?.status ?? "") === pill.value;
 
-    return (
-      <button
-        key={pill.value || "all"}
-        onClick={() => applyFilter("status", pill.value)}
-        className={`px-3 py-1 text-sm rounded-md transition
-          ${
-            active
-              ? "bg-white shadow text-blue-600 font-medium"
-              : "text-gray-600 hover:text-black"
-          }`}
-      >
-        {pill.label}
-      </button>
-    );
-  })}
-</div>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          {statusPills.map((pill) => {
+            const active = (filters?.status ?? "") === pill.value;
 
+            return (
+              <button
+                key={pill.value || "all"}
+                type="button"
+                onClick={() => applyFilter("status", pill.value)}
+                className={`px-3 py-1 text-sm rounded-md transition ${
+                  active
+                    ? "bg-white shadow text-blue-600 font-medium"
+                    : "text-gray-600 hover:text-black"
+                }`}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <input
+          type="date"
+          className="border px-3 py-2 rounded text-sm"
+          value={filters?.paid_from ?? ""}
+          onChange={(e) => applyFilter("paid_from", e.target.value)}
+        />
+
+        <input
+          type="date"
+          className="border px-3 py-2 rounded text-sm"
+          value={filters?.paid_to ?? ""}
+          onChange={(e) => applyFilter("paid_to", e.target.value)}
+        />
 
         <input
           className="border px-3 py-2 rounded text-sm w-64"
@@ -315,18 +499,14 @@ export default function FeesIndex() {
         />
       </div>
 
-      {/* Table */}
       <div className="bg-white border rounded-lg overflow-x-auto">
         <table className="min-w-[1000px] text-sm">
           <thead className="bg-gray-50 border-b">
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
-                {hg.headers.map((h) => (
-                  <th key={h.id} className="px-3 py-2 text-left">
-                    {flexRender(
-                      h.column.columnDef.header,
-                      h.getContext()
-                    )}
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th key={header.id} className="px-3 py-2 text-left">
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
               </tr>
@@ -338,152 +518,56 @@ export default function FeesIndex() {
               const isOpen = expandedId === row.id;
               const fees = item.fees ?? [];
 
+              const sortByMonthDesc = (a, b) => {
+                if (a.type === "monthly" && b.type === "monthly") {
+                  return (b.month ?? "").localeCompare(a.month ?? "");
+                }
+                if (a.type === "monthly") return -1;
+                if (b.type === "monthly") return 1;
+                return 0;
+              };
+
+              const gurmukhiFees = fees.filter((fee) => (fee.class_type ?? "gurmukhi") !== "kirtan");
+              const kirtanFees = fees.filter((fee) => fee.class_type === "kirtan");
+
+              const gurmukhiUnpaid = gurmukhiFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
+              const gurmukhiPaid = gurmukhiFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
+              const kirtanUnpaid = kirtanFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
+              const kirtanPaid = kirtanFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
+
               return (
                 <Fragment key={row.id}>
                   <tr className="border-b">
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-3 py-2">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
                   </tr>
+
                   {isOpen && (
                     <tr className="border-b bg-gray-50">
                       <td colSpan={8} className="p-0">
-                        {/* Group by Gurmukhi/Kirtan, then by Paid/Unpaid */}
                         <div className="overflow-x-auto min-w-full px-2 py-3">
-                        {(() => {
-                          const sortByMonthDesc = (a, b) => {
-                            if (a.type === 'monthly' && b.type === 'monthly') {
-                              return (b.month ?? '').localeCompare(a.month ?? '');
-                            }
-                            if (a.type === 'monthly') return -1;
-                            if (b.type === 'monthly') return 1;
-                            return 0;
-                          };
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <FeeGroupColumn
+                              title="Gurmukhi"
+                              titleClassName="text-blue-700"
+                              unpaidFees={gurmukhiUnpaid}
+                              paidFees={gurmukhiPaid}
+                              onCollect={openCollectModal}
+                              onDeCollect={deCollectFee}
+                            />
 
-                          // Separate fees by class type (Gurmukhi vs Kirtan)
-                          const gurmukhiFees = fees.filter((f) => (f.class_type ?? 'gurmukhi') !== 'kirtan');
-                          const kirtanFees = fees.filter((f) => f.class_type === 'kirtan');
-
-                          const gurmukhiUnpaid = gurmukhiFees.filter((f) => !f.is_paid).sort(sortByMonthDesc);
-                          const gurmukhiPaid = gurmukhiFees.filter((f) => f.is_paid).sort(sortByMonthDesc);
-                          const kirtanUnpaid = kirtanFees.filter((f) => !f.is_paid).sort(sortByMonthDesc);
-                          const kirtanPaid = kirtanFees.filter((f) => f.is_paid).sort(sortByMonthDesc);
-
-                          return (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                              {/* Gurmukhi Column */}
-                              <div className="border rounded-lg p-2 sm:p-3 bg-white">
-                                <div className="text-xs font-bold text-blue-700 mb-2 uppercase tracking-wide">
-                                  Gurmukhi
-                                </div>
-                                <div className="mb-3">
-                                  <div className="text-xs font-semibold text-gray-600 mb-2">
-                                    Unpaid Fees
-                                  </div>
-                                  {gurmukhiUnpaid.length === 0 ? (
-                                    <div className="text-xs text-gray-500">No unpaid fees.</div>
-                                  ) : (
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                                      {gurmukhiUnpaid.map((fee) => (
-                                        <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
-                                          <div className="truncate min-w-0">
-                                            <div className="text-xs font-medium truncate">
-                                              {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
-                                            </div>
-                                            <div className="text-xs text-gray-500">Rs {fee.amount}</div>
-                                          </div>
-                                          <button onClick={() => collectFee(fee.id)} className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start">
-                                            Collect
-                                          </button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                                <div>
-                                  <div className="text-xs font-semibold text-gray-600 mb-2">Paid Fees (Un-collect)</div>
-                                  {gurmukhiPaid.length === 0 ? (
-                                    <div className="text-xs text-gray-500">No paid fees.</div>
-                                  ) : (
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                                      {gurmukhiPaid.map((fee) => (
-                                        <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
-                                          <div className="truncate min-w-0">
-                                            <div className="text-xs font-medium truncate">
-                                              {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
-                                            </div>
-                                            <div className="text-xs text-gray-500">Rs {fee.amount}</div>
-                                          </div>
-                                          <button onClick={() => deCollectFee(fee.id)} className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start">
-                                            Un-collect
-                                          </button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Kirtan Column */}
-                              <div className="border rounded-lg p-2 sm:p-3 bg-white">
-                                <div className="text-xs font-bold text-purple-700 mb-2 uppercase tracking-wide">
-                                  Kirtan
-                                </div>
-                                <div className="mb-3">
-                                  <div className="text-xs font-semibold text-gray-600 mb-2">
-                                    Unpaid Fees
-                                  </div>
-                                  {kirtanUnpaid.length === 0 ? (
-                                    <div className="text-xs text-gray-500">No unpaid fees.</div>
-                                  ) : (
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                                      {kirtanUnpaid.map((fee) => (
-                                        <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
-                                          <div className="truncate min-w-0">
-                                            <div className="text-xs font-medium truncate">
-                                              {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
-                                            </div>
-                                            <div className="text-xs text-gray-500">Rs {fee.amount}</div>
-                                          </div>
-                                          <button onClick={() => collectFee(fee.id)} className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start">
-                                            Collect
-                                          </button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                                <div>
-                                  <div className="text-xs font-semibold text-gray-600 mb-2">Paid Fees (Un-collect)</div>
-                                  {kirtanPaid.length === 0 ? (
-                                    <div className="text-xs text-gray-500">No paid fees.</div>
-                                  ) : (
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                                      {kirtanPaid.map((fee) => (
-                                        <div key={fee.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
-                                          <div className="truncate min-w-0">
-                                            <div className="text-xs font-medium truncate">
-                                              {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
-                                            </div>
-                                            <div className="text-xs text-gray-500">Rs {fee.amount}</div>
-                                          </div>
-                                          <button onClick={() => deCollectFee(fee.id)} className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start">
-                                            Un-collect
-                                          </button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })()}
+                            <FeeGroupColumn
+                              title="Kirtan"
+                              titleClassName="text-purple-700"
+                              unpaidFees={kirtanUnpaid}
+                              paidFees={kirtanPaid}
+                              onCollect={openCollectModal}
+                              onDeCollect={deCollectFee}
+                            />
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -494,6 +578,14 @@ export default function FeesIndex() {
           </tbody>
         </table>
       </div>
+
+      <CollectFeeModal
+        fee={collectingFee}
+        collectionDate={collectionDate}
+        onCollectionDateChange={setCollectionDate}
+        onClose={closeCollectModal}
+        onConfirm={confirmCollectFee}
+      />
     </AdminLayout>
   );
 }

@@ -2,6 +2,17 @@ import SimpleLayout from "@/Layouts/SimpleLayout";
 import { Link } from "@inertiajs/react";
 
 export default function FeesIndex({ fees = [] }) {
+  const formatCollectionDate = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
   const toMonthValue = (month) => {
     if (!month || typeof month !== "string") return 0;
     const [year, m] = month.split("-").map(Number);
@@ -11,6 +22,16 @@ export default function FeesIndex({ fees = [] }) {
 
   const isPaid = (fee) =>
     Boolean(fee?.is_paid) || (Array.isArray(fee?.payments) && fee.payments.length > 0);
+
+  const getPaidAt = (fee) => {
+    if (fee?.paid_at) return fee.paid_at;
+
+    const activePayment = Array.isArray(fee?.payments)
+      ? fee.payments.find((payment) => !payment?.deleted_at)
+      : null;
+
+    return activePayment?.paid_at ?? "";
+  };
 
   const sortedFees = [...fees].sort((a, b) => {
     const aStudent = (a?.enrollment?.student?.name ?? "").toLowerCase();
@@ -69,6 +90,11 @@ export default function FeesIndex({ fees = [] }) {
                 <p className="text-gray-600">
                   Amount: <span className="font-medium text-gray-800">Rs {fee.amount}</span>
                 </p>
+                {isPaid(fee) && getPaidAt(fee) ? (
+                  <p className="text-gray-600">
+                    Collected On: <span className="font-medium text-gray-800">{formatCollectionDate(getPaidAt(fee))}</span>
+                  </p>
+                ) : null}
               </div>
 
               {!isPaid(fee) && (

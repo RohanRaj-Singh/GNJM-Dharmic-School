@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Fee;
+use Carbon\Carbon;
 
 class FeePaymentController extends Controller
 {
@@ -12,7 +13,11 @@ class FeePaymentController extends Controller
     $request->validate([
         'fee_ids' => ['required', 'array', 'min:1'],
         'fee_ids.*' => ['exists:fees,id'],
+        'collection_date' => ['required', 'date'],
     ]);
+
+    $collectionDate = Carbon::parse($request->collection_date, config('app.timezone'))
+        ->startOfDay();
 
     foreach ($request->fee_ids as $feeId) {
 
@@ -25,7 +30,7 @@ class FeePaymentController extends Controller
 
         $fee->payments()->create([
             'amount_paid' => $fee->amount,
-            'paid_at' => now(),
+            'paid_at' => $collectionDate,
         ]);
     }
 

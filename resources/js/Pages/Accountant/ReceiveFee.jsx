@@ -3,6 +3,13 @@ import { useState } from "react";
 import { router, Link } from "@inertiajs/react";
 
 export default function ReceiveFee({ student, fees = [] }) {
+  const getTodayDateInput = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   if (!student) {
     return (
@@ -16,28 +23,17 @@ export default function ReceiveFee({ student, fees = [] }) {
 
   const [selectedFees, setSelectedFees] = useState([]);
   const [processing, setProcessing] = useState(false);
+  const [collectionDate, setCollectionDate] = useState(getTodayDateInput);
 
   // Group fees by class type (kirtan vs gurmukhi)
   // Handle various case formats and null values
   const isKirtan = (classType) => {
     const type = String(classType ?? '').toLowerCase().trim();
-    console.log('[ReceiveFee] isKirtan check - raw:', classType, '-> normalized:', type, '-> result:', type === 'kirtan' || type.includes('kirtan'));
     return type === 'kirtan' || type.includes('kirtan');
   };
 
-  // Debug: Log all fees and their class_type values
-  console.log('[ReceiveFee] === DEBUG START ===');
-  console.log('[ReceiveFee] Total fees count:', fees.length);
-  fees.forEach((f, i) => {
-    console.log(`[ReceiveFee] Fee[${i}] id=${f.id}, month=${f.month}, class_type="${f.class_type}", section="${f.section_name}"`);
-  });
-
   const gurmukhiFees = fees.filter(f => !isKirtan(f.class_type));
   const kirtanFees = fees.filter(f => isKirtan(f.class_type));
-
-  console.log('[ReceiveFee] Gurmukhi fees count:', gurmukhiFees.length);
-  console.log('[ReceiveFee] Kirtan fees count:', kirtanFees.length);
-  console.log('[ReceiveFee] === DEBUG END ===');
 
   // Collapsible section state - Gurmukhi open by default
   const [gurmukhiOpen, setGurmukhiOpen] = useState(true);
@@ -62,7 +58,10 @@ export default function ReceiveFee({ student, fees = [] }) {
 
     router.post(
       "/accountant/receive-fee",
-      { fee_ids: selectedFees },
+      {
+        fee_ids: selectedFees,
+        collection_date: collectionDate,
+      },
       { onFinish: () => setProcessing(false) }
     );
   };
@@ -84,6 +83,18 @@ export default function ReceiveFee({ student, fees = [] }) {
           <h3 className="font-semibold text-gray-700">
             Select Month(s)
           </h3>
+
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              Collection Date
+            </label>
+            <input
+              type="date"
+              value={collectionDate}
+              onChange={(e) => setCollectionDate(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
 
           {fees.length === 0 && (
             <p className="text-green-600 text-sm">
@@ -179,7 +190,7 @@ export default function ReceiveFee({ student, fees = [] }) {
         {/* Submit */}
         <button
           onClick={submitPayment}
-          disabled={processing || selectedFees.length === 0}
+          disabled={processing || selectedFees.length === 0 || !collectionDate}
           className="w-full bg-green-600 text-white py-3 rounded-lg disabled:opacity-50"
         >
           {processing ? "Processing..." : "Confirm Payment"}

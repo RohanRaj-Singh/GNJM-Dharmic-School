@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Fee;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +45,7 @@ class FeesController extends Controller
             'classes.name as class_name',
             'classes.type as class_type',
             'sections.name as section_name',
+            'payments.paid_at',
             DB::raw('payments.id IS NOT NULL as is_paid'),
         ])
 
@@ -64,6 +66,10 @@ class FeesController extends Controller
             $q->where('student_sections.section_id', $sectionId)
         )
 
+        ->when($request->month, fn ($q, $month) =>
+            $q->where('fees.month', $month)
+        )
+
         ->when($request->search, function ($q, $search) {
             $q->where(function ($qq) use ($search) {
                 $qq->where('students.name', 'like', "%{$search}%")
@@ -77,6 +83,12 @@ class FeesController extends Controller
 ->when($request->status === 'unpaid', function ($q) {
     $q->whereNull('payments.id');
 })
+        ->when($request->paid_from, function ($q, $paidFrom) {
+            $q->whereDate('payments.paid_at', '>=', $paidFrom);
+        })
+        ->when($request->paid_to, function ($q, $paidTo) {
+            $q->whereDate('payments.paid_at', '<=', $paidTo);
+        })
 
         ->orderBy('fees.created_at', 'desc')
         ->get()
@@ -128,6 +140,7 @@ class FeesController extends Controller
                     'month' => $f->month,
                     'title' => $f->title,
                     'amount' => $f->amount,
+                    'paid_at' => $f->paid_at,
                     'class_type' => $this->normalizeDivisionType(
                         (string) ($f->class_type ?? ''),
                         (string) ($f->class_name ?? '')
@@ -147,6 +160,9 @@ class FeesController extends Controller
             'section_id',
             'search',
             'status',
+            'month',
+            'paid_from',
+            'paid_to',
         ]),
     ]);
 }
@@ -205,10 +221,17 @@ class FeesController extends Controller
         ]);
     }
 
+    $data = request()->validate([
+        'collection_date' => ['required', 'date'],
+    ]);
+
+    $collectionDate = Carbon::parse($data['collection_date'], config('app.timezone'))
+        ->startOfDay();
+
     Payment::create([
         'fee_id'      => $fee->id,
         'amount_paid' => $fee->amount,
-        'paid_at'     => now(),
+        'paid_at'     => $collectionDate,
     ]);
 
     // Lock custom fee after payment
