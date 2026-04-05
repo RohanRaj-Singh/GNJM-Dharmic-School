@@ -8,6 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import toast from "react-hot-toast";
+import { generateMonthOptions } from "@/utils/helper";
 
 function getTodayDateInput() {
   const now = new Date();
@@ -33,6 +34,22 @@ function formatCollectionDate(value) {
     month: "short",
     year: "numeric",
   });
+}
+
+function getOrderedRange(startValue, endValue) {
+  if (!startValue || !endValue) {
+    return { startValue, endValue, swapped: false };
+  }
+
+  if (startValue <= endValue) {
+    return { startValue, endValue, swapped: false };
+  }
+
+  return {
+    startValue: endValue,
+    endValue: startValue,
+    swapped: true,
+  };
 }
 
 function FeeActionCard({
@@ -202,6 +219,11 @@ export default function FeesIndex() {
   const [isGeneratingMonthlyFees, setIsGeneratingMonthlyFees] = useState(false);
   const [collectingFee, setCollectingFee] = useState(null);
   const [collectionDate, setCollectionDate] = useState(getTodayDateInput());
+  const [monthFilter, setMonthFilter] = useState(filters?.month ?? "");
+  const [monthFromFilter, setMonthFromFilter] = useState(filters?.month_from ?? "");
+  const [monthToFilter, setMonthToFilter] = useState(filters?.month_to ?? "");
+  const [paidFromFilter, setPaidFromFilter] = useState(filters?.paid_from ?? "");
+  const [paidToFilter, setPaidToFilter] = useState(filters?.paid_to ?? "");
 
   const START_YEAR = 2025;
   const CURRENT_YEAR = new Date().getFullYear();
@@ -215,6 +237,37 @@ export default function FeesIndex() {
     { label: "Paid", value: "paid" },
     { label: "Unpaid", value: "unpaid" },
   ];
+
+  const monthOptions = useMemo(() => {
+    const selectedYear = Number(filters?.year) || CURRENT_YEAR;
+    return generateMonthOptions(selectedYear);
+  }, [CURRENT_YEAR, filters?.year]);
+
+  const activeFilterCount = useMemo(() => {
+    return [
+      filters?.year,
+      filters?.class_id,
+      filters?.section_id,
+      filters?.search,
+      filters?.status,
+      filters?.month,
+      filters?.month_from,
+      filters?.month_to,
+      filters?.paid_from,
+      filters?.paid_to,
+    ].filter((value) => value !== undefined && value !== null && value !== "").length;
+  }, [
+    filters?.class_id,
+    filters?.month,
+    filters?.month_from,
+    filters?.month_to,
+    filters?.paid_from,
+    filters?.paid_to,
+    filters?.search,
+    filters?.section_id,
+    filters?.status,
+    filters?.year,
+  ]);
 
   useEffect(() => {
     fetch("/admin/classes/options")
@@ -237,6 +290,20 @@ export default function FeesIndex() {
     setSearchInput(filters?.search ?? "");
   }, [filters?.search]);
 
+  useEffect(() => {
+    setMonthFilter(filters?.month ?? "");
+    setMonthFromFilter(filters?.month_from ?? "");
+    setMonthToFilter(filters?.month_to ?? "");
+    setPaidFromFilter(filters?.paid_from ?? "");
+    setPaidToFilter(filters?.paid_to ?? "");
+  }, [
+    filters?.month,
+    filters?.month_from,
+    filters?.month_to,
+    filters?.paid_from,
+    filters?.paid_to,
+  ]);
+
   const applyFilter = useCallback((key, value, options = {}) => {
     router.get(
       route("admin.fees.index"),
@@ -244,6 +311,20 @@ export default function FeesIndex() {
         ...filters,
         [key]: value,
         ...(key === "class_id" ? { section_id: "" } : {}),
+      },
+      {
+        preserveState: options.preserveState ?? false,
+        replace: true,
+      }
+    );
+  }, [filters]);
+
+  const applyFilters = useCallback((nextFilters, options = {}) => {
+    router.get(
+      route("admin.fees.index"),
+      {
+        ...filters,
+        ...nextFilters,
       },
       {
         preserveState: options.preserveState ?? false,
@@ -260,6 +341,71 @@ export default function FeesIndex() {
     },
     [applyFilter, filters?.search]
   );
+
+  const applyMonthFilters = () => {
+    const normalizedExactMonth = monthFilter;
+    const normalizedMonthRange = getOrderedRange(monthFromFilter, monthToFilter);
+
+    applyFilters(
+      {
+        month: normalizedExactMonth,
+        month_from: normalizedExactMonth ? "" : normalizedMonthRange.startValue,
+        month_to: normalizedExactMonth ? "" : normalizedMonthRange.endValue,
+      },
+      { preserveState: true }
+    );
+  };
+
+  const applyCollectionRangeFilters = () => {
+    const normalizedCollectionRange = getOrderedRange(paidFromFilter, paidToFilter);
+
+    applyFilters(
+      {
+        paid_from: normalizedCollectionRange.startValue,
+        paid_to: normalizedCollectionRange.endValue,
+      },
+      { preserveState: true }
+    );
+  };
+
+  const resetFilters = () => {
+    setSearchInput("");
+    setMonthFilter("");
+    setMonthFromFilter("");
+    setMonthToFilter("");
+    setPaidFromFilter("");
+    setPaidToFilter("");
+
+    router.get(
+      route("admin.fees.index"),
+      {},
+      {
+        preserveState: false,
+        replace: true,
+      }
+    );
+  };
+
+  const useCurrentMonth = () => {
+    const currentMonth = `${CURRENT_YEAR}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    setMonthFilter(currentMonth);
+    setMonthFromFilter("");
+    setMonthToFilter("");
+
+    applyFilters(
+      {
+        month: currentMonth,
+        month_from: "",
+        month_to: "",
+      },
+      { preserveState: true }
+    );
+  };
+
+  const normalizedMonthRange = getOrderedRange(monthFromFilter, monthToFilter);
+  const normalizedCollectionRange = getOrderedRange(paidFromFilter, paidToFilter);
+  const hasMonthRangeValues = monthFromFilter || monthToFilter;
+  const hasCollectionRangeValues = paidFromFilter || paidToFilter;
 
   const closeCollectModal = () => {
     setCollectingFee(null);
@@ -410,93 +556,271 @@ export default function FeesIndex() {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <select
-          className="border px-3 py-2 rounded text-sm"
-          value={filters?.year ?? ""}
-          onChange={(e) => applyFilter("year", e.target.value)}
-        >
-          <option value="">Year: All</option>
-          {years.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
+      <div className="mb-4 rounded-xl border bg-white p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-800">Filters</h2>
+              {activeFilterCount > 0 ? (
+                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                  {activeFilterCount} active
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Use an exact month for one billing month, or a month range to inspect pending fees across several months.
+            </p>
+          </div>
 
-        <input
-          type="month"
-          className="border px-3 py-2 rounded text-sm"
-          value={filters?.month ?? ""}
-          onChange={(e) => applyFilter("month", e.target.value)}
-        />
-
-        <select
-          className="border px-3 py-2 rounded text-sm"
-          value={filters?.class_id ?? ""}
-          onChange={(e) => applyFilter("class_id", e.target.value)}
-        >
-          <option value="">Class: All</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-
-        <select
-          className="border px-3 py-2 rounded text-sm"
-          value={filters?.section_id ?? ""}
-          disabled={!filters?.class_id}
-          onChange={(e) => applyFilter("section_id", e.target.value)}
-        >
-          <option value="">Section: All</option>
-          {sections.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
-
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-          {statusPills.map((pill) => {
-            const active = (filters?.status ?? "") === pill.value;
-
-            return (
-              <button
-                key={pill.value || "all"}
-                type="button"
-                onClick={() => applyFilter("status", pill.value)}
-                className={`px-3 py-1 text-sm rounded-md transition ${
-                  active
-                    ? "bg-white shadow text-blue-600 font-medium"
-                    : "text-gray-600 hover:text-black"
-                }`}
-              >
-                {pill.label}
-              </button>
-            );
-          })}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={useCurrentMonth}
+              className="rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              This Month
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Reset Filters
+            </button>
+          </div>
         </div>
 
-        <input
-          type="date"
-          className="border px-3 py-2 rounded text-sm"
-          value={filters?.paid_from ?? ""}
-          onChange={(e) => applyFilter("paid_from", e.target.value)}
-        />
+        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-4">
+          <div className="lg:col-span-2">
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              Search Student
+            </label>
+            <input
+              className="w-full border px-3 py-2 rounded-lg text-sm"
+              placeholder="Search by student or father name"
+              value={searchInput}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSearchInput(value);
+                applySearchLive(value);
+              }}
+            />
+          </div>
 
-        <input
-          type="date"
-          className="border px-3 py-2 rounded text-sm"
-          value={filters?.paid_to ?? ""}
-          onChange={(e) => applyFilter("paid_to", e.target.value)}
-        />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              Year
+            </label>
+            <select
+              className="w-full border px-3 py-2 rounded-lg text-sm"
+              value={filters?.year ?? ""}
+              onChange={(e) => applyFilter("year", e.target.value)}
+            >
+              <option value="">All Years</option>
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
 
-        <input
-          className="border px-3 py-2 rounded text-sm w-64"
-          placeholder="Search student..."
-          value={searchInput}
-          onChange={(e) => {
-            const value = e.target.value;
-            setSearchInput(value);
-            applySearchLive(value);
-          }}
-        />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              Status
+            </label>
+            <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
+              {statusPills.map((pill) => {
+                const active = (filters?.status ?? "") === pill.value;
+
+                return (
+                  <button
+                    key={pill.value || "all"}
+                    type="button"
+                    onClick={() => applyFilter("status", pill.value)}
+                    className={`flex-1 px-3 py-1.5 text-sm rounded-md transition ${
+                      active
+                        ? "bg-white shadow text-blue-600 font-medium"
+                        : "text-gray-600 hover:text-black"
+                    }`}
+                  >
+                    {pill.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              Class
+            </label>
+            <select
+              className="w-full border px-3 py-2 rounded-lg text-sm"
+              value={filters?.class_id ?? ""}
+              onChange={(e) => applyFilter("class_id", e.target.value)}
+            >
+              <option value="">All Classes</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              Section
+            </label>
+            <select
+              className="w-full border px-3 py-2 rounded-lg text-sm disabled:bg-gray-50 disabled:text-gray-400"
+              value={filters?.section_id ?? ""}
+              disabled={!filters?.class_id}
+              onChange={(e) => applyFilter("section_id", e.target.value)}
+            >
+              <option value="">All Sections</option>
+              {sections.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-gray-500">
+              Choose a class first to narrow the section list.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">
+              Exact Billing Month
+            </label>
+            <select
+              className="w-full border px-3 py-2 rounded-lg text-sm"
+              value={monthFilter}
+              onChange={(e) => {
+                const value = e.target.value;
+                setMonthFilter(value);
+                setMonthFromFilter("");
+                setMonthToFilter("");
+                applyFilters(
+                  {
+                    month: value,
+                    month_from: "",
+                    month_to: "",
+                  },
+                  { preserveState: true }
+                );
+              }}
+            >
+              <option value="">Any Month</option>
+              {monthOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-gray-500">
+              Best when you want to inspect one month only.
+            </p>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="rounded-lg border border-gray-200 p-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                <div className="flex-1">
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Month Range From
+                  </label>
+                  <input
+                    type="month"
+                    value={monthFromFilter}
+                    onChange={(e) => {
+                      setMonthFromFilter(e.target.value);
+                      if (e.target.value) {
+                        setMonthFilter("");
+                      }
+                    }}
+                    className="w-full border px-3 py-2 rounded-lg text-sm"
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Month Range To
+                  </label>
+                  <input
+                    type="month"
+                    value={monthToFilter}
+                    onChange={(e) => {
+                      setMonthToFilter(e.target.value);
+                      if (e.target.value) {
+                        setMonthFilter("");
+                      }
+                    }}
+                    className="w-full border px-3 py-2 rounded-lg text-sm"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={applyMonthFilters}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Apply Months
+                </button>
+              </div>
+              <p className="mt-2 text-[11px] text-gray-500">
+                Leave exact month empty to use a month range. Range checks are inclusive, and if you reverse the order we will normalize it automatically.
+              </p>
+              {hasMonthRangeValues && normalizedMonthRange.swapped ? (
+                <p className="mt-1 text-[11px] text-amber-600">
+                  Month range order will be corrected automatically when applied.
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="rounded-lg border border-gray-200 p-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                <div className="flex-1">
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Collected From
+                  </label>
+                  <input
+                    type="date"
+                    value={paidFromFilter}
+                    onChange={(e) => setPaidFromFilter(e.target.value)}
+                    className="w-full border px-3 py-2 rounded-lg text-sm"
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                    Collected To
+                  </label>
+                  <input
+                    type="date"
+                    value={paidToFilter}
+                    onChange={(e) => setPaidToFilter(e.target.value)}
+                    className="w-full border px-3 py-2 rounded-lg text-sm"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={applyCollectionRangeFilters}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Apply Collection Range
+                </button>
+              </div>
+              <p className="mt-2 text-[11px] text-gray-500">
+                Collection-date filters only match paid fees whose collected date falls inside the selected range.
+              </p>
+              {hasCollectionRangeValues && normalizedCollectionRange.swapped ? (
+                <p className="mt-1 text-[11px] text-amber-600">
+                  Collection date range order will be corrected automatically when applied.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white border rounded-lg overflow-x-auto">

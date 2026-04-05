@@ -16,7 +16,9 @@ class FeesController extends Controller
 {
     public function index(Request $request)
 {
-
+    $month = $request->string('month')->toString();
+    $monthFrom = $request->string('month_from')->toString();
+    $monthTo = $request->string('month_to')->toString();
 
     $fees = Fee::query()
         ->join('student_sections', 'fees.student_section_id', '=', 'student_sections.id')
@@ -66,9 +68,27 @@ class FeesController extends Controller
             $q->where('student_sections.section_id', $sectionId)
         )
 
-        ->when($request->month, fn ($q, $month) =>
+        ->when($month !== '', fn ($q) =>
             $q->where('fees.month', $month)
         )
+        ->when($month === '' && ($monthFrom !== '' || $monthTo !== ''), function ($q) use ($monthFrom, $monthTo) {
+            $q->where('fees.type', 'monthly');
+
+            if ($monthFrom !== '' && $monthTo !== '') {
+                $startMonth = $monthFrom <= $monthTo ? $monthFrom : $monthTo;
+                $endMonth = $monthFrom <= $monthTo ? $monthTo : $monthFrom;
+                $q->whereBetween('fees.month', [$startMonth, $endMonth]);
+                return;
+            }
+
+            if ($monthFrom !== '') {
+                $q->where('fees.month', '>=', $monthFrom);
+            }
+
+            if ($monthTo !== '') {
+                $q->where('fees.month', '<=', $monthTo);
+            }
+        })
 
         ->when($request->search, function ($q, $search) {
             $q->where(function ($qq) use ($search) {
@@ -161,6 +181,8 @@ class FeesController extends Controller
             'search',
             'status',
             'month',
+            'month_from',
+            'month_to',
             'paid_from',
             'paid_to',
         ]),
