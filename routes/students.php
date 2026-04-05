@@ -76,12 +76,16 @@ Route::prefix('students')->group(function () {
     // summary logic (unchanged)
 
     $summary = $student->enrollments->map(function ($enrollment) {
-    $attendanceWindowStart = Carbon::today()->subDays(27);
+    $attendanceMonthStart = Carbon::today()->startOfMonth();
+    $attendanceMonthEnd = Carbon::today()->endOfMonth();
 
-    // Attendance counts
-    $present = $enrollment->attendance->where('status', 'present')->count();
-    $absent  = $enrollment->attendance->where('status', 'absent')->count();
-    $leave   = $enrollment->attendance->where('status', 'leave')->count();
+    $monthlyAttendance = $enrollment->attendance
+        ->filter(fn ($a) => Carbon::parse($a->date)->between($attendanceMonthStart, $attendanceMonthEnd));
+
+    // Attendance counts for current month
+    $present = $monthlyAttendance->where('status', 'present')->count();
+    $absent  = $monthlyAttendance->where('status', 'absent')->count();
+    $leave   = $monthlyAttendance->where('status', 'leave')->count();
 
     // Fees
     $fees = $enrollment->fees;
@@ -97,8 +101,7 @@ return [
         'present' => $present,
         'absent'  => $absent,
         'leave'   => $leave,
-        'recent'  => $enrollment->attendance
-            ->filter(fn ($a) => Carbon::parse($a->date)->greaterThanOrEqualTo($attendanceWindowStart))
+        'recent'  => $monthlyAttendance
             ->sortBy('date')
             ->map(fn ($a) => [
                 'date'   => $a->date,

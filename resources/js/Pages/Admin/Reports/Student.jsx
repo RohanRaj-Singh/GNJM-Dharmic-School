@@ -218,7 +218,7 @@ function Stat({ label, value, color }) {
     );
 }
 
-function AttendanceCalendar({ title, attendance }) {
+function LegacyAttendanceCalendar({ title, attendance }) {
     if (
         !attendance ||
         !attendance.calendar ||
@@ -348,6 +348,111 @@ function AttendanceCalendar({ title, attendance }) {
 
 
 
+
+function AttendanceCalendar({ title, attendance }) {
+    if (
+        !attendance ||
+        !attendance.calendar ||
+        Object.keys(attendance.calendar).length === 0
+    ) {
+        return (
+            <div className="bg-white border rounded p-4 text-sm text-gray-400">
+                {title}: No attendance data
+            </div>
+        );
+    }
+
+    const reportYear = attendance.year ?? new Date().getFullYear();
+    const currentMonthIndex = new Date().getMonth();
+    const currentMonthName = new Date(reportYear, currentMonthIndex, 1)
+        .toLocaleString("en-US", { month: "long" });
+    const currentMonthDays = attendance.calendar?.[currentMonthName];
+
+    if (!currentMonthDays || Object.keys(currentMonthDays).length === 0) {
+        return (
+            <div className="bg-white border rounded p-4 text-sm text-gray-400">
+                {title}: No attendance data for {currentMonthName}
+            </div>
+        );
+    }
+
+    const totalDays = Object.keys(currentMonthDays).length;
+    const dayNumbers = Array.from({ length: totalDays }, (_, index) => index + 1);
+    const rows = [];
+
+    for (let index = 0; index < dayNumbers.length; index += 7) {
+        rows.push(dayNumbers.slice(index, index + 7));
+    }
+
+    return (
+        <div className="bg-white border rounded p-4 space-y-6">
+            <h3 className="font-semibold text-sm text-gray-700">
+                {title} Attendance
+            </h3>
+
+            <div className="border rounded p-3">
+                <div className="text-center font-semibold text-xs mb-3">
+                    {currentMonthName} {reportYear}
+                </div>
+
+                <div className="space-y-1">
+                    {rows.map((row, rowIndex) => (
+                        <div
+                            key={`${currentMonthName}-row-${rowIndex}`}
+                            className="grid grid-cols-7 gap-1 text-[10px]"
+                        >
+                            {row.map((day) => {
+                                const cell = currentMonthDays[day];
+
+                                let bg = "bg-gray-100 text-gray-400";
+                                let label = "-";
+
+                                if (cell?.status === "present") {
+                                    bg = "bg-green-100 text-green-700";
+                                    label = "P";
+                                } else if (cell?.status === "absent") {
+                                    bg = "bg-red-100 text-red-700";
+                                    label = "A";
+                                } else if (cell?.status === "leave") {
+                                    bg = "bg-yellow-100 text-yellow-700";
+                                    label = "L";
+                                }
+
+                                return (
+                                    <div
+                                        key={`${currentMonthName}-${day}`}
+                                        className={`relative h-10 rounded ${bg} flex items-center justify-center`}
+                                    >
+                                        <div className="absolute top-0.5 right-1 text-[9px] opacity-60">
+                                            {day}
+                                        </div>
+
+                                        <div className="font-semibold">
+                                            {label}
+                                        </div>
+
+                                        {cell?.lesson_learned && (
+                                            <div className="absolute bottom-0.5 left-1 text-blue-700 font-bold">
+                                                ✓
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+                <span><strong>P</strong> = Present</span>
+                <span><strong>A</strong> = Absent</span>
+                <span><strong>L</strong> = Leave</span>
+                <span><strong>✓</strong> = Lesson Learned</span>
+            </div>
+        </div>
+    );
+}
 
 function FilterBar({
     studentOptions,
@@ -556,4 +661,3 @@ function FeesSection({ title, fees }) {
         </div>
     );
 }
-

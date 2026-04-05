@@ -28,11 +28,14 @@ export default function StudentShow({ student, summary = [] }) {
         return `${year}-${month}-${day}`;
     };
 
-    const days = Array.from({ length: 28 }).map((_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (27 - i));
-        return d;
-    });
+    const monthDays = (() => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const totalDays = new Date(year, month + 1, 0).getDate();
+
+        return Array.from({ length: totalDays }, (_, index) => new Date(year, month, index + 1));
+    })();
 
     let visibleSummary = [];
 
@@ -131,11 +134,11 @@ export default function StudentShow({ student, summary = [] }) {
 
                             <div className="bg-white rounded-xl shadow p-5">
                                 <h3 className="text-md font-semibold text-gray-700 mb-3">
-                                    Last 4 Weeks Attendance
+                                    Current Month Attendance
                                 </h3>
 
                                 <div className="grid grid-cols-7 gap-2 text-center text-xs">
-                                    {days.map((day, i) => {
+                                    {monthDays.map((day, i) => {
                                         const dateStr = toDateKey(day);
 
                                         const status = recentMap?.[dateStr];
@@ -180,7 +183,7 @@ export default function StudentShow({ student, summary = [] }) {
 
                                 {Object.keys(recentMap).length === 0 && (
                                     <p className="text-sm text-gray-500 mt-3 text-center">
-                                        No attendance marked recently
+                                        No attendance marked this month
                                     </p>
                                 )}
                             </div>
