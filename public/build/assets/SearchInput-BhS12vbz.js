@@ -1,1 +1,0 @@
-import{j as o}from"./app-Dw-vtX68.js";function u({value:t,onChange:e,placeholder:n,className:r}){return o.jsx("input",{type:"text",value:t,onChange:a=>e(a.target.value),placeholder:n,className:r})}export{u as S};

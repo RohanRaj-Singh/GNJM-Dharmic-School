@@ -52,6 +52,44 @@ function getOrderedRange(startValue, endValue) {
   };
 }
 
+function FilterSection({
+  title,
+  description,
+  isOpen,
+  onToggle,
+  badge,
+  children,
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-gray-50/70">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+      >
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+            {badge ? (
+              <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-blue-100">
+                {badge}
+              </span>
+            ) : null}
+          </div>
+          {description ? (
+            <p className="mt-1 text-xs text-gray-500">{description}</p>
+          ) : null}
+        </div>
+        <span className="shrink-0 text-xs font-medium text-gray-500">
+          {isOpen ? "Hide" : "Show"}
+        </span>
+      </button>
+
+      {isOpen ? <div className="border-t bg-white px-4 py-4">{children}</div> : null}
+    </div>
+  );
+}
+
 function FeeActionCard({
   fee,
   isPaid,
@@ -224,6 +262,12 @@ export default function FeesIndex() {
   const [monthToFilter, setMonthToFilter] = useState(filters?.month_to ?? "");
   const [paidFromFilter, setPaidFromFilter] = useState(filters?.paid_from ?? "");
   const [paidToFilter, setPaidToFilter] = useState(filters?.paid_to ?? "");
+  const [openSections, setOpenSections] = useState(() => ({
+    basics: true,
+    billingMonth: Boolean(filters?.month || filters?.month_from || filters?.month_to),
+    collectionDate: Boolean(filters?.paid_from || filters?.paid_to),
+    search: Boolean(filters?.search),
+  }));
 
   const START_YEAR = 2025;
   const CURRENT_YEAR = new Date().getFullYear();
@@ -406,6 +450,16 @@ export default function FeesIndex() {
   const normalizedCollectionRange = getOrderedRange(paidFromFilter, paidToFilter);
   const hasMonthRangeValues = monthFromFilter || monthToFilter;
   const hasCollectionRangeValues = paidFromFilter || paidToFilter;
+  const hasBasicFilters = Boolean(
+    filters?.year || filters?.class_id || filters?.section_id || filters?.status
+  );
+
+  const toggleSection = (key) => {
+    setOpenSections((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  };
 
   const closeCollectModal = () => {
     setCollectingFee(null);
@@ -590,192 +644,203 @@ export default function FeesIndex() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-4">
-          <div className="lg:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-gray-600">
-              Search Student
-            </label>
-            <input
-              className="w-full border px-3 py-2 rounded-lg text-sm"
-              placeholder="Search by student or father name"
-              value={searchInput}
-              onChange={(e) => {
-                const value = e.target.value;
-                setSearchInput(value);
-                applySearchLive(value);
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">
-              Year
-            </label>
-            <select
-              className="w-full border px-3 py-2 rounded-lg text-sm"
-              value={filters?.year ?? ""}
-              onChange={(e) => applyFilter("year", e.target.value)}
-            >
-              <option value="">All Years</option>
-              {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">
-              Status
-            </label>
-            <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
-              {statusPills.map((pill) => {
-                const active = (filters?.status ?? "") === pill.value;
-
-                return (
-                  <button
-                    key={pill.value || "all"}
-                    type="button"
-                    onClick={() => applyFilter("status", pill.value)}
-                    className={`flex-1 px-3 py-1.5 text-sm rounded-md transition ${
-                      active
-                        ? "bg-white shadow text-blue-600 font-medium"
-                        : "text-gray-600 hover:text-black"
-                    }`}
-                  >
-                    {pill.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">
-              Class
-            </label>
-            <select
-              className="w-full border px-3 py-2 rounded-lg text-sm"
-              value={filters?.class_id ?? ""}
-              onChange={(e) => applyFilter("class_id", e.target.value)}
-            >
-              <option value="">All Classes</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">
-              Section
-            </label>
-            <select
-              className="w-full border px-3 py-2 rounded-lg text-sm disabled:bg-gray-50 disabled:text-gray-400"
-              value={filters?.section_id ?? ""}
-              disabled={!filters?.class_id}
-              onChange={(e) => applyFilter("section_id", e.target.value)}
-            >
-              <option value="">All Sections</option>
-              {sections.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-            <p className="mt-1 text-[11px] text-gray-500">
-              Choose a class first to narrow the section list.
-            </p>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">
-              Exact Billing Month
-            </label>
-            <select
-              className="w-full border px-3 py-2 rounded-lg text-sm"
-              value={monthFilter}
-              onChange={(e) => {
-                const value = e.target.value;
-                setMonthFilter(value);
-                setMonthFromFilter("");
-                setMonthToFilter("");
-                applyFilters(
-                  {
-                    month: value,
-                    month_from: "",
-                    month_to: "",
-                  },
-                  { preserveState: true }
-                );
-              }}
-            >
-              <option value="">Any Month</option>
-              {monthOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-[11px] text-gray-500">
-              Best when you want to inspect one month only.
-            </p>
-          </div>
-
-          <div className="lg:col-span-2">
-            <div className="rounded-lg border border-gray-200 p-3">
-              <div className="flex flex-col gap-3 md:flex-row md:items-end">
-                <div className="flex-1">
-                  <label className="mb-1 block text-xs font-medium text-gray-600">
-                    Month Range From
-                  </label>
-                  <input
-                    type="month"
-                    value={monthFromFilter}
-                    onChange={(e) => {
-                      setMonthFromFilter(e.target.value);
-                      if (e.target.value) {
-                        setMonthFilter("");
-                      }
-                    }}
-                    className="w-full border px-3 py-2 rounded-lg text-sm"
-                  />
-                </div>
-
-                <div className="flex-1">
-                  <label className="mb-1 block text-xs font-medium text-gray-600">
-                    Month Range To
-                  </label>
-                  <input
-                    type="month"
-                    value={monthToFilter}
-                    onChange={(e) => {
-                      setMonthToFilter(e.target.value);
-                      if (e.target.value) {
-                        setMonthFilter("");
-                      }
-                    }}
-                    className="w-full border px-3 py-2 rounded-lg text-sm"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={applyMonthFilters}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        <div className="mt-4 space-y-3">
+          <FilterSection
+            title="Basic Filters"
+            description="Use these first to narrow the list by session, payment state, and class."
+            isOpen={openSections.basics}
+            onToggle={() => toggleSection("basics")}
+            badge={hasBasicFilters ? "In use" : null}
+          >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Year
+                </label>
+                <select
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  value={filters?.year ?? ""}
+                  onChange={(e) => applyFilter("year", e.target.value)}
                 >
-                  Apply Months
-                </button>
+                  <option value="">All Years</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
               </div>
-              <p className="mt-2 text-[11px] text-gray-500">
-                Leave exact month empty to use a month range. Range checks are inclusive, and if you reverse the order we will normalize it automatically.
-              </p>
-              {hasMonthRangeValues && normalizedMonthRange.swapped ? (
-                <p className="mt-1 text-[11px] text-amber-600">
-                  Month range order will be corrected automatically when applied.
-                </p>
-              ) : null}
-            </div>
-          </div>
 
-          <div className="lg:col-span-2">
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Status
+                </label>
+                <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
+                  {statusPills.map((pill) => {
+                    const active = (filters?.status ?? "") === pill.value;
+
+                    return (
+                      <button
+                        key={pill.value || "all"}
+                        type="button"
+                        onClick={() => applyFilter("status", pill.value)}
+                        className={`flex-1 rounded-md px-3 py-1.5 text-sm transition ${
+                          active
+                            ? "bg-white font-medium text-blue-600 shadow"
+                            : "text-gray-600 hover:text-black"
+                        }`}
+                      >
+                        {pill.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Collection-date filters work best when status is set to paid or all.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Class
+                </label>
+                <select
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  value={filters?.class_id ?? ""}
+                  onChange={(e) => applyFilter("class_id", e.target.value)}
+                >
+                  <option value="">All Classes</option>
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Section
+                </label>
+                <select
+                  className="w-full rounded-lg border px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                  value={filters?.section_id ?? ""}
+                  disabled={!filters?.class_id}
+                  onChange={(e) => applyFilter("section_id", e.target.value)}
+                >
+                  <option value="">All Sections</option>
+                  {sections.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Choose a class first to narrow the section list.
+                </p>
+              </div>
+            </div>
+          </FilterSection>
+
+          <FilterSection
+            title="Billing Month"
+            description="Check one billing month or a month range to find pending fees across several months."
+            isOpen={openSections.billingMonth}
+            onToggle={() => toggleSection("billingMonth")}
+            badge={filters?.month ? "Exact month" : hasMonthRangeValues ? "Range" : null}
+          >
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Exact Billing Month
+                </label>
+                <select
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  value={monthFilter}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setMonthFilter(value);
+                    setMonthFromFilter("");
+                    setMonthToFilter("");
+                    applyFilters(
+                      {
+                        month: value,
+                        month_from: "",
+                        month_to: "",
+                      },
+                      { preserveState: true }
+                    );
+                  }}
+                >
+                  <option value="">Any Month</option>
+                  {monthOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Best when you want one clean monthly snapshot.
+                </p>
+              </div>
+
+              <div className="xl:col-span-2 rounded-lg border border-gray-200 p-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-xs font-medium text-gray-600">
+                      Month Range From
+                    </label>
+                    <input
+                      type="month"
+                      value={monthFromFilter}
+                      onChange={(e) => {
+                        setMonthFromFilter(e.target.value);
+                        if (e.target.value) {
+                          setMonthFilter("");
+                        }
+                      }}
+                      className="w-full rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="flex-1">
+                    <label className="mb-1 block text-xs font-medium text-gray-600">
+                      Month Range To
+                    </label>
+                    <input
+                      type="month"
+                      value={monthToFilter}
+                      onChange={(e) => {
+                        setMonthToFilter(e.target.value);
+                        if (e.target.value) {
+                          setMonthFilter("");
+                        }
+                      }}
+                      className="w-full rounded-lg border px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={applyMonthFilters}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Apply Months
+                  </button>
+                </div>
+                <p className="mt-2 text-[11px] text-gray-500">
+                  Leave exact month empty to use a month range. Range checks stay inclusive, and reversed ranges are corrected automatically.
+                </p>
+                {hasMonthRangeValues && normalizedMonthRange.swapped ? (
+                  <p className="mt-1 text-[11px] text-amber-600">
+                    Month range order will be corrected automatically when applied.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </FilterSection>
+
+          <FilterSection
+            title="Collection Date"
+            description="Use this only when you want fees that were actually collected inside a date range."
+            isOpen={openSections.collectionDate}
+            onToggle={() => toggleSection("collectionDate")}
+            badge={hasCollectionRangeValues ? "Range" : null}
+          >
             <div className="rounded-lg border border-gray-200 p-3">
               <div className="flex flex-col gap-3 md:flex-row md:items-end">
                 <div className="flex-1">
@@ -786,7 +851,7 @@ export default function FeesIndex() {
                     type="date"
                     value={paidFromFilter}
                     onChange={(e) => setPaidFromFilter(e.target.value)}
-                    className="w-full border px-3 py-2 rounded-lg text-sm"
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
                   />
                 </div>
 
@@ -798,7 +863,7 @@ export default function FeesIndex() {
                     type="date"
                     value={paidToFilter}
                     onChange={(e) => setPaidToFilter(e.target.value)}
-                    className="w-full border px-3 py-2 rounded-lg text-sm"
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
                   />
                 </div>
 
@@ -811,7 +876,7 @@ export default function FeesIndex() {
                 </button>
               </div>
               <p className="mt-2 text-[11px] text-gray-500">
-                Collection-date filters only match paid fees whose collected date falls inside the selected range.
+                This checks paid fees only, using the saved collection date. Unpaid fees will naturally stay out of these results.
               </p>
               {hasCollectionRangeValues && normalizedCollectionRange.swapped ? (
                 <p className="mt-1 text-[11px] text-amber-600">
@@ -819,7 +884,49 @@ export default function FeesIndex() {
                 </p>
               ) : null}
             </div>
-          </div>
+          </FilterSection>
+
+          <FilterSection
+            title="Student Search"
+            description="Search is placed last so you can first narrow the list by filters, then quickly find a student or father name."
+            isOpen={openSections.search}
+            onToggle={() => toggleSection("search")}
+            badge={filters?.search ? "Searching" : null}
+          >
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Search Student
+                </label>
+                <input
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  placeholder="Search by student or father name"
+                  value={searchInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchInput(value);
+                    applySearchLive(value);
+                  }}
+                />
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Helpful after selecting class, section, or month so the result list stays focused.
+                </p>
+              </div>
+
+              {searchInput ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchInput("");
+                    applySearchLive("");
+                  }}
+                  className="rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Clear Search
+                </button>
+              ) : null}
+            </div>
+          </FilterSection>
         </div>
       </div>
 
