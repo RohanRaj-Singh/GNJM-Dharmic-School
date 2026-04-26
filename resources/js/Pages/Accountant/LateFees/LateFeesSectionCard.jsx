@@ -8,6 +8,8 @@ function StudentFeeRow({ student }) {
       <div className="flex justify-between items-center mb-2 gap-2">
         <div>
           <p className="text-base font-semibold text-gray-800">{student.student}</p>
+
+          <p className="text-sm text-gray-500">{student.father_name}</p>
           <p className="text-sm text-gray-500">
             {student.class} - {student.section}
           </p>

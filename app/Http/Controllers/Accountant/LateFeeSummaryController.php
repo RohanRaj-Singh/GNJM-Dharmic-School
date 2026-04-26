@@ -35,6 +35,7 @@ class LateFeeSummaryController extends Controller
             $item = [
                 'student_id' => $fee->enrollment->student->id,
                 'student' => $fee->enrollment->student->name,
+                'father_name' => $fee->enrollment->student->father_name,
                 'class' => $fee->enrollment->schoolClass->name,
                 'section' => $fee->enrollment->section->name,
                 'month' => $fee->month,

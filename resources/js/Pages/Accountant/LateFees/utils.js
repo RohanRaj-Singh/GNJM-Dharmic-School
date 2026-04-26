@@ -76,6 +76,7 @@ export function groupFeesByStudent(items = []) {
       acc[key] = {
         student_id: item?.student_id,
         student: normalizeText(item?.student) || "Unknown Student",
+        father_name: normalizeText(item?.father_name) || "",
         class: normalizeText(item?.class) || "-",
         section: normalizeText(item?.section) || "-",
         fees: [],
