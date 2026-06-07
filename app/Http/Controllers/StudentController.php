@@ -7,12 +7,15 @@ use App\Models\Section;
 use App\Models\Student;
 use App\Models\StudentSection;
 use App\Services\MonthlyFeeResolver;
+use App\Services\StudentReport\StudentReportCache;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
-    public function __construct(private readonly MonthlyFeeResolver $monthlyFeeResolver)
-    {
+    public function __construct(
+        private readonly MonthlyFeeResolver $monthlyFeeResolver,
+        private readonly StudentReportCache $reportCache,
+    ) {
     }
 
     public function store(Request $request)
@@ -62,6 +65,8 @@ class StudentController extends Controller
                 );
             }
         }
+
+        $this->reportCache->forget($student->id);
 
         return redirect()->route('students.index');
     }

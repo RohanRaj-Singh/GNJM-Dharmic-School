@@ -41,6 +41,10 @@
 | 10 | [10-open-questions-and-gaps.md](10-open-questions-and-gaps.md) | find `INSUFFICIENT INFORMATION` markers and known staleness signals |
 | 11 | [11-conventions-and-style.md](11-conventions-and-style.md) | match the surrounding code style (naming, query builder vs Eloquent, controller shape, React layout) |
 | 12 | [12-student-performa-forensic-audit.md](12-student-performa-forensic-audit.md) | the 8-phase forensic audit of the Student Performa report — bugs, repros, fixes, refactor plan |
+| 13 | [13-student-report-center-v2-design.md](13-student-report-center-v2-design.md) | the V2 product, architecture, and implementation plan — five report types, value-object engine, redesigned PDF, phased migration |
+| 14 | [14-student-report-center-v1-kickoff.md](14-student-report-center-v1-kickoff.md) | the **V1 implementation kickoff** — current state, gap analysis, V1 architecture, schema footprint, 3-phase plan, business-rule approvals needed |
+| 15 | [15-authentication-audit-and-migration.md](15-authentication-audit-and-migration.md) | the full auth audit — root-cause analysis of 419, security review, migration plan |
+| 16 | [16-auth-cleanup-final-report.md](16-auth-cleanup-final-report.md) | the auth cleanup execution — files removed/modified, test results, security improvements |
 
 ---
 

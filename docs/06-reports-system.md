@@ -8,7 +8,8 @@ Three report types are exposed under the admin sidebar. They share a single cont
 |---|---|---|---|---|---|
 | Fees | `resources/js/Pages/Admin/Reports/Index.jsx` | `POST /admin/reports/build` (report=fees) | `POST /admin/reports/export/csv`, `POST /admin/reports/export/pdf` | `resources/views/reports/fees.blade.php` | ✅ `ReportRegistry::fees()` |
 | Attendance | `resources/js/Pages/Admin/Reports/Attendance.jsx` | `POST /admin/reports/build` (report=attendance) | `POST /admin/reports/export/pdf` | `resources/views/reports/attendance.blade.php` (table) | ❌ Not registered (commented as future) |
-| Student Performa | `resources/js/Pages/Admin/Reports/Student.jsx` | `POST /admin/reports/build` (report=student) | `POST /admin/reports/export/pdf` | `resources/views/reports/student.blade.php` | ❌ Not registered |
+| Student Performa (legacy — removed in V1) | n/a | n/a | n/a | n/a | n/a |
+| **Student Center (V1)** | `resources/js/Pages/Admin/StudentReportCenter/Index.jsx` | `POST /admin/student-report-center/build` | `POST /admin/student-report-center/export/pdf` | `resources/views/reports/student_center.blade.php` + `partials/student_center_calendar.blade.php` | ❌ Not in `ReportRegistry` (V1.1) |
 
 Sidebar entries (from `AdminLayout.jsx`):
 ```

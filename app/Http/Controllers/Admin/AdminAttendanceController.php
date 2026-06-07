@@ -5,15 +5,20 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Section;
+use App\Services\StudentReport\StudentReportCache;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Models\SchoolClass;
 
 class AdminAttendanceController extends Controller
 {
+    public function __construct(
+        private readonly StudentReportCache $reportCache,
+    ) {}
     private function isKirtanClass(?string $type, ?string $name = null): bool
     {
         $normalized = strtolower(trim((string) ($type ?? '')));
@@ -192,6 +197,16 @@ public function save(Request $request)
                     : null,
             ]
         );
+
+        // Collect distinct student_ids whose section was just written.
+        $studentIds = DB::table('students as s')
+            ->join('student_sections as ss', 'ss.student_id', '=', 's.id')
+            ->where('ss.id', $studentSectionId)
+            ->pluck('s.id')
+            ->unique();
+        foreach ($studentIds as $sid) {
+            $this->reportCache->forget((int) $sid);
+        }
     }
 
     return response()->json(['success' => true]);

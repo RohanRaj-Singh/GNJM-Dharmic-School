@@ -3,8 +3,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
-use Illuminate\Session\TokenMismatchException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,29 +12,28 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
 
-    // Web middleware stack
-    $middleware->web(append: [
-        \App\Http\Middleware\HandleInertiaRequests::class,
-        \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
-    ]);
+        // Web middleware stack
+        //
+        // We append only the Inertia + preloaded-asset middlewares on top of
+        // the Laravel 12 default web group (EncryptCookies, StartSession,
+        // ShareErrorsFromSession, VerifyCsrfToken, SubstituteBindings).
+        // The default VerifyCsrfToken handles the X-XSRF-TOKEN header
+        // correctly: axios sends the cookie value as-is, Laravel decrypts
+        // the encrypted value, strips the CookieValuePrefix HMAC, and
+        // compares to the session token. No custom subclass required.
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleInertiaRequests::class,
+            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+        ]);
 
-    // 🔑 Route middleware aliases (Laravel 12 way)
-    $middleware->alias([
-        'role' => \App\Http\Middleware\RoleMiddleware::class,
-        'session.cache_guard' => \App\Http\Middleware\EnsureSessionAfterCacheClear::class,
-    ]);
-})
-
+        // Route middleware aliases
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+        ]);
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->render(function (TokenMismatchException $exception, Request $request) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'Session expired. Please log in again.',
-                ], 419);
-            }
-
-            return redirect()
-                ->guest(route('login'))
-                ->with('error', 'Your session has expired. Please log in again.');
-        });
-    })->create();
+        // Default Laravel exception handling. The framework's built-in
+        // TokenMismatchException renderer redirects to /login with a
+        // flash message, which is what we want.
+    })
+    ->create();

@@ -38,18 +38,16 @@ class ReportController extends Controller
 
                 // attendance specific
                 'status'      => 'array',
+
+                // Legacy single value filters
                 'month'       => 'nullable|string', // YYYY-MM
                 'year'        => 'nullable|integer',
-            ]);
-        }
 
-        if ($request->report === 'student') {
-            $request->validate([
-                'student_id' => 'required|integer|exists:students,id',
-                'year'       => 'required|integer',
-                'month_from' => 'nullable|date_format:Y-m',
-                'month_to'   => 'nullable|date_format:Y-m',
-
+                // New date range filters
+                'year_from'   => 'nullable|integer',
+                'year_to'     => 'nullable|integer',
+                'month_from'  => 'nullable|string|date_format:Y-m',
+                'month_to'    => 'nullable|string|date_format:Y-m',
             ]);
         }
 
@@ -74,12 +72,8 @@ class ReportController extends Controller
                     : $this->buildAttendanceReport($request)
             ),
 
-            /* ==============================
-           STUDENT PERFORMA
-        =============================== */
-            'student' => response()->json(
-                $this->buildStudentReport($request)
-            ),
+            // 'student' was removed in V1 of the Student Report Center.
+            // The new path is POST /admin/student-report-center/build.
 
             default => abort(400, 'Unsupported report type'),
         };
@@ -107,24 +101,60 @@ class ReportController extends Controller
                     ->whereNull('payments.deleted_at');
             })
             ->whereIn('student_sections.class_id', $request->class_ids);
-        // year filter
 
-        if ($request->filled('year')) {
-            $baseQuery->where(function ($q) use ($request) {
-                $q->where(function ($q2) use ($request) {
-                    $q2->where('fees.type', 'monthly')
-                        ->where('fees.month', 'like', $request->year . '-%');
-                })->orWhere('fees.type', 'custom');
-            });
+        /* -------------------------------------------------
+           DATE RANGE FILTER
+           Supports:
+             - Legacy: year (int) + month (YYYY-MM)
+             - New:    year_from / year_to (int)
+             - New:    month_from / month_to (YYYY-MM)
+
+           The month_from/month_to range is the most granular
+           filter and takes precedence. If only year_from/year_to
+           are set, we filter all monthly fees whose month falls
+           within the year range. Custom fees are always included.
+        ------------------------------------------------- */
+        $monthFrom = $request->input('month_from');
+        $monthTo   = $request->input('month_to');
+        $yearFrom  = $request->input('year_from');
+        $yearTo    = $request->input('year_to');
+
+        // Build the actual month range boundaries.
+        // Priority: explicit month > year fallback > legacy year param.
+        $start = null;
+        $end   = null;
+
+        if (!empty($monthFrom) || !empty($monthTo)) {
+            // Explicit month_from / month_to takes precedence.
+            $start = $monthFrom ?: ($yearFrom ? "{$yearFrom}-01" : null);
+            $end   = $monthTo   ?: ($yearTo   ? "{$yearTo}-12"   : null);
+        } elseif (!empty($yearFrom) || !empty($yearTo)) {
+            // Only year_from / year_to: cover full year range.
+            $start = $yearFrom ? "{$yearFrom}-01" : null;
+            $end   = $yearTo   ? "{$yearTo}-12"   : null;
+        } elseif ($request->filled('year')) {
+            // Legacy single year.
+            $start = "{$request->year}-01";
+            $end   = "{$request->year}-12";
         }
 
-
-        //month filter
         if ($request->filled('month')) {
-            $baseQuery->where(function ($q) use ($request) {
-                $q->where(function ($q2) use ($request) {
-                    $q2->where('fees.type', 'monthly')
-                        ->where('fees.month', $request->month);
+            // Legacy single month overrides everything.
+            $start = $request->month;
+            $end   = $request->month;
+        }
+
+        // Apply the filter if we have any boundaries.
+        if (!empty($start) || !empty($end)) {
+            $baseQuery->where(function ($q) use ($start, $end) {
+                $q->where(function ($q2) use ($start, $end) {
+                    $q2->where('fees.type', 'monthly');
+                    if (!empty($start)) {
+                        $q2->where('fees.month', '>=', $start);
+                    }
+                    if (!empty($end)) {
+                        $q2->where('fees.month', '<=', $end);
+                    }
                 })->orWhere('fees.type', 'custom');
             });
         }
@@ -267,6 +297,10 @@ class ReportController extends Controller
             'paid_status' => 'array',
             'month'       => 'nullable|string',
             'year'        => 'nullable|integer',
+            'year_from'   => 'nullable|integer',
+            'year_to'     => 'nullable|integer',
+            'month_from'  => 'nullable|string',
+            'month_to'    => 'nullable|string',
         ]);
 
         $report = match ($request->report) {
@@ -329,15 +363,6 @@ class ReportController extends Controller
             'report' => 'required|string',
         ]);
 
-        if ($request->report === 'student') {
-            $request->validate([
-                'student_id' => 'required|integer|exists:students,id',
-                'year'       => 'required|integer',
-                'month_from' => 'nullable|date_format:Y-m',
-                'month_to'   => 'nullable|date_format:Y-m',
-            ]);
-        }
-
         if (in_array($request->report, ['fees', 'attendance'])) {
             $request->validate([
                 'class_ids'   => 'required|array|min:1',
@@ -347,6 +372,10 @@ class ReportController extends Controller
                 'status'      => 'array',
                 'month'       => 'nullable|string',
                 'year'        => 'nullable|integer',
+                'year_from'   => 'nullable|integer',
+                'year_to'     => 'nullable|integer',
+                'month_from'  => 'nullable|string',
+                'month_to'    => 'nullable|string',
             ]);
         }
 
@@ -356,7 +385,8 @@ class ReportController extends Controller
         $report = match ($request->report) {
             'fees'       => $this->buildFeesReport($request),
             'attendance' => $this->buildAttendanceReport($request),
-            'student'    => $this->buildStudentReport($request),
+            // 'student' was removed in V1 of the Student Report Center.
+            // The new path is POST /admin/student-report-center/export/pdf.
             default      => abort(400, 'Unsupported report type'),
         };
 
@@ -366,7 +396,6 @@ class ReportController extends Controller
         $view = match ($request->report) {
             'fees'       => 'reports.fees',
             'attendance' => 'reports.attendance',
-            'student'    => 'reports.student',
         };
 
         if (isset($report['tables']['rows'])) {
@@ -584,289 +613,4 @@ class ReportController extends Controller
             ],
         ];
     }
-
-    private function buildStudentReport(Request $request): array
-{
-    logger()->info('STUDENT REPORT REQUEST', [
-        'student_id' => $request->student_id,
-        'year'       => $request->year,
-        'month_from' => $request->month_from,
-        'month_to'   => $request->month_to,
-    ]);
-
-    /* ===============================
-       VALIDATION
-    ================================ */
-    $request->validate([
-        'student_id' => 'required|integer|exists:students,id',
-        'year'       => 'required|integer',
-        'month_from' => 'nullable|string',
-        'month_to'   => 'nullable|string',
-    ]);
-
-    if ($request->month_from && $request->month_to && $request->month_from > $request->month_to) {
-        abort(422, 'Invalid month range');
-    }
-
-    /* ===============================
-       STUDENT
-    ================================ */
-    $student = DB::table('students')
-        ->where('id', $request->student_id)
-        ->first();
-
-    /* ===============================
-       STUDENT SECTIONS (CASE SAFE)
-    ================================ */
-    $sections = DB::table('student_sections')
-        ->join('classes', 'classes.id', '=', 'student_sections.class_id')
-        ->where('student_sections.student_id', $request->student_id)
-        ->select(
-            'student_sections.id as student_section_id',
-            DB::raw('LOWER(classes.type) as class_type')
-        )
-        ->get();
-
-    /* ===============================
-       SPLIT BY TYPE
-    ================================ */
-    $gurmukhiSections = $sections
-        ->where('class_type', '!=', 'kirtan')
-        ->pluck('student_section_id')
-        ->values();
-
-    $kirtanSections = $sections
-        ->where('class_type', 'kirtan')
-        ->pluck('student_section_id')
-        ->values();
-
-    logger()->info('STUDENT SECTIONS DEBUG', [
-        'student_id' => $student->id,
-        'gurmukhi_section_ids' => $gurmukhiSections->all(),
-        'kirtan_section_ids'   => $kirtanSections->all(),
-    ]);
-
-    /* ===============================
-       YEAR RANGE (STRING BASED)
-    ================================ */
-    $year = (int) $request->year;
-    $yearStart = "{$year}-01";
-    $yearEnd   = "{$year}-12";
-
-    /* ===============================
-       FEES BUILDER (MATCHES FeesController)
-    ================================ */
-    $buildFees = function ($sectionIds) use ($year, $yearStart, $yearEnd, $request) {
-
-        if ($sectionIds->isEmpty()) {
-            return [
-                'summary' => ['total' => 0, 'paid' => 0, 'pending' => 0],
-                'rows' => collect(),
-            ];
-        }
-
-        $query = DB::table('fees')
-            ->whereIn('fees.student_section_id', $sectionIds)
-            ->where(function ($q) use ($year) {
-                $q->where(function ($qq) use ($year) {
-                    $qq->where('fees.type', 'monthly')
-                       ->where('fees.month', 'like', $year . '-%');
-                })
-                ->orWhere('fees.type', 'custom');
-            });
-
-        // OPTIONAL month range filters (non-breaking)
-        if ($request->month_from) {
-            $query->where('fees.month', '>=', $request->month_from);
-        }
-        if ($request->month_to) {
-            $query->where('fees.month', '<=', $request->month_to);
-        }
-
-        $rows = $query
-            ->select(
-                'fees.id',
-                'fees.title',
-                'fees.type',
-                'fees.month',
-                'fees.amount',
-                DB::raw('EXISTS(SELECT 1 FROM payments WHERE payments.fee_id = fees.id AND payments.deleted_at IS NULL) as is_paid')
-            )
-            ->orderByRaw('fees.month IS NULL')
-            ->orderBy('fees.month')
-            ->get()
-            ->map(function ($row) {
-                $row->is_paid = (bool) $row->is_paid;
-                return $row;
-            });
-
-        logger()->info('FEES QUERY RESULT', [
-            'section_ids' => $sectionIds->values(),
-            'count' => $rows->count(),
-            'rows' => $rows->map(fn ($r) => [
-                'type'   => $r->type,
-                'month'  => $r->month,
-                'amount'=> $r->amount,
-                'paid'  => (bool) $r->is_paid,
-            ]),
-        ]);
-
-        return [
-            'summary' => [
-                'total'   => (int) $rows->sum('amount'),
-                'paid'    => (int) $rows->filter(fn ($r) => (bool) $r->is_paid)->sum('amount'),
-                'pending' => (int) $rows->reject(fn ($r) => (bool) $r->is_paid)->sum('amount'),
-            ],
-            'rows' => $rows,
-        ];
-    };
-
-    /* ===============================
-       ATTENDANCE BUILDER
-    ================================ */
-    $attendanceStart = "{$year}-01-01";
-    $attendanceEnd   = "{$year}-12-31";
-
-    $buildAttendance = function ($studentSectionIds) use ($year, $attendanceStart, $attendanceEnd) {
-
-        if ($studentSectionIds->isEmpty()) {
-            return [
-                'months' => [],
-                'calendar' => [],
-                'summary' => [
-                    'present' => 0,
-                    'absent' => 0,
-                    'leave' => 0,
-                    'percentage' => 0,
-                ],
-            ];
-        }
-
-        $records = DB::table('attendance')
-            ->whereIn('student_section_id', $studentSectionIds)
-            ->whereBetween('date', [$attendanceStart, $attendanceEnd])
-            ->select('student_section_id', 'date', 'status', 'lesson_learned')
-            ->get()
-            ->groupBy(fn ($r) => "{$r->student_section_id}|{$r->date}");
-
-        $calendar = [];
-        $monthsSummary = [];
-
-        for ($m = 1; $m <= 12; $m++) {
-            $monthName = \Carbon\Carbon::create($year, $m, 1)->format('F');
-            $daysInMonth = \Carbon\Carbon::create($year, $m, 1)->daysInMonth;
-
-            $monthsSummary[$monthName] = [
-                'present' => 0,
-                'absent' => 0,
-                'leave' => 0,
-                'lessons_learned' => 0,
-            ];
-
-            for ($d = 1; $d <= $daysInMonth; $d++) {
-                $date = \Carbon\Carbon::create($year, $m, $d)->toDateString();
-                $dayRecords = collect();
-
-                foreach ($studentSectionIds as $sid) {
-                    $key = "{$sid}|{$date}";
-                    if (isset($records[$key])) {
-                        $dayRecords = $dayRecords->merge($records[$key]);
-                    }
-                }
-
-                $statuses = $dayRecords->pluck('status')->filter()->map(fn ($s) => strtolower($s));
-
-                $status =
-                    $statuses->contains('present') ? 'present'
-                    : ($statuses->contains('leave') ? 'leave'
-                    : ($statuses->contains('absent') ? 'absent' : null));
-
-                $lessonLearned = $dayRecords->contains(
-                    fn ($r) => (int) ($r->lesson_learned ?? 0) === 1
-                );
-
-                if ($status) $monthsSummary[$monthName][$status]++;
-                if ($lessonLearned) $monthsSummary[$monthName]['lessons_learned']++;
-
-                $calendar[$monthName][$d] = [
-                    'status' => $status,
-                    'lesson_learned' => $lessonLearned,
-                ];
-            }
-        }
-
-        $present = collect($monthsSummary)->sum('present');
-        $absent  = collect($monthsSummary)->sum('absent');
-        $leave   = collect($monthsSummary)->sum('leave');
-        $total   = $present + $absent + $leave;
-
-        return [
-            'months' => $monthsSummary,
-            'calendar' => $calendar,
-            'summary' => [
-                'present' => $present,
-                'absent' => $absent,
-                'leave' => $leave,
-                'percentage' => $total > 0
-                    ? round(($present / $total) * 100, 2)
-                    : 0,
-            ],
-        ];
-    };
-
-    /* ===============================
-       PERFORMANCE (KIRTAN)
-    ================================ */
-    $evaluatePerformance = function ($attendance) {
-        $total = $attendance['summary']['present']
-            + $attendance['summary']['absent']
-            + $attendance['summary']['leave'];
-
-        $lessons = collect($attendance['months'])->sum('lessons_learned');
-
-        $percentage = $total > 0
-            ? round(($lessons / $total) * 100, 2)
-            : 0;
-
-        return [
-            'total_classes' => $total,
-            'lessons_learned' => $lessons,
-            'percentage' => $percentage,
-            'rating' => match (true) {
-                $percentage >= 85 => 'Excellent',
-                $percentage >= 70 => 'Good',
-                $percentage >= 50 => 'Average',
-                default => 'Needs Improvement',
-            },
-        ];
-    };
-
-    /* ===============================
-       FINAL RESPONSE
-    ================================ */
-    $gurmukhiAttendance = $buildAttendance($gurmukhiSections);
-    $kirtanAttendance   = $buildAttendance($kirtanSections);
-
-    return [
-        'meta' => [
-            'report' => 'student',
-            'generated_at' => now()->toDateTimeString(),
-        ],
-        'student' => [
-            'id' => $student->id,
-            'name' => $student->name,
-            'father_name' => $student->father_name,
-        ],
-        'gurmukhi' => [
-            'fees' => $buildFees($gurmukhiSections),
-            'attendance' => $gurmukhiAttendance,
-        ],
-        'kirtan' => [
-            'fees' => $buildFees($kirtanSections),
-            'attendance' => $kirtanAttendance,
-            'performance' => $evaluatePerformance($kirtanAttendance),
-        ],
-    ];
-}
-
 }

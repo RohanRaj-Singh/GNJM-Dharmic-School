@@ -25,12 +25,12 @@ class DemoFeeSeeder extends Seeder
             }
             $previousMonth = Carbon::now()->subMonth();
 $currentMonth  = Carbon::now();
-            // Previous month
+            // Previous month (YYYY-MM format used everywhere else in the system)
             Fee::create([
                 'student_section_id' => $studentSection->id,
                 'title' => 'Monthly Fee - ' . $previousMonth->format('F Y'),
                 'type' => 'monthly',
-                'month' => $previousMonth->format('F Y'),
+                'month' => $previousMonth->format('Y-m'),
                 'amount' => $monthlyFee,
             ]);
 
@@ -39,7 +39,7 @@ $currentMonth  = Carbon::now();
                 'student_section_id' => $studentSection->id,
                 'title' => 'Monthly Fee - ' . $currentMonth->format('F Y'),
                 'type' => 'monthly',
-                'month' => $currentMonth->format('F Y'),
+                'month' => $currentMonth->format('Y-m'),
                 'amount' => $monthlyFee,
             ]);
         }

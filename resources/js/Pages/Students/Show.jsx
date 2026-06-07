@@ -2,6 +2,7 @@ import SimpleLayout from "@/Layouts/SimpleLayout";
 import useRoles from "@/Hooks/useRoles";
 import FeeSection from "./FeeSection";
 import { usePage } from "@inertiajs/react";
+import { useState, useMemo } from "react";
 
 /*
 |--------------------------------------------------------------------------
@@ -17,9 +18,41 @@ import { usePage } from "@inertiajs/react";
 |   - No fees
 */
 
+const MONTHS = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+];
+
 export default function StudentShow({ student, summary = [] }) {
     const { isTeacher, isAccountant, isAdmin } = useRoles();
     const { auth } = usePage().props;
+
+    // Current month/year defaults
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-based
+
+    // Selected month/year for the attendance calendar
+    const [selectedYear, setSelectedYear] = useState(currentYear);
+    const [selectedMonth, setSelectedMonth] = useState(currentMonth); // 0-based
+
+    // Year range: current year ± 2
+    const yearOptions = useMemo(() => {
+        const years = [];
+        for (let y = currentYear - 2; y <= currentYear + 2; y++) {
+            years.push(y);
+        }
+        return years;
+    }, [currentYear]);
+
+    // Days in the selected month
+    const monthDays = useMemo(() => {
+        const totalDays = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        return Array.from({ length: totalDays }, (_, i) =>
+            new Date(selectedYear, selectedMonth, i + 1)
+        );
+    }, [selectedYear, selectedMonth]);
+
     const toDateKey = (value) => {
         const date = new Date(value);
         const year = date.getFullYear();
@@ -27,15 +60,6 @@ export default function StudentShow({ student, summary = [] }) {
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
     };
-
-    const monthDays = (() => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth();
-        const totalDays = new Date(year, month + 1, 0).getDate();
-
-        return Array.from({ length: totalDays }, (_, index) => new Date(year, month, index + 1));
-    })();
 
     let visibleSummary = [];
 
@@ -133,14 +157,38 @@ export default function StudentShow({ student, summary = [] }) {
                             </div>
 
                             <div className="bg-white rounded-xl shadow p-5">
-                                <h3 className="text-md font-semibold text-gray-700 mb-3">
-                                    Current Month Attendance
-                                </h3>
+                                {/* Month + Year selectors */}
+                                <div className="flex flex-wrap items-center gap-3 mb-3">
+                                    <h3 className="text-md font-semibold text-gray-700">
+                                        Attendance
+                                    </h3>
+                                    <select
+                                        value={selectedMonth}
+                                        onChange={(e) =>
+                                            setSelectedMonth(Number(e.target.value))
+                                        }
+                                        className="border rounded-lg px-3 py-1.5 text-sm bg-white"
+                                    >
+                                        {MONTHS.map((m, i) => (
+                                            <option key={i} value={i}>{m}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={selectedYear}
+                                        onChange={(e) =>
+                                            setSelectedYear(Number(e.target.value))
+                                        }
+                                        className="border rounded-lg px-3 py-1.5 text-sm bg-white"
+                                    >
+                                        {yearOptions.map((y) => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
                                 <div className="grid grid-cols-7 gap-2 text-center text-xs">
                                     {monthDays.map((day, i) => {
                                         const dateStr = toDateKey(day);
-
                                         const status = recentMap?.[dateStr];
 
                                         const color =
@@ -183,7 +231,7 @@ export default function StudentShow({ student, summary = [] }) {
 
                                 {Object.keys(recentMap).length === 0 && (
                                     <p className="text-sm text-gray-500 mt-3 text-center">
-                                        No attendance marked this month
+                                        No attendance marked
                                     </p>
                                 )}
                             </div>

@@ -7,6 +7,7 @@ use App\Models\StudentSection;
 use App\Models\Fee;
 use Carbon\Carbon;
 use App\Services\MonthlyFeeResolver;
+use App\Services\StudentReport\StudentReportCache;
 
 class GenerateMonthlyFees extends Command
 {
@@ -14,8 +15,10 @@ class GenerateMonthlyFees extends Command
 
     protected $description = 'Generate monthly fees for eligible students';
 
-    public function __construct(private readonly MonthlyFeeResolver $monthlyFeeResolver)
-    {
+    public function __construct(
+        private readonly MonthlyFeeResolver $monthlyFeeResolver,
+        private readonly StudentReportCache $reportCache,
+    ) {
         parent::__construct();
     }
 
@@ -26,9 +29,12 @@ class GenerateMonthlyFees extends Command
         $enrollments = StudentSection::with(['schoolClass', 'section'])
             ->get();
 
+        $affectedStudentIds = [];
+
         foreach ($enrollments as $enrollment) {
             if ($enrollment->student_type === 'free') {
                 $this->clearUnpaidMonthlyFeesForFreeEnrollment($enrollment);
+                $affectedStudentIds[(int) $enrollment->student_id] = true;
                 continue;
             }
 
@@ -60,6 +66,12 @@ class GenerateMonthlyFees extends Command
                 'month' => $month,
                 'source' => 'monthly',
             ]);
+
+            $affectedStudentIds[(int) $enrollment->student_id] = true;
+        }
+
+        foreach (array_keys($affectedStudentIds) as $sid) {
+            $this->reportCache->forget($sid);
         }
 
         $this->info('Monthly fees generated successfully.');

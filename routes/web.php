@@ -1,28 +1,25 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
 /*
 |--------------------------------------------------------------------------
 | Public
 |--------------------------------------------------------------------------
 */
 
-
 Route::get('/', function () {
     if (auth()->check()) {
         return match (auth()->user()->role) {
-            'admin' => redirect()->route('admin.dashboard'),
+            'admin'      => redirect()->route('admin.dashboard'),
             'accountant' => redirect('/accountant'),
-            'teacher' => redirect()->route('teacher.dashboard'),
-            default => redirect()->route('login'),
+            'teacher'    => redirect()->route('teacher.dashboard'),
+            default      => redirect()->route('login'),
         };
     }
 
     return Inertia::render('Splash');
-});
-
-//Route::get('/demo-login', fn () => Inertia::render('DemoLogin'));
+})->name('home');
 
 require __DIR__.'/auth.php';
 
@@ -32,7 +29,7 @@ require __DIR__.'/auth.php';
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'session.cache_guard'])->group(function () {
+Route::middleware(['auth'])->group(function () {
 
     // Attendance routes - teacher and accountant only (NOT admin)
     Route::middleware('role:teacher,accountant')
@@ -62,4 +59,3 @@ Route::middleware(['auth', 'session.cache_guard'])->group(function () {
 
     require __DIR__.'/students.php';
 });
-

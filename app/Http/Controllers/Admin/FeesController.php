@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Fee;
+use App\Services\StudentReport\StudentReportCache;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -14,6 +15,19 @@ use App\Models\StudentSection;
 use App\Models\Section;
 class FeesController extends Controller
 {
+    public function __construct(
+        private readonly StudentReportCache $reportCache,
+    ) {}
+
+    /**
+     * Resolve the student_id owning this fee (via the enrollment).
+     * Centralised so the seven write paths below stay consistent.
+     */
+    private function studentIdFor(Fee $fee): int
+    {
+        $sid = DB::table('student_sections')->where('id', $fee->student_section_id)->value('student_id');
+        return (int) $sid;
+    }
     public function index(Request $request)
 {
     $month = $request->string('month')->toString();
@@ -261,6 +275,8 @@ class FeesController extends Controller
         $fee->update(['is_locked' => true]);
     }
 
+    $this->reportCache->forget($this->studentIdFor($fee));
+
     return back()->with('success', 'Fee collected successfully.');
 }
 public function deCollect(Fee $fee)
@@ -276,6 +292,8 @@ public function deCollect(Fee $fee)
     }
 
     $payment->delete(); // soft delete
+
+    $this->reportCache->forget($this->studentIdFor($fee));
 
     return back()->with('success', 'Fee un-collected successfully.');
 }
@@ -358,6 +376,10 @@ public function customIndex()
             }
         });
 
+        foreach ($enrollments as $enrollment) {
+            $this->reportCache->forget((int) $enrollment->student_id);
+        }
+
         return back()->with('success', 'Custom fee assigned to section.');
     }
 
@@ -403,6 +425,14 @@ public function customIndex()
                 'amount' => $data['amount'],
             ]);
 
+        $studentIds = DB::table('student_sections')
+            ->where('section_id', $data['section_id'])
+            ->pluck('student_id')
+            ->unique();
+        foreach ($studentIds as $sid) {
+            $this->reportCache->forget((int) $sid);
+        }
+
         return back()->with('success', 'Custom fee updated.');
     }
 
@@ -419,7 +449,9 @@ public function customIndex()
             ]);
         }
 
+        $studentId = $this->studentIdFor($fee);
         $fee->delete();
+        $this->reportCache->forget($studentId);
 
         return back()->with('success', 'Custom fee removed for student.');
     }
@@ -459,6 +491,14 @@ public function customIndex()
                 $q->where('section_id', $data['section_id'])
             )
             ->delete();
+
+        $studentIds = DB::table('student_sections')
+            ->where('section_id', $data['section_id'])
+            ->pluck('student_id')
+            ->unique();
+        foreach ($studentIds as $sid) {
+            $this->reportCache->forget((int) $sid);
+        }
 
         return back()->with('success', 'Custom fee deleted for section.');
     }

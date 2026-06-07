@@ -82,28 +82,6 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Check if redirect URL is safe (no open redirect vulnerability)
-     */
-    private function isSafeRedirect(?string $url): bool
-    {
-        if (!$url) return false;
-        
-        $url = trim($url);
-        
-        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
-            $blocked = ['http://', 'https://', 'ftp://', 'javascript:'];
-            foreach ($blocked as $blockedPrefix) {
-                if (str_starts_with(strtolower($url), $blockedPrefix)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        
-        return false;
-    }
-
-    /**
      * Logout
      */
     public function destroy(Request $request)

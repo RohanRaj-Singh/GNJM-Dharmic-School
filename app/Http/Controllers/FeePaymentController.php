@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Fee;
+use App\Services\StudentReport\StudentReportCache;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FeePaymentController extends Controller
 {
+    public function __construct(
+        private readonly StudentReportCache $reportCache,
+    ) {}
+
     public function store(Request $request)
 {
     $request->validate([
@@ -18,6 +24,15 @@ class FeePaymentController extends Controller
 
     $collectionDate = Carbon::parse($request->collection_date, config('app.timezone'))
         ->startOfDay();
+
+    // Collect distinct student IDs that this write will affect, so we can
+    // invalidate their reports in a single pass.
+    $studentIds = DB::table('fees as f')
+        ->join('student_sections as ss', 'ss.id', '=', 'f.student_section_id')
+        ->whereIn('f.id', $request->fee_ids)
+        ->pluck('ss.student_id')
+        ->unique()
+        ->all();
 
     foreach ($request->fee_ids as $feeId) {
 
@@ -32,6 +47,10 @@ class FeePaymentController extends Controller
             'amount_paid' => $fee->amount,
             'paid_at' => $collectionDate,
         ]);
+    }
+
+    foreach ($studentIds as $sid) {
+        $this->reportCache->forget((int) $sid);
     }
 
     return redirect()

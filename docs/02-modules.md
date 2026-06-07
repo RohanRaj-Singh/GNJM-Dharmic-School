@@ -24,7 +24,7 @@ Each module is annotated with **status** (Implemented / Stubs / INSUFFICIENT INF
 | 16 | **Admin Dashboard** | Admin | `app/Http/Controllers/Admin/DashboardController.php`, `resources/js/Pages/Admin/Dashboard.jsx` |
 | 17 | **Reports — Fees** | Admin | `ReportController::buildFeesReport`, `ReportRegistry::fees()`, `resources/js/Pages/Admin/Reports/Index.jsx`, `resources/views/reports/fees.blade.php` |
 | 18 | **Reports — Attendance (table + calendar)** | Admin | `ReportController::buildAttendanceReport`, `ReportController::buildAttendanceCalendar`, `resources/js/Pages/Admin/Reports/Attendance.jsx`, `resources/views/reports/attendance.blade.php`, `resources/views/reports/partials/attendance-calendar.blade.php` |
-| 19 | **Reports — Student Performa** | Admin | `ReportController::buildStudentReport`, `resources/js/Pages/Admin/Reports/Student.jsx`, `resources/views/reports/student.blade.php` |
+| 19 | **Student Report Center (V1)** | Admin | `StudentReportCenterController` + `StudentReportService` orchestrator. React page `Admin/StudentReportCenter/Index.jsx` + 6 components. PDF: `resources/views/reports/student_center.blade.php` + `partials/student_center_calendar.blade.php`. Engine: `app/Services/StudentReport/*` + value objects in `app/Support/StudentReport/*`. |
 | 20 | **Fee Cleanup Command** | Admin (manual) | `app/Console/Commands/CleanupMonthlyFees.php` (`fees:cleanup-monthly [--execute]`) |
 | 21 | **Splash / Landing pages** | Public | `resources/js/Pages/Splash.jsx`, `resources/js/Pages/Welcome.jsx` |
 | 22 | **Profile / Password** | Authenticated users | `routes/auth.php`, `app/Http/Controllers/ProfileController.php` |

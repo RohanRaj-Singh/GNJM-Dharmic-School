@@ -8,14 +8,40 @@ use App\Models\FeeRatePeriod;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Services\MonthlyFeeResolver;
+use App\Services\StudentReport\StudentReportCache;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class FeeRatePeriodController extends Controller
 {
-    public function __construct(private readonly MonthlyFeeResolver $monthlyFeeResolver)
+    public function __construct(
+        private readonly MonthlyFeeResolver $monthlyFeeResolver,
+        private readonly StudentReportCache $reportCache,
+    ) {
+    }
+
+    /**
+     * Invalidate cached reports for all students affected by a rate-period
+     * mutation. Scoped by class or section.
+     */
+    private function invalidateAffectedReports(string $scopeType, int $scopeId): void
     {
+        $studentIds = match ($scopeType) {
+            'class' => DB::table('student_sections')
+                ->where('class_id', $scopeId)
+                ->whereNull('transferred_at')
+                ->pluck('student_id'),
+            'section' => DB::table('student_sections')
+                ->where('section_id', $scopeId)
+                ->whereNull('transferred_at')
+                ->pluck('student_id'),
+            default => collect(),
+        };
+        foreach ($studentIds as $sid) {
+            $this->reportCache->forget((int) $sid);
+        }
     }
 
     public function classPeriods(SchoolClass $class)
@@ -102,6 +128,8 @@ class FeeRatePeriodController extends Controller
             $this->toMonth($normalized['end_date'])
         );
 
+        $this->invalidateAffectedReports($scopeType, $scopeId);
+
         return [
             'period' => $this->serializePeriod($period),
             'section_sync' => $sectionSync,
@@ -162,6 +190,8 @@ class FeeRatePeriodController extends Controller
             $refreshEndMonth
         );
 
+        $this->invalidateAffectedReports($period->scope_type, (int) $period->scope_id);
+
         return [
             'period' => $this->serializePeriod($period),
             'section_sync' => $sectionSync,
@@ -192,6 +222,8 @@ class FeeRatePeriodController extends Controller
             $startMonth,
             $endMonth
         );
+
+        $this->invalidateAffectedReports($period->scope_type, (int) $period->scope_id);
 
         return response()->json([], 204);
     }

@@ -1,12 +1,12 @@
 import AdminLayout from "@/Layouts/AdminLayout";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
     flexRender,
     getCoreRowModel,
     useReactTable,
 } from "@tanstack/react-table";
-import MultiSelect from "@/Components/MultiSelect";
-import { formatPKR, formatMonth, generateMonthOptions } from "@/utils/helper";
+import FeeFilterSelect from "@/Components/FeeFilterSelect";
+import { formatPKR, formatMonth } from "@/utils/helper";
 
 /* ===============================
    COLUMN OPTIONS
@@ -23,29 +23,70 @@ const COLUMN_OPTIONS = [
 ];
 
 /* ===============================
+   CONSTANTS
+================================ */
+const MONTHS = [
+    { value: "01", label: "January" },
+    { value: "02", label: "February" },
+    { value: "03", label: "March" },
+    { value: "04", label: "April" },
+    { value: "05", label: "May" },
+    { value: "06", label: "June" },
+    { value: "07", label: "July" },
+    { value: "08", label: "August" },
+    { value: "09", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
+];
+
+const now = new Date();
+const CURRENT_YEAR = now.getFullYear();
+const CURRENT_MONTH = now.getMonth() + 1; // 1-based
+
+function yearOptions() {
+    const opts = [];
+    for (let y = CURRENT_YEAR - 3; y <= CURRENT_YEAR + 1; y++) {
+        opts.push({ value: y, label: String(y) });
+    }
+    return opts;
+}
+
+/* ===============================
    STAT CARD
 ================================ */
-function Stat({ label, value }) {
+function Stat({ label, value, color }) {
     return (
         <div className="bg-white border rounded p-4">
             <div className="text-xs text-gray-500">{label}</div>
-            <div className="text-lg font-semibold">{value}</div>
+            <div className={`text-lg font-semibold ${color || ""}`}>{value}</div>
         </div>
     );
 }
 
+/* ===============================
+   PRESETS
+================================ */
+const PRESETS = [
+    { key: "this_year", label: "This Year" },
+    { key: "last_year", label: "Last Year" },
+    { key: "last_12m", label: "Last 12 Months" },
+    { key: "all", label: "All Time" },
+];
+
+/* ===============================
+   MAIN COMPONENT
+================================ */
 export default function ReportsIndex() {
     /* ===============================
-       STATE
+       FILTER STATE
     ================================ */
-    const [filters, setFilters] = useState({
-        class_ids: [],
-        section_ids: [],
-        student_ids: [],
-        paid_status: ["paid", "unpaid"],
-    });
+    const [classIds, setClassIds] = useState([]);
+    const [sectionIds, setSectionIds] = useState([]);
+    const [studentIds, setStudentIds] = useState([]);
+    const [paidStatus, setPaidStatus] = useState(["paid", "unpaid"]);
 
-    const [columns, setColumns] = useState([
+    const [columns] = useState([
         "student_name",
         "class_name",
         "section_name",
@@ -54,6 +95,14 @@ export default function ReportsIndex() {
         "amount",
         "is_paid",
     ]);
+
+    // Date range: from
+    const [fromYear, setFromYear] = useState(CURRENT_YEAR);
+    const [fromMonth, setFromMonth] = useState(null);
+
+    // Date range: to
+    const [toYear, setToYear] = useState(CURRENT_YEAR);
+    const [toMonth, setToMonth] = useState(null);
 
     const [rows, setRows] = useState([]);
     const [summary, setSummary] = useState(null);
@@ -64,15 +113,17 @@ export default function ReportsIndex() {
     const [sections, setSections] = useState([]);
     const [students, setStudents] = useState([]);
 
-    const currentYear = new Date().getFullYear();
-    const [year, setYear] = useState(currentYear);
-    const [month, setMonth] = useState(null);
-
     /* ===============================
-       OPTIONS (STABLE)
+       OPTIONS (with deduplication)
     ================================ */
     const classOptions = useMemo(
-        () => classes.map((c) => ({ value: c.id, label: c.name })),
+        () => {
+            const seen = new Map();
+            for (const c of classes) {
+                if (!seen.has(c.id)) seen.set(c.id, { value: c.id, label: c.name });
+            }
+            return Array.from(seen.values());
+        },
         [classes],
     );
 
@@ -86,14 +137,7 @@ export default function ReportsIndex() {
         [students],
     );
 
-    const yearOptions = useMemo(() => {
-        return Array.from({ length: 5 }, (_, i) => {
-            const y = currentYear - 3 + i;
-            return { value: y, label: String(y) };
-        });
-    }, [currentYear]);
-
-    const monthOptions = useMemo(() => generateMonthOptions(year), [year]);
+    const yrs = useMemo(() => yearOptions(), []);
 
     /* ===============================
        LOAD OPTIONS
@@ -101,48 +145,88 @@ export default function ReportsIndex() {
     useEffect(() => {
         fetch("/admin/classes/options")
             .then((r) => r.json())
-            .then(setClasses)
+            .then((data) => {
+                // Deduplicate by id
+                const unique = data.filter((c, i, arr) => arr.findIndex((x) => x.id === c.id) === i);
+                setClasses(unique);
+                // Default: select all classes
+                setClassIds(unique.map((c) => c.id));
+            })
             .catch(() => setClasses([]));
     }, []);
 
+    // Load sections when classes change
     useEffect(() => {
-        if (!filters.class_ids.length) {
+        if (!classIds.length) {
             setSections([]);
+            setSectionIds([]);
             return;
         }
 
-        const qs = filters.class_ids.map((id) => `class_ids[]=${id}`).join("&");
-
+        const qs = classIds.map((id) => `class_ids[]=${id}`).join("&");
         fetch(`/admin/sections/options?${qs}`)
             .then((r) => r.json())
-            .then(setSections)
-            .catch(() => setSections([]));
-    }, [filters.class_ids]);
+            .then((data) => {
+                setSections(data);
+                // Reset section selection when classes change
+                setSectionIds([]);
+            })
+            .catch(() => {
+                setSections([]);
+                setSectionIds([]);
+            });
+    }, [classIds]);
 
+    // Load students when classes change (sections filter is optional)
     useEffect(() => {
-        if (!filters.class_ids.length) {
+        if (!classIds.length) {
             setStudents([]);
+            setStudentIds([]);
             return;
         }
 
-        const qs = [
-            ...filters.class_ids.map((id) => `class_ids[]=${id}`),
-            ...filters.section_ids.map((id) => `section_ids[]=${id}`),
-        ].join("&");
+        const params = new URLSearchParams();
+        classIds.forEach((id) => params.append("class_ids[]", id));
+        // Only add section_ids if any are actually selected
+        sectionIds.forEach((id) => params.append("section_ids[]", id));
 
-        fetch(`/admin/students/options?${qs}`)
+        fetch(`/admin/students/options?${params.toString()}`)
             .then((r) => r.json())
             .then(setStudents)
             .catch(() => setStudents([]));
-    }, [filters.class_ids, filters.section_ids]);
+    }, [classIds, sectionIds]);
 
     /* ===============================
        BUILD REPORT
     ================================ */
+    const buildPayload = useCallback(() => {
+        const payload = {
+            report: "fees",
+            class_ids: classIds,
+            section_ids: sectionIds,
+            student_ids: studentIds,
+            paid_status: paidStatus,
+            columns,
+        };
+
+        // Date range: year_from / year_to
+        if (fromYear) payload.year_from = fromYear;
+        if (toYear) payload.year_to = toYear;
+
+        // Date range: month_from / month_to
+        if (fromMonth) payload.month_from = `${fromYear}-${fromMonth}`;
+        if (toMonth) payload.month_to = `${toYear}-${toMonth}`;
+
+        return payload;
+    }, [classIds, sectionIds, studentIds, paidStatus, columns, fromYear, fromMonth, toYear, toMonth]);
+
     async function buildReport() {
-        if (!filters.class_ids.length) return;
+        if (!classIds.length) return;
 
         setLoading(true);
+        setRows([]);
+        setSummary(null);
+        setByClass([]);
 
         try {
             const res = await fetch("/admin/reports/build", {
@@ -153,22 +237,91 @@ export default function ReportsIndex() {
                         .querySelector('meta[name="csrf-token"]')
                         ?.getAttribute("content"),
                 },
-                body: JSON.stringify({
-                    report: "fees",
-                    ...filters,
-                    columns,
-                    year,
-                    month,
-                }),
+                body: JSON.stringify(buildPayload()),
             });
 
             const json = await res.json();
-
             setSummary(json.summary ?? null);
             setByClass(json.breakdowns?.by_class ?? []);
             setRows(json.tables?.rows ?? []);
+        } catch {
+            // 401/419 handled globally by bootstrap.js interceptor
         } finally {
             setLoading(false);
+        }
+    }
+
+    /* ===============================
+       EXPORT (CSV / PDF)
+    ================================ */
+    function submitExport(action) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = action;
+
+        const csrf = document.createElement("input");
+        csrf.type = "hidden";
+        csrf.name = "_token";
+        csrf.value = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
+        form.appendChild(csrf);
+
+        const payload = buildPayload();
+        Object.entries(payload).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                value.forEach((v) => {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = `${key}[]`;
+                    input.value = v;
+                    form.appendChild(input);
+                });
+            } else if (value !== null && value !== undefined) {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            }
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    }
+
+    /* ===============================
+       PRESETS
+    ================================ */
+    function applyPreset(key) {
+        switch (key) {
+            case "this_year":
+                setFromYear(CURRENT_YEAR);
+                setToYear(CURRENT_YEAR);
+                setFromMonth(null);
+                setToMonth(null);
+                break;
+            case "last_year":
+                setFromYear(CURRENT_YEAR - 1);
+                setToYear(CURRENT_YEAR - 1);
+                setFromMonth(null);
+                setToMonth(null);
+                break;
+            case "last_12m": {
+                const d = new Date(CURRENT_YEAR, CURRENT_MONTH - 12, 1);
+                setFromYear(d.getFullYear());
+                setFromMonth(String(d.getMonth() + 1).padStart(2, "0"));
+                setToYear(CURRENT_YEAR);
+                setToMonth(String(CURRENT_MONTH).padStart(2, "0"));
+                break;
+            }
+            case "all":
+                setFromYear(CURRENT_YEAR - 3);
+                setFromMonth(null);
+                setToYear(CURRENT_YEAR + 1);
+                setToMonth(null);
+                break;
         }
     }
 
@@ -197,206 +350,173 @@ export default function ReportsIndex() {
        RENDER
     ================================ */
     return (
-        <AdminLayout title="Reports">
+        <AdminLayout title="Fees Report">
             {/* FILTER BAR */}
-            <div className="bg-white p-4 rounded border mb-4 space-y-4">
-                <div className="flex flex-wrap gap-4">
-                    <MultiSelect
-                        options={classOptions}
-                        value={filters.class_ids}
-                        placeholder="Select class(es)"
-                        onChange={(ids) =>
-                            setFilters({
-                                ...filters,
-                                class_ids: ids,
-                                section_ids: [],
-                                student_ids: [],
-                            })
-                        }
-                    />
+            <div className="bg-white p-4 rounded border mb-4 space-y-3">
+                {/* Row 1: Scope filters */}
+                <div className="flex flex-wrap gap-3 items-end">
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Class(es)</label>
+                        <FeeFilterSelect
+                            options={classOptions}
+                            value={classIds}
+                            placeholder="Select class(es)"
+                            onChange={setClassIds}
+                            width="min-w-[220px]"
+                        />
+                    </div>
 
-                    <MultiSelect
-                        options={yearOptions}
-                        value={[year]}
-                        placeholder="Select year"
-                        onChange={(ids) => {
-                            setYear(ids[0] ?? currentYear);
-                            setMonth(null);
-                        }}
-                    />
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Section(s)</label>
+                        <FeeFilterSelect
+                            options={sectionOptions}
+                            value={sectionIds}
+                            placeholder="All sections"
+                            onChange={setSectionIds}
+                            disabled={!classIds.length}
+                            width="min-w-[200px]"
+                        />
+                    </div>
 
-                    <MultiSelect
-                        options={monthOptions}
-                        value={month ? [month] : []}
-                        placeholder="Select month (optional)"
-                        onChange={(ids) => setMonth(ids[0] ?? null)}
-                    />
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Student(s)</label>
+                        <FeeFilterSelect
+                            options={studentOptions}
+                            value={studentIds}
+                            placeholder="All students"
+                            onChange={setStudentIds}
+                            disabled={!classIds.length}
+                            width="min-w-[200px]"
+                        />
+                    </div>
 
-                    <MultiSelect
-                        options={sectionOptions}
-                        value={filters.section_ids}
-                        placeholder="Select section(s)"
-                        onChange={(ids) =>
-                            setFilters({
-                                ...filters,
-                                section_ids: ids,
-                                student_ids: [],
-                            })
-                        }
-                    />
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Status</label>
+                        <FeeFilterSelect
+                            options={[
+                                { value: "paid", label: "Paid" },
+                                { value: "unpaid", label: "Unpaid" },
+                            ]}
+                            value={paidStatus}
+                            placeholder="All"
+                            onChange={(vals) => setPaidStatus(vals.length ? vals : ["paid", "unpaid"])}
+                            width="min-w-[140px]"
+                        />
+                    </div>
+                </div>
 
-                    {/* <MultiSelect
-                        options={studentOptions}
-                        value={filters.student_ids}
-                        placeholder="Select student(s)"
-                        onChange={(ids) =>
-                            setFilters({ ...filters, student_ids: ids })
-                        }
-                    /> */}
+                {/* Row 2: Date range */}
+                <div className="flex flex-wrap gap-3 items-end">
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">From Year</label>
+                        <FeeFilterSelect
+                            options={yrs}
+                            value={[fromYear]}
+                            onChange={(ids) => setFromYear(ids[0] ?? CURRENT_YEAR)}
+                            single
+                            width="min-w-[120px]"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">From Month</label>
+                        <FeeFilterSelect
+                            options={MONTHS.map((m) => ({ value: m.value, label: `${m.label} ${fromYear}` }))}
+                            value={fromMonth ? [fromMonth] : []}
+                            placeholder="All months"
+                            onChange={(ids) => setFromMonth(ids[0] ?? null)}
+                            single
+                            width="min-w-[160px]"
+                        />
+                    </div>
 
-                    <button
-                        onClick={buildReport}
-                        disabled={!filters.class_ids.length || loading}
-                        className="px-4 py-2 rounded text-sm text-white bg-blue-600 disabled:bg-gray-400"
-                    >
-                        {loading ? "Building…" : "Build Report"}
-                    </button>
+                    <div className="text-xs text-gray-400 self-center pb-2">→</div>
 
-                    <button
-    disabled={!rows.length}
-    onClick={() => {
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = "/admin/reports/export/csv";
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">To Year</label>
+                        <FeeFilterSelect
+                            options={yrs}
+                            value={[toYear]}
+                            onChange={(ids) => setToYear(ids[0] ?? CURRENT_YEAR)}
+                            single
+                            width="min-w-[120px]"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">To Month</label>
+                        <FeeFilterSelect
+                            options={MONTHS.map((m) => ({ value: m.value, label: `${m.label} ${toYear}` }))}
+                            value={toMonth ? [toMonth] : []}
+                            placeholder="All months"
+                            onChange={(ids) => setToMonth(ids[0] ?? null)}
+                            single
+                            width="min-w-[160px]"
+                        />
+                    </div>
 
-        // CSRF
-        const csrf = document.createElement("input");
-        csrf.type = "hidden";
-        csrf.name = "_token";
-        csrf.value = document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content");
-        form.appendChild(csrf);
+                    <div className="flex gap-2 ml-auto">
+                        <button
+                            onClick={buildReport}
+                            disabled={!classIds.length || loading}
+                            className="px-4 py-2 rounded text-sm text-white bg-blue-600 disabled:bg-gray-400"
+                        >
+                            {loading ? "Building…" : "Build Report"}
+                        </button>
 
-        // payload
-        const payload = {
-            report: "fees",
-            ...filters,
-            columns,
-            year,
-            month,
-        };
+                        <button
+                            disabled={!rows.length}
+                            onClick={() => submitExport("/admin/reports/export/csv")}
+                            className={`px-3 py-2 rounded text-sm font-medium border ${
+                                rows.length
+                                    ? "bg-white hover:bg-gray-50 text-gray-800"
+                                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            }`}
+                        >
+                            Export CSV
+                        </button>
 
-        Object.entries(payload).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-                value.forEach((v) => {
-                    const input = document.createElement("input");
-                    input.type = "hidden";
-                    input.name = `${key}[]`;
-                    input.value = v;
-                    form.appendChild(input);
-                });
-            } else if (value !== null && value !== undefined) {
-                const input = document.createElement("input");
-                input.type = "hidden";
-                input.name = key;
-                input.value = value;
-                form.appendChild(input);
-            }
-        });
+                        <button
+                            disabled={!rows.length}
+                            onClick={() => submitExport("/admin/reports/export/pdf")}
+                            className={`px-3 py-2 rounded text-sm font-medium border ${
+                                rows.length
+                                    ? "bg-white hover:bg-gray-50 text-gray-800"
+                                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            }`}
+                        >
+                            Export PDF
+                        </button>
+                    </div>
+                </div>
 
-        document.body.appendChild(form);
-        form.submit();
-        form.remove();
-    }}
-    className={`px-4 py-2 rounded text-sm font-medium border
-        ${
-            rows.length
-                ? "bg-white hover:bg-gray-50 text-gray-800"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-        }`}
->
-    Export CSV
-</button>
-
-<button
-    disabled={!rows.length}
-    onClick={() => {
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = "/admin/reports/export/pdf";
-
-        const csrf = document.createElement("input");
-        csrf.type = "hidden";
-        csrf.name = "_token";
-        csrf.value = document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content");
-        form.appendChild(csrf);
-
-        const payload = {
-            report: "fees",
-            ...filters,
-            columns,
-            year,
-            month,
-        };
-
-        Object.entries(payload).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-                value.forEach((v) => {
-                    const input = document.createElement("input");
-                    input.type = "hidden";
-                    input.name = `${key}[]`;
-                    input.value = v;
-                    form.appendChild(input);
-                });
-            } else if (value !== null && value !== undefined) {
-                const input = document.createElement("input");
-                input.type = "hidden";
-                input.name = key;
-                input.value = value;
-                form.appendChild(input);
-            }
-        });
-
-        document.body.appendChild(form);
-        form.submit();
-        form.remove();
-    }}
-    className={`px-4 py-2 rounded text-sm font-medium border
-        ${
-            rows.length
-                ? "bg-white hover:bg-gray-50 text-gray-800"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-        }`}
->
-    Export PDF
-</button>
-
-
-
+                {/* Row 3: Presets */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t">
+                    <span className="text-xs text-gray-500">Quick range:</span>
+                    {PRESETS.map((p) => (
+                        <button
+                            key={p.key}
+                            onClick={() => applyPreset(p.key)}
+                            className="text-xs px-3 py-1.5 rounded-full border bg-white hover:bg-blue-50 hover:border-blue-300 text-gray-700"
+                        >
+                            {p.label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
             {/* SUMMARY */}
             {summary && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <Stat
-                        label="Total Fees"
-                        value={formatPKR(summary.total_fees)}
-                    />
-                    <Stat
-                        label="Collected"
-                        value={formatPKR(summary.total_collected)}
-                    />
+                    <Stat label="Total Fees" value={formatPKR(summary.total_fees)} />
+                    <Stat label="Collected" value={formatPKR(summary.total_collected)} color="text-green-700" />
                     <Stat
                         label="Pending"
                         value={formatPKR(summary.total_pending)}
+                        color={summary.total_pending > 0 ? "text-red-600" : "text-gray-700"}
                     />
                     <Stat
                         label="Collection %"
                         value={`${summary.collection_percentage}%`}
+                        color={summary.collection_percentage >= 75 ? "text-green-700" : summary.collection_percentage >= 50 ? "text-amber-600" : "text-red-600"}
                     />
                 </div>
             )}
@@ -404,83 +524,41 @@ export default function ReportsIndex() {
             {/* PAID / UNPAID LISTS */}
             {summary && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    {/* PAID */}
                     <div className="bg-white border rounded">
                         <div className="px-4 py-3 border-b flex justify-between">
-                            <span className="font-semibold text-green-700">
-                                Paid Students
-                            </span>
-                            <span className="bg-green-600 text-white px-2 rounded">
-                                {paidCount}
-                            </span>
+                            <span className="font-semibold text-green-700">Paid</span>
+                            <span className="bg-green-600 text-white px-2 rounded">{paidCount}</span>
                         </div>
-
                         <ul className="divide-y text-sm max-h-96 overflow-y-auto">
-                            {rows
-                                .filter((r) => r.is_paid)
-                                .map((r, i) => (
-                                    <li
-                                        key={i}
-                                        className="px-4 py-3 flex justify-between"
-                                    >
-                                        <div>
-                                            <div className="font-medium">
-                                                {r.student_name}
-                                            </div>
-                                            {r.father_name && (
-                                                <div className="text-xs text-gray-500">
-                                                    Father: {r.father_name}
-                                                </div>
-                                            )}
-                                            <div className="text-xs text-gray-500">
-                                                {r.fee_title}
-                                            </div>
-                                        </div>
-                                        <div className="text-green-700 font-medium">
-                                            {formatPKR(r.amount)}
-                                        </div>
-                                    </li>
-                                ))}
+                            {rows.filter((r) => r.is_paid).map((r, i) => (
+                                <li key={i} className="px-4 py-3 flex justify-between">
+                                    <div>
+                                        <div className="font-medium">{r.student_name}</div>
+                                        {r.father_name && <div className="text-xs text-gray-500">Father: {r.father_name}</div>}
+                                        <div className="text-xs text-gray-500">{r.fee_title}</div>
+                                    </div>
+                                    <div className="text-green-700 font-medium">{formatPKR(r.amount)}</div>
+                                </li>
+                            ))}
                         </ul>
                     </div>
 
-                    {/* UNPAID */}
                     <div className="bg-white border rounded">
                         <div className="px-4 py-3 border-b flex justify-between">
-                            <span className="font-semibold text-red-600">
-                                Unpaid Students
-                            </span>
-                            <span className="bg-red-600 text-white px-2 rounded">
-                                {unpaidCount}
-                            </span>
+                            <span className="font-semibold text-red-600">Unpaid</span>
+                            <span className="bg-red-600 text-white px-2 rounded">{unpaidCount}</span>
                         </div>
-
                         <ul className="divide-y text-sm max-h-96 overflow-y-auto">
-                            {rows
-                                .filter((r) => !r.is_paid)
-                                .map((r, i) => (
-                                    <li
-                                        key={i}
-                                        className="px-4 py-3 flex justify-between"
-                                    >
-                                        <div>
-                                            <div className="font-medium">
-                                                {r.student_name}
-                                            </div>
-                                            {r.father_name && (
-                                                <div className="text-xs text-gray-500">
-                                                    Father: {r.father_name}
-                                                </div>
-                                            )}
-                                            <div className="text-xs text-gray-500">
-                                                {r.fee_title}
-                                            </div>
-                                        </div>
-                                        <div className="text-red-600 font-medium">
-                                            {formatPKR(r.amount)}
-                                        </div>
-                                    </li>
-                                ))}
+                            {rows.filter((r) => !r.is_paid).map((r, i) => (
+                                <li key={i} className="px-4 py-3 flex justify-between">
+                                    <div>
+                                        <div className="font-medium">{r.student_name}</div>
+                                        {r.father_name && <div className="text-xs text-gray-500">Father: {r.father_name}</div>}
+                                        <div className="text-xs text-gray-500">{r.fee_title}</div>
+                                    </div>
+                                    <div className="text-red-600 font-medium">{formatPKR(r.amount)}</div>
+                                </li>
+                            ))}
                         </ul>
                     </div>
                 </div>
@@ -493,20 +571,13 @@ export default function ReportsIndex() {
                         {table.getHeaderGroups().map((hg) => (
                             <tr key={hg.id}>
                                 {hg.headers.map((h) => (
-                                    <th
-                                        key={h.id}
-                                        className="px-3 py-2 text-left"
-                                    >
-                                        {flexRender(
-                                            h.column.columnDef.header,
-                                            h.getContext(),
-                                        )}
+                                    <th key={h.id} className="px-3 py-2 text-left">
+                                        {flexRender(h.column.columnDef.header, h.getContext())}
                                     </th>
                                 ))}
                             </tr>
                         ))}
                     </thead>
-
                     <tbody>
                         {table.getRowModel().rows.map((row) => (
                             <tr key={row.id} className="border-b">
@@ -514,17 +585,9 @@ export default function ReportsIndex() {
                                     <td key={cell.id} className="px-3 py-2">
                                         {cell.column.id === "student_name" ? (
                                             <div>
-                                                <div className="font-medium">
-                                                    {cell.getValue()}
-                                                </div>
+                                                <div className="font-medium">{cell.getValue()}</div>
                                                 {row.original.father_name && (
-                                                    <div className="text-xs text-gray-500">
-                                                        Father:{" "}
-                                                        {
-                                                            row.original
-                                                                .father_name
-                                                        }
-                                                    </div>
+                                                    <div className="text-xs text-gray-500">Father: {row.original.father_name}</div>
                                                 )}
                                             </div>
                                         ) : cell.column.id === "amount" ? (
@@ -533,13 +596,9 @@ export default function ReportsIndex() {
                                             formatMonth(cell.getValue())
                                         ) : cell.column.id === "is_paid" ? (
                                             cell.getValue() ? (
-                                                <span className="text-green-700 font-medium">
-                                                    Paid
-                                                </span>
+                                                <span className="text-green-700 font-medium">Paid</span>
                                             ) : (
-                                                <span className="text-red-600 font-medium">
-                                                    Unpaid
-                                                </span>
+                                                <span className="text-red-600 font-medium">Unpaid</span>
                                             )
                                         ) : (
                                             String(cell.getValue() ?? "")
@@ -548,15 +607,9 @@ export default function ReportsIndex() {
                                 ))}
                             </tr>
                         ))}
-
                         {!rows.length && (
                             <tr>
-                                <td
-                                    colSpan={columns.length}
-                                    className="p-6 text-center text-gray-500"
-                                >
-                                    No data
-                                </td>
+                                <td colSpan={columns.length} className="p-6 text-center text-gray-500">No data</td>
                             </tr>
                         )}
                     </tbody>

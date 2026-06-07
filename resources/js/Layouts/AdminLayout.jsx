@@ -194,9 +194,9 @@ export default function AdminLayout({ title, children }) {
           </SidebarGroup>
 
           <SidebarGroup label="Reports">
-            <SidebarLink href="/admin/reports/" label="Fees Report" />
-            <SidebarLink href="/admin/reports/attendance" label="Attendance Report" />
-            <SidebarLink href="/admin/reports/student" label="Student Report" />
+            <SidebarLink href="/admin/student-report-center" label="Student Center" />
+            <SidebarSubLink href="/admin/reports/" label="Fees Report" />
+            <SidebarSubLink href="/admin/reports/attendance" label="Attendance Report" />
           </SidebarGroup>
 
           <SidebarLink href="/admin/users" label="Users" />

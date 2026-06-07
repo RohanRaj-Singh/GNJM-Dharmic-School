@@ -5,12 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\Section;
 use App\Models\StudentSection;
+use App\Services\StudentReport\StudentReportCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
 class AttendanceController extends Controller
 {
+    public function __construct(
+        private readonly StudentReportCache $reportCache,
+    ) {}
+
     /**
      * Store or update attendance for a section (per day)
      */
@@ -25,6 +30,7 @@ class AttendanceController extends Controller
         ]);
 
         $today = Carbon::today();
+        $affectedStudentIds = [];
 
         foreach ($validated['attendance'] as $record) {
 
@@ -51,6 +57,12 @@ class AttendanceController extends Controller
                             : false,
                 ]
             );
+
+            $affectedStudentIds[(int) $record['student_id']] = true;
+        }
+
+        foreach (array_keys($affectedStudentIds) as $sid) {
+            $this->reportCache->forget($sid);
         }
 
         /**

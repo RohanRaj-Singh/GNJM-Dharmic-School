@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\{
     FeesController,
     FeeRatePeriodController,
     ReportController,
+    StudentReportCenterController,
     UserController,
     DashboardController,
     PendingFeesController
@@ -151,6 +152,29 @@ Route::prefix('students')->name('students.')->group(function () {
             ]);
     })->name('data');
 
+    // Filtered student options for report filters
+    Route::get('/options', function (Request $request) {
+        $classIds = (array) ($request->class_ids ?? []);
+        $sectionIds = (array) ($request->section_ids ?? []);
+        $classIds = array_filter($classIds);
+        $sectionIds = array_filter($sectionIds);
+
+        if (empty($classIds)) {
+            return [];
+        }
+
+        $query = DB::table('students')
+            ->join('student_sections', 'students.id', '=', 'student_sections.student_id')
+            ->whereIn('student_sections.class_id', $classIds)
+            ->select('students.id', 'students.name');
+
+        if (!empty($sectionIds)) {
+            $query->whereIn('student_sections.section_id', $sectionIds);
+        }
+
+        return $query->distinct()->orderBy('students.name')->get();
+    })->name('options');
+
     Route::post('/bulk-update', function (Request $request) {
 
         DB::transaction(function () use ($request) {
@@ -264,7 +288,12 @@ Route::prefix('classes')->name('classes.')->group(function () {
     Route::get(
         '/options',
         fn() =>
-        SchoolClass::orderBy('name')->distinct()->get(['id', 'name'])
+        SchoolClass::select('id', 'name')
+            ->orderBy('name')
+            ->get()
+            // Defend against duplicate names (no DB unique constraint exists)
+            ->unique('name')
+            ->values()
     )->name('options');
 
     Route::get(
@@ -437,7 +466,23 @@ Route::prefix('reports')->name('reports.')->group(function () {
     Route::post('/export/csv', [ReportController::class, 'exportCsv'])->name('export.csv');
     Route::post('/export/pdf', [ReportController::class, 'exportPdf'])->name('export.pdf');
     Route::get('/attendance', fn() => Inertia::render('Admin/Reports/Attendance'))->name('attendance');
-    Route::get('/student', fn() => Inertia::render('Admin/Reports/Student'))->name('student');
+    // /admin/reports/student was removed in V1 of the Student Report Center.
+    // The new path is /admin/student-report-center.
+});
+
+/* =========================================================
+     | Student Report Center (V1)
+     ========================================================= */
+
+Route::prefix('student-report-center')->name('student-report-center.')->group(function () {
+    Route::get('/', [StudentReportCenterController::class, 'page'])->name('page');
+    Route::post('/build', [StudentReportCenterController::class, 'build'])->name('build');
+    // PDF export is GET-based: read-only, no CSRF needed, the URL is
+    // shareable / bookmarkable. The frontend uses a plain <a download>.
+    Route::get('/export/pdf', [StudentReportCenterController::class, 'exportPdfGet'])->name('export.pdf.get');
+    // POST kept for backward compat with any external scripts that already
+    // POST. The route name is suffixed .post to disambiguate.
+    Route::post('/export/pdf', [StudentReportCenterController::class, 'exportPdf'])->name('export.pdf.post');
 });
 
 /* =========================================================
