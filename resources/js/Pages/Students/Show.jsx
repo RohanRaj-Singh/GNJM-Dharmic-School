@@ -117,6 +117,16 @@ export default function StudentShow({ student, summary = [] }) {
                         ])
                     );
 
+                    // Calculate stats for the SELECTED month (not the current month)
+                    const selectedMonthStr = String(selectedMonth + 1).padStart(2, "0");
+                    const selectedMonthPrefix = `${selectedYear}-${selectedMonthStr}`;
+                    const monthAttendance = recentAttendance.filter((r) =>
+                        r.date && r.date.startsWith(selectedMonthPrefix)
+                    );
+                    const present = monthAttendance.filter((r) => r.status === "present").length;
+                    const absent = monthAttendance.filter((r) => r.status === "absent").length;
+                    const leave = monthAttendance.filter((r) => r.status === "leave").length;
+
                     return (
                         <div key={`${item.class}-${item.section}-${index}`} className="space-y-4">
                             <div className="bg-white rounded-xl shadow p-5">
@@ -141,17 +151,17 @@ export default function StudentShow({ student, summary = [] }) {
 
                                 <StatRow
                                     label="Present"
-                                    value={item.attendance.present}
+                                    value={present}
                                     color="green"
                                 />
                                 <StatRow
                                     label="Absent"
-                                    value={item.attendance.absent}
+                                    value={absent}
                                     color="red"
                                 />
                                 <StatRow
                                     label="Leave"
-                                    value={item.attendance.leave}
+                                    value={leave}
                                     color="yellow"
                                 />
                             </div>
@@ -229,9 +239,13 @@ export default function StudentShow({ student, summary = [] }) {
                                     })}
                                 </div>
 
-                                {Object.keys(recentMap).length === 0 && (
+                                {Object.keys(recentMap).length === 0 ? (
                                     <p className="text-sm text-gray-500 mt-3 text-center">
                                         No attendance marked
+                                    </p>
+                                ) : monthAttendance.length === 0 && (
+                                    <p className="text-sm text-gray-500 mt-3 text-center">
+                                        No records for {MONTHS[selectedMonth]} {selectedYear}
                                     </p>
                                 )}
                             </div>
