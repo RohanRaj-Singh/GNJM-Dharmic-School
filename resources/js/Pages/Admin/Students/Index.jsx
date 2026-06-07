@@ -677,33 +677,27 @@ function saveChanges() {
                     (e) => e.status === "inactive"
                   );
                   return (
-                    <tr key={row.id} className={`border-b ${hasInactive ? "bg-gray-50" : ""}`}>
+                    <tr key={row.id} className={`border-b ${hasInactive ? "bg-gray-100" : ""}`}>
                       {row.getVisibleCells().map((cell) => (
                         <td
                           key={cell.id}
                           className={`px-3 py-2 border-b align-top ${
                             cell.column.id === "row_no"
-                              ? "sticky left-0 z-20 bg-inherit"
+                              ? `sticky left-0 z-20 ${hasInactive ? "bg-gray-100" : "bg-white"}`
                               : cell.column.id === "name"
-                              ? "sticky z-20 bg-inherit whitespace-nowrap"
+                              ? `sticky z-20 ${hasInactive ? "bg-gray-100" : "bg-white"} whitespace-nowrap`
                               : ""
                           }`}
                           style={cell.column.id === "name" ? { left: `${rowNoColWidth}px` } : undefined}
                         >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
+                          <div className={hasInactive ? "pointer-events-none opacity-50" : ""}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </div>
                         </td>
                       ))}
-                      {/* Inactive badge */}
-                      {hasInactive && (
-                        <td className="px-3 py-2">
-                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                            Inactive
-                          </span>
-                        </td>
-                      )}
                     </tr>
                   );
                 })}
