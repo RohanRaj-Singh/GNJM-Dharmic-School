@@ -133,7 +133,10 @@ export default function ReportsIndex() {
     );
 
     const studentOptions = useMemo(
-        () => students.map((s) => ({ value: s.id, label: s.name })),
+        () => students.map((s) => ({
+            value: s.id,
+            label: s.father_name ? `${s.name} (Father: ${s.father_name})` : s.name,
+        })),
         [students],
     );
 

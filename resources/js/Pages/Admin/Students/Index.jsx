@@ -31,6 +31,7 @@ export default function Index() {
   const [isSaving, setIsSaving] = useState(false);
   const [pendingFocusId, setPendingFocusId] = useState(null);
   const [rowNoColWidth, setRowNoColWidth] = useState(0);
+  const [includeInactive, setIncludeInactive] = useState(false);
   const isSavingRef = useRef(false);
   const newRowNameRef = useRef(null);
   const rowNoHeaderRef = useRef(null);
@@ -61,12 +62,14 @@ export default function Index() {
     reloadData();
   }, []);
 
-  function reloadData() {
+  function reloadData(forceIncludeInactive) {
     setLoading(true);
     setUiReady(false);
 
+    const inc = forceIncludeInactive !== undefined ? forceIncludeInactive : includeInactive;
+
     return Promise.all([
-      fetch("/admin/students/data").then((r) => r.json()),
+      fetch(`/admin/students/data${inc ? "?include_inactive=1" : ""}`).then((r) => r.json()),
       fetch("/admin/classes/options").then((r) => r.json()),
     ])
       .then(([students, classes]) => {
@@ -77,6 +80,7 @@ export default function Index() {
             class_id: String(e.class_id ?? ""),
             section_id: String(e.section_id ?? ""),
             student_type: e.student_type ?? "paid",
+            status: e.status ?? "active",
           })),
         }));
 
@@ -589,6 +593,21 @@ function saveChanges() {
     >
       Reset
     </button>
+
+    {/* Include Inactive toggle */}
+    <label className="flex items-center gap-2 px-3 py-2 border rounded text-sm cursor-pointer select-none hover:bg-gray-50">
+      <input
+        type="checkbox"
+        checked={includeInactive}
+        onChange={(e) => {
+          const newVal = e.target.checked;
+          setIncludeInactive(newVal);
+          reloadData(newVal);
+        }}
+        className="w-4 h-4"
+      />
+      Include Inactive
+    </label>
   </div>
 
   {/* RIGHT: Actions */}
@@ -653,29 +672,41 @@ function saveChanges() {
 
             <tbody>
               {
-                table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-b">
-
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      className={`px-3 py-2 border-b align-top ${
-                        cell.column.id === "row_no"
-                          ? "sticky left-0 z-20 bg-white"
-                          : cell.column.id === "name"
-                          ? "sticky z-20 bg-white whitespace-nowrap"
-                          : ""
-                      }`}
-                      style={cell.column.id === "name" ? { left: `${rowNoColWidth}px` } : undefined}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
+                table.getRowModel().rows.map((row) => {
+                  const hasInactive = (row.original.enrollments || []).some(
+                    (e) => e.status === "inactive"
+                  );
+                  return (
+                    <tr key={row.id} className={`border-b ${hasInactive ? "bg-gray-50" : ""}`}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          className={`px-3 py-2 border-b align-top ${
+                            cell.column.id === "row_no"
+                              ? "sticky left-0 z-20 bg-inherit"
+                              : cell.column.id === "name"
+                              ? "sticky z-20 bg-inherit whitespace-nowrap"
+                              : ""
+                          }`}
+                          style={cell.column.id === "name" ? { left: `${rowNoColWidth}px` } : undefined}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </td>
+                      ))}
+                      {/* Inactive badge */}
+                      {hasInactive && (
+                        <td className="px-3 py-2">
+                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                            Inactive
+                          </span>
+                        </td>
                       )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>

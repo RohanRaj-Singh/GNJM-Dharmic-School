@@ -24,6 +24,13 @@ export default function Utilities() {
           description="Set assumed pending months (utility)"
           href="/admin/utilities/pending-fees"
         />
+
+        <UtilityCard
+          emoji="🔄"
+          title="Student Status"
+          description="Activate or deactivate students in bulk"
+          href="/admin/utilities/student-status"
+        />
       </div>
     </AdminLayout>
   );

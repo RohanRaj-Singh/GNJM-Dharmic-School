@@ -179,6 +179,7 @@ Route::get('/', fn () =>
             'schoolClass',
             'attendance' => fn ($q) => $q->orderByDesc('date'),
         ])
+            ->where('status', 'active')
             ->whereIn('section_id', $allowedSectionIds)
             ->get();
 

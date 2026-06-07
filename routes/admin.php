@@ -98,6 +98,64 @@ Route::patch(
     [PendingFeesController::class, 'bulkUpdate']
 )->name('utilities.pending-fees.bulk');
 
+// Student Status Management (enrollment-level)
+Route::get(
+    '/utilities/student-status',
+    fn() => Inertia::render('Admin/Utilities/StudentStatus')
+)->name('utilities.student-status');
+
+Route::get(
+    '/utilities/student-status/data',
+    function (Request $request) {
+        $classId = $request->query('class_id');
+        $sectionId = $request->query('section_id');
+
+        $query = DB::table('student_sections')
+            ->join('students', 'students.id', '=', 'student_sections.student_id')
+            ->join('classes', 'classes.id', '=', 'student_sections.class_id')
+            ->join('sections', 'sections.id', '=', 'student_sections.section_id')
+            ->select(
+                'student_sections.id as enrollment_id',
+                'students.id as student_id',
+                'students.name as student_name',
+                'students.father_name',
+                'student_sections.status as enrollment_status',
+                'classes.id as class_id',
+                'classes.name as class_name',
+                'sections.id as section_id',
+                'sections.name as section_name',
+                'student_sections.student_type',
+            )
+            ->where('student_sections.status', '!=', null); // always true, just for structure
+
+        if ($classId) {
+            $query->where('student_sections.class_id', (int) $classId);
+        }
+        if ($sectionId) {
+            $query->where('student_sections.section_id', (int) $sectionId);
+        }
+
+        return $query->orderBy('classes.name')->orderBy('sections.name')->orderBy('students.name')->get();
+    }
+)->name('utilities.student-status.data');
+
+Route::post(
+    '/utilities/student-status/bulk-update',
+    function (Request $request) {
+        $request->validate([
+            'enrollment_ids' => 'required|array|min:1',
+            'enrollment_ids.*' => 'integer|exists:student_sections,id',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        $count = DB::table('student_sections')
+            ->whereIn('id', $request->enrollment_ids)
+            ->update(['status' => $request->status]);
+
+        return back()->with('success', "$count enrollment(s) set to {$request->status}.");
+    }
+)->name('utilities.student-status.bulk-update');
+
 Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardController::class, 'summary'])
     ->name('admin.dashboard.summary');
 
@@ -121,35 +179,51 @@ Route::prefix('students')->name('students.')->group(function () {
                 $q->whereIn(
                     'section_id',
                     $user->sections->pluck('id')
-                );
+                )->where('status', 'active');
             })
-            ->with(['enrollments.schoolClass', 'enrollments.section'])
+            ->with(['enrollments' => function ($q) {
+                $q->where('status', 'active');
+            }, 'enrollments.schoolClass', 'enrollments.section'])
             ->get()
-            : Student::with([
-                'enrollments.schoolClass',
-                'enrollments.section',
-            ])->get();
+            : Student::with(['enrollments' => function ($q) {
+                $q->where('status', 'active');
+            }, 'enrollments.schoolClass', 'enrollments.section'])->get();
 
         return $students;
     })->name('list');
 
-    Route::get('/data', function () {
-        return Student::with(['enrollments.section.schoolClass'])
-            ->orderBy('name')
-            ->get()
-            ->map(fn($s) => [
-                'id' => $s->id,
-                'name' => $s->name,
-                'father_name' => $s->father_name,
-                'father_phone' => $s->father_phone,
-                'mother_phone' => $s->mother_phone,
-                'status' => $s->status,
-                'enrollments' => $s->enrollments->map(fn($e) => [
-                    'class_id' => (string) $e->class_id,
-                    'section_id' => (string) $e->section_id,
-                    'student_type' => $e->student_type,
-                ])->values(),
-            ]);
+    Route::get('/data', function (Request $request) {
+        $includeInactive = $request->boolean('include_inactive');
+
+        $query = Student::with([
+            'enrollments' => function ($q) use ($includeInactive) {
+                if (!$includeInactive) {
+                    $q->where('status', 'active');
+                }
+            },
+            'enrollments.section.schoolClass',
+        ])->orderBy('name');
+
+        // When not including inactive enrollments, also filter out students
+        // who have no active enrollments at all.
+        if (!$includeInactive) {
+            $query->whereHas('enrollments', fn ($q) => $q->where('status', 'active'));
+        }
+
+        return $query->get()->map(fn($s) => [
+            'id' => $s->id,
+            'name' => $s->name,
+            'father_name' => $s->father_name,
+            'father_phone' => $s->father_phone,
+            'mother_phone' => $s->mother_phone,
+            'status' => $s->status,
+            'enrollments' => $s->enrollments->map(fn($e) => [
+                'class_id' => (string) $e->class_id,
+                'section_id' => (string) $e->section_id,
+                'student_type' => $e->student_type,
+                'status' => $e->status ?? 'active',
+            ])->values(),
+        ]);
     })->name('data');
 
     // Filtered student options for report filters
@@ -166,7 +240,8 @@ Route::prefix('students')->name('students.')->group(function () {
         $query = DB::table('students')
             ->join('student_sections', 'students.id', '=', 'student_sections.student_id')
             ->whereIn('student_sections.class_id', $classIds)
-            ->select('students.id', 'students.name');
+            ->where('student_sections.status', 'active')
+            ->select('students.id', 'students.name', 'students.father_name');
 
         if (!empty($sectionIds)) {
             $query->whereIn('student_sections.section_id', $sectionIds);
@@ -209,7 +284,9 @@ Route::prefix('students')->name('students.')->group(function () {
                     ->filter(fn($e) => !empty($e['section_id']))
                     ->unique('section_id');
 
+                // Never delete or modify inactive enrollments
                 StudentSection::where('student_id', $student->id)
+                    ->where('status', 'active')
                     ->whereNotIn('section_id', $incoming->pluck('section_id'))
                     ->delete();
 
@@ -226,8 +303,11 @@ Route::prefix('students')->name('students.')->group(function () {
                             'class_id' => $section->class_id,
                             'section_id' => $section->id,
                         ],
-                        ['student_type' => $studentType]
+                        ['student_type' => $studentType, 'status' => 'active']
                     );
+
+                    // Don't modify inactive enrollments
+                    if ($enrollment->status === 'inactive') continue;
 
                     if ($enrollment->student_type !== $studentType) {
                         $enrollment->update(['student_type' => $studentType]);

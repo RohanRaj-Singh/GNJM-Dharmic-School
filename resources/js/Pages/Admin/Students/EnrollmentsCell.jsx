@@ -129,19 +129,19 @@ export default function EnrollmentsCell({
           sectionsByClass[String(e.class_id)] || [];
 
         const isFree = e.student_type === "free";
+        const isInactive = e.status === "inactive";
 
         return (
           <div
             key={e.id}
             className={`flex gap-2 items-center p-2 rounded border
-              ${isFree ? "bg-green-50 border-green-200" : "bg-white"}
+              ${isInactive ? "bg-gray-50 border-gray-200" : isFree ? "bg-green-50 border-green-200" : "bg-white"}
             ` }
-
           >
 
             {/* ---------- Class ---------- */}
             <select
-              disabled={!classesReady}
+              disabled={!classesReady || isInactive}
               value={classesReady ? String(e.class_id ?? "") : ""}
               onChange={(ev) => {
                 const classId = ev.target.value;
@@ -163,7 +163,7 @@ export default function EnrollmentsCell({
 
             {/* ---------- Section ---------- */}
             <select
-              disabled={!sectionsReady}
+              disabled={!sectionsReady || isInactive}
               value={sectionsReady ? String(e.section_id ?? "") : ""}
               onChange={(ev) =>
                 updateEnrollment(e.id, "section_id", ev.target.value)
@@ -181,10 +181,11 @@ export default function EnrollmentsCell({
             </select>
 
             {/* ---------- FREE CHECKBOX ---------- */}
-            <label className="flex items-center gap-1 text-xs cursor-pointer select-none">
+            <label className={`flex items-center gap-1 text-xs ${isInactive ? "cursor-not-allowed" : "cursor-pointer"} select-none`}>
               <input
                 type="checkbox"
                 checked={e.student_type === "free"}
+                disabled={isInactive}
                 onChange={(e2) =>{
                   updateEnrollment(
                     e.id,
@@ -195,7 +196,7 @@ export default function EnrollmentsCell({
                 }
                 }
 
-                className="h-4 w-4 accent-green-600"
+                className="h-4 w-4 accent-green-600 disabled:opacity-50"
               />
               <span
                 className={
@@ -208,15 +209,24 @@ export default function EnrollmentsCell({
               </span>
             </label>
 
+            {/* ---------- Inactive Badge ---------- */}
+            {isInactive && (
+              <span className="text-xs bg-red-100 text-red-800 px-1.5 py-0.5 rounded-full font-medium ml-auto">
+                Inactive
+              </span>
+            )}
+
             {/* ---------- Remove ---------- */}
-            <button
-              type="button"
-              onClick={() => removeEnrollment(e.id)}
-              className="text-red-600 text-sm ml-auto"
-              title="Remove enrollment"
-            >
-              ✕
-            </button>
+            {!isInactive && (
+              <button
+                type="button"
+                onClick={() => removeEnrollment(e.id)}
+                className="text-red-600 text-sm ml-auto"
+                title="Remove enrollment"
+              >
+                ✕
+              </button>
+            )}
           </div>
         );
       })}

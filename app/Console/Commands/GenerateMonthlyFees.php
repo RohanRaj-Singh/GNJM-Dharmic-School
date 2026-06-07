@@ -27,6 +27,7 @@ class GenerateMonthlyFees extends Command
         $month = Carbon::now(config('app.timezone'))->format('Y-m');
 
         $enrollments = StudentSection::with(['schoolClass', 'section'])
+            ->where('status', 'active')
             ->get();
 
         $affectedStudentIds = [];

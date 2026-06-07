@@ -91,9 +91,9 @@ class DashboardController extends Controller
                 'leave' => $leave,
             ],
             'students' => [
-                'total' => DB::table('students')->count(),
+                'total' => DB::table('students')->where('status', 'active')->count(),
                 'active' => DB::table('students')->where('status', 'active')->count(),
-                'enrollments' => DB::table('student_sections')->count(),
+                'enrollments' => DB::table('student_sections')->where('status', 'active')->count(),
             ],
         ];
     }
@@ -124,10 +124,15 @@ class DashboardController extends Controller
             $stats = [
                 'classes_count' => count($classIds),
                 'sections_count' => (int) DB::table('sections')->whereIn('class_id', $classIds)->count(),
-                'students_count' => (int) DB::table('student_sections')->whereIn('class_id', $classIds)->distinct('student_id')->count('student_id'),
+                'students_count' => (int) DB::table('student_sections')
+                    ->whereIn('class_id', $classIds)
+                    ->where('status', 'active')
+                    ->distinct('student_id')
+                    ->count('student_id'),
                 'free_students_count' => (int) DB::table('student_sections')
                     ->whereIn('class_id', $classIds)
                     ->where('student_type', 'free')
+                    ->where('status', 'active')
                     ->distinct('student_id')
                     ->count('student_id'),
                 'active_students_count' => (int) DB::table('student_sections')
@@ -136,7 +141,10 @@ class DashboardController extends Controller
                     ->where('students.status', 'active')
                     ->distinct('student_sections.student_id')
                     ->count('student_sections.student_id'),
-                'enrollments_count' => (int) DB::table('student_sections')->whereIn('class_id', $classIds)->count(),
+                'enrollments_count' => (int) DB::table('student_sections')
+                    ->whereIn('class_id', $classIds)
+                    ->where('status', 'active')
+                    ->count(),
             ];
 
             $fees = $this->feesSummaryForScope('class', $classIds, $years);

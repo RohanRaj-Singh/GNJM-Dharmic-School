@@ -28,11 +28,16 @@ Route::prefix('students')->group(function () {
             $q->whereIn(
                 'section_id',
                 $user->sections->pluck('id')
-            );
+            )->where('status', 'active');
         })
-        ->with(['enrollments.schoolClass', 'enrollments.section'])
+        ->with(['enrollments' => function ($q) {
+            $q->where('status', 'active');
+        }, 'enrollments.schoolClass', 'enrollments.section'])
         ->get()
         : Student::with([
+            'enrollments' => function ($q) {
+                $q->where('status', 'active');
+            },
             'enrollments.schoolClass',
             'enrollments.section',
         ])->get();
@@ -60,6 +65,7 @@ Route::prefix('students')->group(function () {
 
     if ($user->isTeacher()) {
         $allowed = $student->enrollments()
+            ->where('status', 'active')
             ->whereIn('section_id', $user->sections->pluck('id'))
             ->exists();
 
@@ -67,6 +73,9 @@ Route::prefix('students')->group(function () {
     }
 
     $student->load([
+        'enrollments' => function ($q) {
+            $q->where('status', 'active');
+        },
         'enrollments.schoolClass',
         'enrollments.section',
         'enrollments.attendance' => fn ($q) => $q->orderByDesc('date'),
@@ -76,13 +85,17 @@ Route::prefix('students')->group(function () {
     // summary logic (unchanged)
 
     $summary = $student->enrollments->map(function ($enrollment) {
+
+    // Send ALL attendance records (frontend filters by selected month/year)
+    $allAttendance = $enrollment->attendance;
+
+    // Attendance counts for current month (for the summary cards)
     $attendanceMonthStart = Carbon::today()->startOfMonth();
     $attendanceMonthEnd = Carbon::today()->endOfMonth();
 
-    $monthlyAttendance = $enrollment->attendance
+    $monthlyAttendance = $allAttendance
         ->filter(fn ($a) => Carbon::parse($a->date)->between($attendanceMonthStart, $attendanceMonthEnd));
 
-    // Attendance counts for current month
     $present = $monthlyAttendance->where('status', 'present')->count();
     $absent  = $monthlyAttendance->where('status', 'absent')->count();
     $leave   = $monthlyAttendance->where('status', 'leave')->count();
@@ -101,7 +114,7 @@ return [
         'present' => $present,
         'absent'  => $absent,
         'leave'   => $leave,
-        'recent'  => $monthlyAttendance
+        'recent'  => $allAttendance
             ->sortBy('date')
             ->map(fn ($a) => [
                 'date'   => $a->date,
