@@ -100,6 +100,7 @@ class ReportController extends Controller
                 $join->on('payments.fee_id', '=', 'fees.id')
                     ->whereNull('payments.deleted_at');
             })
+            ->where('student_sections.status', 'active')
             ->whereIn('student_sections.class_id', $request->class_ids);
 
         /* -------------------------------------------------
@@ -420,6 +421,7 @@ class ReportController extends Controller
             ->join('students', 'student_sections.student_id', '=', 'students.id')
             ->join('classes', 'student_sections.class_id', '=', 'classes.id')
             ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
+            ->where('student_sections.status', 'active')
             ->whereIn('student_sections.class_id', $request->class_ids);
 
         /* -------------------------------
@@ -437,8 +439,33 @@ class ReportController extends Controller
             $query->whereIn('attendance.status', $request->status);
         }
 
-        if ($request->filled('year')) {
-            $query->whereYear('attendance.date', $request->year);
+        /* -------------------------------------------------
+           DATE RANGE FILTER (matches fees report pattern)
+        ------------------------------------------------- */
+        $monthFrom = $request->input('month_from');
+        $monthTo   = $request->input('month_to');
+        $yearFrom  = $request->input('year_from');
+        $yearTo    = $request->input('year_to');
+
+        $dateStart = null;
+        $dateEnd   = null;
+
+        if (!empty($monthFrom) || !empty($monthTo)) {
+            $dateStart = $monthFrom ?: ($yearFrom ? "{$yearFrom}-01-01" : null);
+            $dateEnd   = $monthTo   ?: ($yearTo   ? "{$yearTo}-12-31"   : null);
+        } elseif (!empty($yearFrom) || !empty($yearTo)) {
+            $dateStart = $yearFrom ? "{$yearFrom}-01-01" : null;
+            $dateEnd   = $yearTo   ? "{$yearTo}-12-31"   : null;
+        } elseif ($request->filled('year')) {
+            $dateStart = "{$request->year}-01-01";
+            $dateEnd   = "{$request->year}-12-31";
+        }
+
+        if (!empty($dateStart)) {
+            $query->where('attendance.date', '>=', $dateStart);
+        }
+        if (!empty($dateEnd)) {
+            $query->where('attendance.date', '<=', $dateEnd);
         }
 
         if ($request->filled('month')) {
@@ -467,6 +494,7 @@ class ReportController extends Controller
             'attendance_percentage' => $total > 0
                 ? round(($summaryRaw->present / $total) * 100, 2)
                 : 0,
+            'student_count'  => 0,
         ];
 
         /* -------------------------------
@@ -491,7 +519,51 @@ class ReportController extends Controller
             ]);
 
         /* -------------------------------
-       TABLE ROWS
+       PER-STUDENT SUMMARY
+    -------------------------------- */
+        $studentsSummary = (clone $query)
+            ->select(
+                'students.id as student_id',
+                'students.name as student_name',
+                'students.father_name',
+                'classes.name as class_name',
+                'sections.name as section_name',
+                DB::raw('COUNT(*) as total'),
+                DB::raw("SUM(CASE WHEN attendance.status = 'present' THEN 1 ELSE 0 END) as present"),
+                DB::raw("SUM(CASE WHEN attendance.status = 'absent' THEN 1 ELSE 0 END) as absent"),
+                DB::raw("SUM(CASE WHEN attendance.status = 'leave' THEN 1 ELSE 0 END) as `leave`"),
+            )
+            ->groupBy('students.id', 'students.name', 'students.father_name', 'classes.name', 'sections.name')
+            ->orderBy('students.name')
+            ->get()
+            ->map(fn($row) => [
+                'student_id'   => (int) $row->student_id,
+                'student_name' => $row->student_name,
+                'father_name'  => $row->father_name,
+                'class_name'   => $row->class_name,
+                'section_name' => $row->section_name,
+                'present'      => (int) $row->present,
+                'absent'       => (int) $row->absent,
+                'leave'        => (int) $row->leave,
+                'total'        => (int) $row->total,
+                'percentage'   => $row->total > 0
+                    ? round(((int) $row->present / (int) $row->total) * 100, 2)
+                    : 0,
+            ]);
+
+        $summary['student_count'] = $studentsSummary->count();
+
+        /* -------------------------------
+       TOP ABSENTEES (WORST 20)
+    -------------------------------- */
+        $topAbsentees = $studentsSummary
+            ->sortByDesc('absent')
+            ->take(20)
+            ->values()
+            ->all();
+
+        /* -------------------------------
+       TABLE ROWS (RAW DETAIL)
     -------------------------------- */
         $rows = (clone $query)
             ->select(
@@ -522,6 +594,9 @@ class ReportController extends Controller
             'tables' => [
                 'rows' => $rows,
             ],
+
+            'students' => $studentsSummary->all(),
+            'top_absentees' => $topAbsentees,
         ];
     }
 

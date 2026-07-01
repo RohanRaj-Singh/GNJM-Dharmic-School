@@ -60,6 +60,7 @@ Route::get('/', fn () =>
         /* ---------- Load relations ---------- */
         $section->load([
             'schoolClass',
+            'studentSections' => fn ($q) => $q->where('status', 'active'),
             'studentSections.student',
         ]);
 

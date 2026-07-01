@@ -1,354 +1,324 @@
 import AdminLayout from "@/Layouts/AdminLayout";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import FeeFilterSelect from "@/Components/FeeFilterSelect";
+import { formatPKR } from "@/utils/helper";
 
 /*
 |--------------------------------------------------------------------------
-| Attendance Report – Admin (READ ONLY)
+| Attendance Report
 |--------------------------------------------------------------------------
-| - Calendar-based (same as marking page)
-| - Uses /admin/attendance/grid
-| - NO editing
-| - NO saving
-| - Summary cards included
+| Per-student summary over a flexible date range, with top absentees.
+| Replaces the old per-day calendar grid.
 */
 
-export default function AttendanceReport() {
-  const today = new Date();
+const MONTHS = [
+    { value: "01", label: "January" },   { value: "02", label: "February" },
+    { value: "03", label: "March" },      { value: "04", label: "April" },
+    { value: "05", label: "May" },        { value: "06", label: "June" },
+    { value: "07", label: "July" },       { value: "08", label: "August" },
+    { value: "09", label: "September" },  { value: "10", label: "October" },
+    { value: "11", label: "November" },   { value: "12", label: "December" },
+];
 
-  /* ===============================
-     STATE
-  ================================ */
-  const [classes, setClasses] = useState([]);
-  const [classId, setClassId] = useState("");
+const now = new Date();
+const CURRENT_YEAR = now.getFullYear();
+const CURRENT_MONTH = now.getMonth() + 1;
 
-  const [sections, setSections] = useState([]);
-  const [sectionId, setSectionId] = useState("");
-
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(
-    String(today.getMonth() + 1).padStart(2, "0")
-  );
-
-  const [grid, setGrid] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const selectedClass = useMemo(
-  () => classes.find(c => String(c.id) === String(classId)),
-  [classes, classId]
-);
-
-const isKirtan = selectedClass?.type === "Kirtan";
-
-
-
-
-  /* ===============================
-     LOAD CLASSES (ONCE)
-  ================================ */
-  useEffect(() => {
-    fetch("/admin/classes/options")
-      .then(r => r.json())
-      .then(setClasses)
-      .catch(() => setClasses([]));
-  }, []);
-
-  /* ===============================
-     AUTO SELECT FIRST CLASS
-  ================================ */
-  useEffect(() => {
-    if (classes.length && !classId) {
-      setClassId(String(classes[0].id));
-    }
-  }, [classes]);
-
-  /* ===============================
-     LOAD SECTIONS
-  ================================ */
-  useEffect(() => {
-    if (!classId) {
-      setSections([]);
-      setSectionId("");
-      setGrid(null);
-      return;
-    }
-
-    fetch(`/admin/sections/options?class_id=${classId}`)
-      .then(r => r.json())
-      .then(data => {
-        setSections(data);
-        setSectionId(data.length ? String(data[0].id) : "");
-      })
-      .catch(() => {
-        setSections([]);
-        setSectionId("");
-      });
-  }, [classId]);
-
-  /* ===============================
-     LOAD ATTENDANCE GRID (REPORT)
-  ================================ */
-  useEffect(() => {
-    if (!sectionId) {
-      setGrid(null);
-      return;
-    }
-
-    setLoading(true);
-
-    fetch(
-      `/admin/attendance/grid?section_id=${sectionId}&year=${year}&month=${parseInt(
-        month
-      )}`
-    )
-      .then(r => r.json())
-      .then(setGrid)
-      .finally(() => setLoading(false));
-  }, [sectionId, year, month]);
-
-  /* ===============================
-     DERIVED DATA
-  ================================ */
-  const days = grid?.days ?? [];
-  const students = grid?.students ?? [];
-
-  const allRecords = useMemo(() => {
-    return students.flatMap(s =>
-      Object.values(s.records ?? {})
-    );
-  }, [students]);
-
-  const lessonLearnedCount = useMemo(() => {
-  return students.flatMap(s =>
-    Object.values(s.records ?? {})
-  ).filter(r => r.lesson_learned).length;
-}, [students]);
-
-  const summary = useMemo(() => {
-    return {
-      total: allRecords.length,
-      present: allRecords.filter(r => r.status === "present").length,
-      absent: allRecords.filter(r => r.status === "absent").length,
-      leave: allRecords.filter(r => r.status === "leave").length,
-    };
-  }, [allRecords]);
-
-  const attendancePercentage =
-    summary.total > 0
-      ? Math.round((summary.present / summary.total) * 100)
-      : 0;
-
-  /* ===============================
-     RENDER
-  ================================ */
-  return (
-    <AdminLayout title="Attendance Report">
-      {/* ================= Filters ================= */}
-      <div className="flex flex-wrap gap-3 mb-4 items-center">
-        <select
-          value={classId}
-          onChange={e => setClassId(e.target.value)}
-          className="border px-3 py-2 rounded text-sm"
-        >
-          {classes.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={sectionId}
-          onChange={e => setSectionId(e.target.value)}
-          className="border px-3 py-2 rounded text-sm"
-          disabled={!sections.length}
-        >
-          {sections.map(s => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="month"
-          value={`${year}-${month}`}
-          onChange={e => {
-            const [y, m] = e.target.value.split("-");
-            setYear(parseInt(y));
-            setMonth(m);
-          }}
-          className="border px-3 py-2 rounded text-sm"
-        />
-        <button
-  onClick={() => {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = "/admin/reports/export/pdf";
-    form.target = "_blank";
-
-    const csrf = document.createElement("input");
-    csrf.type = "hidden";
-    csrf.name = "_token";
-    csrf.value = document
-      .querySelector('meta[name="csrf-token"]')
-      .getAttribute("content");
-
-    const payload = {
-      report: "attendance",
-      class_ids: classId ? [classId] : [],
-      section_ids: sectionId ? [sectionId] : [],
-      student_ids: students ? students.map(s => s.id) : [],
-      status: null,
-      month: parseInt(month),
-      year: year,
-    };
-
-    Object.entries(payload).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach(v => {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = `${key}[]`;
-          input.value = v;
-          form.appendChild(input);
-        });
-      } else if (value !== null && value !== undefined) {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = key;
-        input.value = value;
-        form.appendChild(input);
-      }
-    });
-
-    form.appendChild(csrf);
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
-  }}
-  disabled={!allRecords.length}
-  className="px-4 py-2 bg-red-600 text-white rounded text-sm disabled:opacity-50"
->
-  Export PDF
-</button>
-
-      </div>
-
-      {/* ================= SUMMARY ================= */}
-      {grid && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <Stat label="Total Records" value={summary.total} />
-          <Stat label="Present" value={summary.present} />
-          <Stat label="Absent" value={summary.absent} />
-          <Stat label="Leave" value={summary.leave} />
-          <Stat
-            label="Attendance %"
-            value={`${attendancePercentage}%`}
-          />
-          <Stat label="Lessons Learned" value={lessonLearnedCount} />
-
-        </div>
-      )}
-
-      {/* ================= GRID ================= */}
-      <div className="relative bg-white border rounded overflow-x-auto">
-        {(loading || !grid) && (
-          <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-30">
-            <p className="text-sm text-gray-500">
-              {loading
-                ? "Loading attendance..."
-                : "Attendance report will appear here"}
-            </p>
-          </div>
-        )}
-
-        <table className="min-w-max text-sm border-collapse">
-          <thead className="bg-gray-50 sticky top-0 z-20">
-            <tr>
-              <th className="px-3 py-2 sticky left-0 bg-gray-50 z-30 text-left">
-                Student
-              </th>
-
-              {days.map(d => (
-                <th
-                  key={d.date}
-                  className={`px-2 py-2 text-center ${
-                    !d.enabled ? "text-gray-300" : ""
-                  }`}
-                >
-                  {d.day}
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            {students.map(student => (
-              <tr key={student.id} className="border-b">
-                <td className="px-3 py-2 sticky left-0 bg-white z-10 font-medium">
-                  {student.name}
-                </td>
-
-                {days.map(d => {
-                  const key = `${student.id}-${d.date}`;
-                  const value = student.records?.[key]?.status ?? null;
-
-                  const statusClass =
-                    value === "present"
-                      ? "bg-green-200 text-green-800"
-                      : value === "absent"
-                      ? "bg-red-200 text-red-800"
-                      : value === "leave"
-                      ? "bg-yellow-200 text-yellow-800"
-                      : "";
-
-                  return (
-                    <td
-  key={d.date}
-  className={`px-2 py-2 text-center select-none ${statusClass}
-    ${!d.enabled ? "bg-gray-100 text-gray-300" : ""}`}
->
-  {value ? value[0].toUpperCase() : "—"}
-
-  {isKirtan &&
-  value === "present" &&
-  Number(student.records?.[key]?.lesson_learned) === 1 && (
-    <div className="mt-1 text-[10px] text-blue-700 font-semibold">
-      Lesson ✓
-    </div>
-)}
-</td>
-
-                  );
-                })}
-              </tr>
-            ))}
-
-            {!students.length && (
-              <tr>
-                <td
-                  colSpan={days.length + 1}
-                  className="px-4 py-6 text-center text-gray-500"
-                >
-                  No students found in this section
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </AdminLayout>
-  );
+function yearOptions(from = CURRENT_YEAR - 3, to = CURRENT_YEAR + 1) {
+    const opts = [];
+    for (let y = from; y <= to; y++) opts.push({ value: y, label: String(y) });
+    return opts;
 }
 
-/* ===============================
-   STAT CARD
-================================ */
-function Stat({ label, value }) {
-  return (
-    <div className="bg-white border rounded p-4">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-lg font-semibold">{value}</div>
-    </div>
-  );
+const PRESETS = [
+    { key: "this_year", label: "This Year" },
+    { key: "last_year", label: "Last Year" },
+    { key: "last_12m",  label: "Last 12 Months" },
+    { key: "all",       label: "All Time" },
+];
+
+function Stat({ label, value, color }) {
+    return (
+        <div className="bg-white border rounded p-4">
+            <div className="text-xs text-gray-500">{label}</div>
+            <div className={`text-lg font-semibold ${color || ""}`}>{value}</div>
+        </div>
+    );
+}
+
+export default function AttendanceReport() {
+    /* ===============================
+       FILTER STATE
+    ================================ */
+    const [classIds, setClassIds]       = useState([]);
+    const [sectionIds, setSectionIds]   = useState([]);
+    const [studentIds, setStudentIds]   = useState([]);
+    const [statusFilter, setStatusFilter] = useState([]);
+
+    const [fromYear, setFromYear]       = useState(CURRENT_YEAR);
+    const [fromMonth, setFromMonth]     = useState(null);
+    const [toYear, setToYear]           = useState(CURRENT_YEAR);
+    const [toMonth, setToMonth]         = useState(null);
+
+    const [report, setReport]           = useState(null);
+    const [loading, setLoading]         = useState(false);
+
+    /* Data */
+    const [classes, setClasses]         = useState([]);
+    const [sections, setSections]       = useState([]);
+    const [students, setStudents]       = useState([]);
+
+    const yrs = useMemo(() => yearOptions(), []);
+
+    /* Load classes */
+    useEffect(() => {
+        fetch("/admin/classes/options")
+            .then((r) => r.json()).then((data) => {
+                const unique = data.filter((c,i,a) => a.findIndex(x => x.id === c.id) === i);
+                setClasses(unique);
+                setClassIds(unique.map((c) => c.id));
+            })
+            .catch(() => setClasses([]));
+    }, []);
+
+    /* Load sections */
+    useEffect(() => {
+        if (!classIds.length) { setSections([]); setSectionIds([]); return; }
+        const qs = classIds.map((id) => `class_ids[]=${id}`).join("&");
+        fetch(`/admin/sections/options?${qs}`)
+            .then((r) => r.json()).then(setSections)
+            .catch(() => setSections([]));
+    }, [classIds]);
+
+    /* Load students */
+    useEffect(() => {
+        if (!classIds.length) { setStudents([]); setStudentIds([]); return; }
+        const params = new URLSearchParams();
+        classIds.forEach((id) => params.append("class_ids[]", id));
+        sectionIds.forEach((id) => params.append("section_ids[]", id));
+        fetch(`/admin/students/options?${params.toString()}`)
+            .then((r) => r.json()).then(setStudents)
+            .catch(() => setStudents([]));
+    }, [classIds, sectionIds]);
+
+    /* Build payload */
+    const buildPayload = useCallback(() => {
+        const p = {
+            report: "attendance",
+            class_ids: classIds,
+            section_ids: sectionIds,
+            student_ids: studentIds,
+            status: statusFilter,
+        };
+        if (fromYear) p.year_from = fromYear;
+        if (toYear)   p.year_to   = toYear;
+        if (fromMonth) p.month_from = `${fromYear}-${fromMonth}`;
+        if (toMonth)   p.month_to   = `${toYear}-${toMonth}`;
+        return p;
+    }, [classIds, sectionIds, studentIds, statusFilter, fromYear, fromMonth, toYear, toMonth]);
+
+    /* Build */
+    async function buildReport() {
+        if (!classIds.length) return;
+        setLoading(true);
+        setReport(null);
+        try {
+            const res = await fetch("/admin/reports/build", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content"),
+                },
+                body: JSON.stringify(buildPayload()),
+            });
+            const json = await res.json();
+            setReport(json);
+        } finally { setLoading(false); }
+    }
+
+    /* Export PDF */
+    function exportPdf() {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/admin/reports/export/pdf";
+        const csrf = document.createElement("input");
+        csrf.type = "hidden"; csrf.name = "_token";
+        csrf.value = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+        form.appendChild(csrf);
+        const payload = buildPayload();
+        Object.entries(payload).forEach(([k, v]) => {
+            if (Array.isArray(v)) { v.forEach((x) => { const i = document.createElement("input"); i.type = "hidden"; i.name = `${k}[]`; i.value = x; form.appendChild(i); }); }
+            else if (v != null) { const i = document.createElement("input"); i.type = "hidden"; i.name = k; i.value = v; form.appendChild(i); }
+        });
+        document.body.appendChild(form); form.submit(); form.remove();
+    }
+
+    /* Presets */
+    function applyPreset(key) {
+        switch (key) {
+            case "this_year":    setFromYear(CURRENT_YEAR); setToYear(CURRENT_YEAR); setFromMonth(null); setToMonth(null); break;
+            case "last_year":    setFromYear(CURRENT_YEAR-1); setToYear(CURRENT_YEAR-1); setFromMonth(null); setToMonth(null); break;
+            case "last_12m": {
+                const d = new Date(CURRENT_YEAR, CURRENT_MONTH-12, 1);
+                setFromYear(d.getFullYear()); setFromMonth(String(d.getMonth()+1).padStart(2,"0"));
+                setToYear(CURRENT_YEAR); setToMonth(String(CURRENT_MONTH).padStart(2,"0"));
+                break;
+            }
+            case "all":          setFromYear(CURRENT_YEAR-3); setFromMonth(null); setToYear(CURRENT_YEAR+1); setToMonth(null); break;
+        }
+    }
+
+    /* ===============================
+       DERIVED
+    ================================ */
+    const summary   = report?.summary ?? null;
+    const studentsList = report?.students ?? [];
+    const topAbsentees = report?.top_absentees ?? [];
+
+    return (
+        <AdminLayout title="Attendance Report">
+            {/* FILTERS */}
+            <div className="bg-white p-4 rounded border mb-4 space-y-3">
+                <div className="flex flex-wrap gap-3 items-end">
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Class(es)</label>
+                        <FeeFilterSelect options={classes.map(c=>({value:c.id,label:c.name}))} value={classIds} onChange={setClassIds} width="min-w-[220px]" />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Section(s)</label>
+                        <FeeFilterSelect options={sections.map(s=>({value:s.id,label:s.name}))} value={sectionIds} onChange={setSectionIds} disabled={!classIds.length} width="min-w-[200px]" />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Student(s)</label>
+                        <FeeFilterSelect options={students.map(s=>({value:s.id,label:s.name}))} value={studentIds} onChange={setStudentIds} disabled={!classIds.length} width="min-w-[200px]" />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Status</label>
+                        <FeeFilterSelect options={[{value:"present",label:"Present"},{value:"absent",label:"Absent"},{value:"leave",label:"Leave"}]} value={statusFilter} onChange={setStatusFilter} width="min-w-[140px]" />
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3 items-end">
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">From Year</label>
+                        <FeeFilterSelect options={yrs} value={[fromYear]} onChange={ids => setFromYear(ids[0]??CURRENT_YEAR)} single width="min-w-[120px]" />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">From Month</label>
+                        <FeeFilterSelect options={MONTHS.map(m=>({value:m.value,label:`${m.label} ${fromYear}`}))} value={fromMonth?[fromMonth]:[]} placeholder="All months" onChange={ids=>setFromMonth(ids[0]??null)} single width="min-w-[160px]" />
+                    </div>
+                    <div className="text-xs text-gray-400 self-center pb-2">→</div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">To Year</label>
+                        <FeeFilterSelect options={yrs} value={[toYear]} onChange={ids=>setToYear(ids[0]??CURRENT_YEAR)} single width="min-w-[120px]" />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">To Month</label>
+                        <FeeFilterSelect options={MONTHS.map(m=>({value:m.value,label:`${m.label} ${toYear}`}))} value={toMonth?[toMonth]:[]} placeholder="All months" onChange={ids=>setToMonth(ids[0]??null)} single width="min-w-[160px]" />
+                    </div>
+                    <div className="flex gap-2 ml-auto">
+                        <button onClick={buildReport} disabled={!classIds.length||loading} className="px-4 py-2 rounded text-sm text-white bg-blue-600 disabled:bg-gray-400">{loading ? "Building…" : "Build Report"}</button>
+                        <button onClick={exportPdf} disabled={!studentsList.length} className={`px-3 py-2 rounded text-sm font-medium border ${studentsList.length ? "bg-white hover:bg-gray-50 text-gray-800" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Export PDF</button>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t">
+                    <span className="text-xs text-gray-500">Quick range:</span>
+                    {PRESETS.map(p => (
+                        <button key={p.key} onClick={()=>applyPreset(p.key)} className="text-xs px-3 py-1.5 rounded-full border bg-white hover:bg-blue-50 hover:border-blue-300 text-gray-700">{p.label}</button>
+                    ))}
+                </div>
+            </div>
+
+            {/* SUMMARY CARDS */}
+            {summary && (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                    <Stat label="Students" value={summary.student_count} />
+                    <Stat label="Present" value={summary.present} color="text-green-700" />
+                    <Stat label="Absent" value={summary.absent} color={summary.absent > 0 ? "text-red-600" : "text-gray-700"} />
+                    <Stat label="Leave" value={summary.leave} />
+                    <Stat label="Attendance %" value={`${summary.attendance_percentage}%`}
+                        color={summary.attendance_percentage >= 85 ? "text-green-700" : summary.attendance_percentage >= 70 ? "text-amber-600" : "text-red-600"} />
+                </div>
+            )}
+
+            {/* PER-STUDENT TABLE */}
+            {studentsList.length > 0 && (
+                <div className="bg-white border rounded overflow-x-auto mb-4">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b">
+                            <tr>
+                                <th className="px-4 py-2 text-left">Student</th>
+                                <th className="px-4 py-2 text-left">Father</th>
+                                <th className="px-4 py-2 text-left">Class</th>
+                                <th className="px-4 py-2 text-left">Section</th>
+                                <th className="px-4 py-2 text-right">Present</th>
+                                <th className="px-4 py-2 text-right">Absent</th>
+                                <th className="px-4 py-2 text-right">Leave</th>
+                                <th className="px-4 py-2 text-center">%</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {studentsList.map((s) => (
+                                <tr key={s.student_id} className="hover:bg-blue-50">
+                                    <td className="px-4 py-2 font-medium">{s.student_name}</td>
+                                    <td className="px-4 py-2 text-gray-600">{s.father_name || "—"}</td>
+                                    <td className="px-4 py-2">{s.class_name}</td>
+                                    <td className="px-4 py-2">{s.section_name}</td>
+                                    <td className="px-4 py-2 text-right text-green-700 font-medium">{s.present}</td>
+                                    <td className={`px-4 py-2 text-right font-medium ${s.absent > 0 ? "text-red-600" : "text-gray-600"}`}>{s.absent}</td>
+                                    <td className="px-4 py-2 text-right">{s.leave}</td>
+                                    <td className={`px-4 py-2 text-center font-semibold ${
+                                        s.percentage >= 85 ? "text-green-700" : s.percentage >= 70 ? "text-amber-600" : "text-red-600"
+                                    }`}>
+                                        {s.percentage}%
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* TOP ABSENTEES */}
+            {topAbsentees.length > 0 && (
+                <div className="bg-white border rounded">
+                    <div className="px-4 py-3 border-b bg-red-50">
+                        <h3 className="font-semibold text-red-800">Top Absentees</h3>
+                    </div>
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-4 py-2 text-left w-10">#</th>
+                                <th className="px-4 py-2 text-left">Student</th>
+                                <th className="px-4 py-2 text-left">Father</th>
+                                <th className="px-4 py-2 text-left">Class</th>
+                                <th className="px-4 py-2 text-left">Section</th>
+                                <th className="px-4 py-2 text-right">Absent Days</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {topAbsentees.map((s, i) => (
+                                <tr key={s.student_id} className="hover:bg-red-50">
+                                    <td className="px-4 py-2 text-gray-500">{i + 1}</td>
+                                    <td className="px-4 py-2 font-medium">{s.student_name}</td>
+                                    <td className="px-4 py-2 text-gray-600">{s.father_name || "—"}</td>
+                                    <td className="px-4 py-2">{s.class_name}</td>
+                                    <td className="px-4 py-2">{s.section_name}</td>
+                                    <td className="px-4 py-2 text-right font-semibold text-red-600">{s.absent}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* EMPTY */}
+            {!loading && !report && (
+                <div className="bg-white border rounded p-6 text-center text-sm text-gray-400">
+                    Select classes and a date range, then click <b>Build Report</b>.
+                </div>
+            )}
+        </AdminLayout>
+    );
 }

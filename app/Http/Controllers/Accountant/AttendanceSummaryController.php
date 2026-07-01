@@ -27,6 +27,7 @@ class AttendanceSummaryController extends Controller
                 $q->orderByDesc('date');
             }
         ])
+        ->where('status', 'active')
         ->whereHas('schoolClass', fn ($q) => $q->where('type', 'gurmukhi'))
         ->get();
 

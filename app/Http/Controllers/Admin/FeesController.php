@@ -39,6 +39,7 @@ class FeesController extends Controller
         ->join('students', 'student_sections.student_id', '=', 'students.id')
         ->join('classes', 'student_sections.class_id', '=', 'classes.id')
         ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
+        ->where('student_sections.status', 'active')
 
         ->leftJoin('payments', function ($join) {
             $join->on('payments.fee_id', '=', 'fees.id')
@@ -306,6 +307,7 @@ public function customIndex()
         ->join('sections', 'student_sections.section_id', '=', 'sections.id')
         ->join('classes', 'student_sections.class_id', '=', 'classes.id')
         ->leftJoin('payments', 'payments.fee_id', '=', 'fees.id')
+        ->where('student_sections.status', 'active')
 
         ->select([
             'sections.id as section_id',
@@ -352,7 +354,7 @@ public function customIndex()
             'amount'     => 'required|integer|min:1',
         ]);
 
-        $enrollments = StudentSection::where('section_id', $data['section_id'])->get();
+        $enrollments = StudentSection::where('section_id', $data['section_id'])->where('status', 'active')->get();
 
         if ($enrollments->isEmpty()) {
             return back()->withErrors([
