@@ -171,7 +171,7 @@
     </tr>
     <tr>
         <td class="summary-label">Calendar Days</td>
-        <td>{{ $summary['total_days'] }}</td>
+        <td>{{ $summary['total_days'] }} ({{ $summary['total_months'] }} mo)</td>
         <td class="summary-label">Working Days</td>
         <td>{{ $summary['working_days'] }}</td>
     </tr>

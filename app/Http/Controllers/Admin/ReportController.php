@@ -498,6 +498,16 @@ class ReportController extends Controller
             }
         }
 
+        // Compute month count for the range label
+        $monthCount = 0;
+        if (!empty($dateStart) && !empty($dateEnd)) {
+            $sd = \Carbon\Carbon::parse($dateStart);
+            $ed = \Carbon\Carbon::parse($dateEnd);
+            $monthCount = ((int) $ed->year - (int) $sd->year) * 12
+                        + ((int) $ed->month - (int) $sd->month)
+                        + 1;
+        }
+
         /* -------------------------------
        SUMMARY (MYSQL SAFE)
     -------------------------------- */
@@ -523,6 +533,7 @@ class ReportController extends Controller
             'student_count'  => 0,
             'total_days'     => $totalDays,
             'working_days'   => $workingDays,
+            'total_months'   => $monthCount,
         ];
 
         /* -------------------------------

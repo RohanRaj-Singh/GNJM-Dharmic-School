@@ -190,7 +190,7 @@ export default function AttendanceReport() {
                     </div>
                     <div>
                         <label className="block text-xs text-gray-500 mb-1">Student(s)</label>
-                        <FeeFilterSelect options={students.map(s=>({value:s.id,label:s.name}))} value={studentIds} onChange={setStudentIds} disabled={!classIds.length} width="min-w-[200px]" />
+                        <FeeFilterSelect options={students.map(s=>({value:s.id,label: s.father_name ? `${s.name} (Father: ${s.father_name})` : s.name}))} value={studentIds} onChange={setStudentIds} disabled={!classIds.length} width="min-w-[200px]" />
                     </div>
                     <div>
                         <label className="block text-xs text-gray-500 mb-1">Status</label>
@@ -239,7 +239,7 @@ export default function AttendanceReport() {
                     <Stat label="Leave" value={summary.leave} />
                     <Stat label="Attendance %" value={`${summary.attendance_percentage}%`}
                         color={summary.attendance_percentage >= 85 ? "text-green-700" : summary.attendance_percentage >= 70 ? "text-amber-600" : "text-red-600"} />
-                    <Stat label="Calendar Days" value={summary.total_days} />
+                    <Stat label="Calendar Days" value={`${summary.total_days} days (${summary.total_months} mo)`} />
                     <Stat label="Working Days" value={summary.working_days} color="text-blue-700" />
                     <Stat label="Total Records" value={summary.total_records} />
                 </div>
