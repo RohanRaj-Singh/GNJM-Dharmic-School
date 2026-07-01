@@ -478,6 +478,27 @@ class ReportController extends Controller
         }
 
         /* -------------------------------
+           COMPUTE CALENDAR STATS
+        -------------------------------- */
+        $totalDays = 0;
+        $workingDays = 0;
+
+        if (!empty($dateStart) && !empty($dateEnd)) {
+            $startDt = \Carbon\Carbon::parse($dateStart);
+            $endDt   = \Carbon\Carbon::parse($dateEnd);
+            $totalDays = (int) $startDt->diffInDays($endDt) + 1;
+
+            // Working days = Mon-Sat (school default). Kirtan-only reports
+            // would use Sunday-only, but since a report can span multiple
+            // classes we default to the Gurmukhi (majority) calendar.
+            for ($d = $startDt->copy(); $d->lte($endDt); $d->addDay()) {
+                if ($d->dayOfWeek !== \Carbon\Carbon::SUNDAY) {
+                    $workingDays++;
+                }
+            }
+        }
+
+        /* -------------------------------
        SUMMARY (MYSQL SAFE)
     -------------------------------- */
         $summaryRaw = (clone $query)
@@ -500,6 +521,8 @@ class ReportController extends Controller
                 ? round(($summaryRaw->present / $total) * 100, 2)
                 : 0,
             'student_count'  => 0,
+            'total_days'     => $totalDays,
+            'working_days'   => $workingDays,
         ];
 
         /* -------------------------------

@@ -239,6 +239,9 @@ export default function AttendanceReport() {
                     <Stat label="Leave" value={summary.leave} />
                     <Stat label="Attendance %" value={`${summary.attendance_percentage}%`}
                         color={summary.attendance_percentage >= 85 ? "text-green-700" : summary.attendance_percentage >= 70 ? "text-amber-600" : "text-red-600"} />
+                    <Stat label="Calendar Days" value={summary.total_days} />
+                    <Stat label="Working Days" value={summary.working_days} color="text-blue-700" />
+                    <Stat label="Total Records" value={summary.total_records} />
                 </div>
             )}
 
@@ -255,6 +258,7 @@ export default function AttendanceReport() {
                                 <th className="px-4 py-2 text-right">Present</th>
                                 <th className="px-4 py-2 text-right">Absent</th>
                                 <th className="px-4 py-2 text-right">Leave</th>
+                                <th className="px-4 py-2 text-right">Marked</th>
                                 <th className="px-4 py-2 text-center">%</th>
                             </tr>
                         </thead>
@@ -268,6 +272,7 @@ export default function AttendanceReport() {
                                     <td className="px-4 py-2 text-right text-green-700 font-medium">{s.present}</td>
                                     <td className={`px-4 py-2 text-right font-medium ${s.absent > 0 ? "text-red-600" : "text-gray-600"}`}>{s.absent}</td>
                                     <td className="px-4 py-2 text-right">{s.leave}</td>
+                                    <td className="px-4 py-2 text-right text-gray-600">{s.total}</td>
                                     <td className={`px-4 py-2 text-center font-semibold ${
                                         s.percentage >= 85 ? "text-green-700" : s.percentage >= 70 ? "text-amber-600" : "text-red-600"
                                     }`}>

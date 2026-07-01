@@ -170,6 +170,12 @@
         <td>{{ $summary['leave'] }}</td>
     </tr>
     <tr>
+        <td class="summary-label">Calendar Days</td>
+        <td>{{ $summary['total_days'] }}</td>
+        <td class="summary-label">Working Days</td>
+        <td>{{ $summary['working_days'] }}</td>
+    </tr>
+    <tr>
         <td class="summary-label">Total Records</td>
         <td>{{ $summary['total_records'] }}</td>
         <td class="summary-label">Attendance %</td>
@@ -189,6 +195,7 @@
             <th class="amount">Present</th>
             <th class="amount">Absent</th>
             <th class="amount">Leave</th>
+            <th class="amount">Marked</th>
             <th class="center">%</th>
         </tr>
     </thead>
@@ -207,13 +214,14 @@
                 <td class="amount paid">{{ $s['present'] }}</td>
                 <td class="amount {{ $s['absent'] > 0 ? 'unpaid' : '' }}">{{ $s['absent'] }}</td>
                 <td class="amount">{{ $s['leave'] }}</td>
+                <td class="amount">{{ $s['total'] }}</td>
                 <td class="center" style="color: {{ $s['percentage'] >= 85 ? '#0a7a28' : ($s['percentage'] >= 70 ? '#cc8800' : '#b30000') }};">
                     {{ number_format($s['percentage'], 1) }}%
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="7" style="text-align:center;color:#888;">No attendance data in this range.</td>
+                <td colspan="8" style="text-align:center;color:#888;">No attendance data in this range.</td>
             </tr>
         @endforelse
     </tbody>
