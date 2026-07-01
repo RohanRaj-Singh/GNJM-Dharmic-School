@@ -37,6 +37,7 @@ class AttendanceController extends Controller
             // Find the student_section row
             $studentSection = StudentSection::where('section_id', $validated['section_id'])
                 ->where('student_id', $record['student_id'])
+                ->where('status', 'active')
                 ->firstOrFail();
 
             /**

@@ -451,8 +451,13 @@ class ReportController extends Controller
         $dateEnd   = null;
 
         if (!empty($monthFrom) || !empty($monthTo)) {
-            $dateStart = $monthFrom ?: ($yearFrom ? "{$yearFrom}-01-01" : null);
-            $dateEnd   = $monthTo   ?: ($yearTo   ? "{$yearTo}-12-31"   : null);
+            // month_from and month_to are YYYY-MM. Append day so MySQL can compare.
+            $dateStart = $monthFrom ? "{$monthFrom}-01" : ($yearFrom ? "{$yearFrom}-01-01" : null);
+            $dateEnd   = $monthTo   ? "{$monthTo}-01"   : ($yearTo   ? "{$yearTo}-12-31"   : null);
+            // Shift to end-of-month for the "to" date so the full month is included.
+            if ($monthTo) {
+                $dateEnd = \Carbon\Carbon::createFromFormat('Y-m-d', $dateEnd)->endOfMonth()->toDateString();
+            }
         } elseif (!empty($yearFrom) || !empty($yearTo)) {
             $dateStart = $yearFrom ? "{$yearFrom}-01-01" : null;
             $dateEnd   = $yearTo   ? "{$yearTo}-12-31"   : null;
