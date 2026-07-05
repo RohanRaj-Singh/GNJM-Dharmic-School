@@ -253,17 +253,29 @@ Route::prefix('students')->name('students.')->group(function () {
     Route::post('/bulk-update', function (Request $request) {
 
         DB::transaction(function () use ($request) {
-            $formatName = function (?string $value): ?string {
-                if ($value === null) {
-                    return null;
-                }
 
+            // Preload all sections into a memory map (class_id by section_id).
+            // This replaces N individual Section::find() calls (one per enrollment)
+            // with a single bulk query. In PHP-FPM the static cache is per-request,
+            // so it never goes stale across requests.
+            static $sectionMap = [];
+
+            if (empty($sectionMap)) {
+                $sectionMap = Section::pluck('class_id', 'id')->all();
+            }
+
+            $formatName = function (?string $value): ?string {
+                if ($value === null) return null;
                 $normalized = Str::of($value)->squish()->lower()->title()->toString();
                 return $normalized === '' ? null : $normalized;
             };
 
+            $today = now(config('app.timezone'))->format('Y-m');
+            $resolver = app(MonthlyFeeResolver::class);
+
             foreach ($request->students as $row) {
 
+                // ---- 1. Upsert student (name, father, phone, status) ----
                 $student = empty($row['id'])
                     ? Student::create([
                         'name' => $formatName($row['name']) ?? $row['name'],
@@ -280,33 +292,35 @@ Route::prefix('students')->name('students.')->group(function () {
                         'status' => $row['status'] ?? 'active',
                     ]);
 
+                // ---- 2. Compute desired enrollments ----
                 $incoming = collect($row['enrollments'] ?? [])
                     ->filter(fn($e) => !empty($e['section_id']))
-                    ->unique('section_id');
+                    ->unique('section_id')
+                    ->keyBy('section_id');
 
-                // Never delete or modify inactive enrollments
+                // ---- 3. Remove orphaned active enrollments (single DELETE) ----
                 StudentSection::where('student_id', $student->id)
                     ->where('status', 'active')
-                    ->whereNotIn('section_id', $incoming->pluck('section_id'))
+                    ->whereNotIn('section_id', $incoming->keys())
                     ->delete();
 
+                // ---- 4. Upsert each incoming enrollment ----
                 foreach ($incoming as $e) {
-
-                    $section = Section::find($e['section_id']);
-                    if (!$section) continue;
+                    $sectionId = (int) $e['section_id'];
+                    $classId   = $sectionMap[$sectionId] ?? null;
+                    if (!$classId) continue;
 
                     $studentType = $e['student_type'] === 'free' ? 'free' : 'paid';
 
                     $enrollment = StudentSection::firstOrCreate(
                         [
                             'student_id' => $student->id,
-                            'class_id' => $section->class_id,
-                            'section_id' => $section->id,
+                            'class_id'   => $classId,
+                            'section_id' => $sectionId,
                         ],
                         ['student_type' => $studentType, 'status' => 'active']
                     );
 
-                    // Don't modify inactive enrollments
                     if ($enrollment->status === 'inactive') continue;
 
                     if ($enrollment->student_type !== $studentType) {
@@ -314,26 +328,29 @@ Route::prefix('students')->name('students.')->group(function () {
                     }
 
                     if ($studentType === 'free') {
-                        Fee::where('student_section_id', $enrollment->id)
-                            ->where('type', 'monthly')
-                            ->whereDoesntHave('payments', fn ($q) => $q->whereNull('deleted_at'))
+                        // Bulk delete unpaid monthly fees (subquery instead of Eloquent whereDoesntHave)
+                        DB::table('fees as f')
+                            ->where('f.student_section_id', $enrollment->id)
+                            ->where('f.type', 'monthly')
+                            ->whereNotExists(function ($q) {
+                                $q->selectRaw('1')
+                                    ->from('payments')
+                                    ->whereColumn('payments.fee_id', '=', 'f.id')
+                                    ->whereNull('payments.deleted_at');
+                            })
                             ->delete();
                         continue;
                     }
 
-                    $class = SchoolClass::find($section->class_id);
-                    if (!$class) continue;
-
-                    $fee = app(MonthlyFeeResolver::class)
-                        ->resolveForMonth($enrollment, now(config('app.timezone'))->format('Y-m'));
-
+                    // ---- 5. Resolve and upsert monthly fee ----
+                    $fee = $resolver->resolveForMonth($enrollment, $today);
                     if ($fee <= 0) continue;
 
                     Fee::firstOrCreate(
                         [
                             'student_section_id' => $enrollment->id,
                             'type' => 'monthly',
-                            'month' => now()->format('Y-m'),
+                            'month' => $today,
                         ],
                         [
                             'source' => 'monthly',

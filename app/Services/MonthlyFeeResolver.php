@@ -5,9 +5,21 @@ namespace App\Services;
 use App\Models\FeeRatePeriod;
 use App\Models\StudentSection;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class MonthlyFeeResolver
 {
+    /**
+     * Resolve the monthly fee amount for a given enrollment and month.
+     *
+     * Resolution order:
+     *  1. Free students → 0.
+     *  2. Section-level active fee rate period.
+     *  3. Class-level active fee rate period.
+     *  4. Sections.monthly_fee (legacy).
+     *  5. Classes.default_monthly_fee (legacy).
+     *  6. 0 if none.
+     */
     public function resolveForMonth(StudentSection $studentSection, Carbon|string $month): int
     {
         $monthStart = $month instanceof Carbon
@@ -46,6 +58,54 @@ class MonthlyFeeResolver
 
         $classFee = (int) optional($studentSection->schoolClass)->default_monthly_fee;
         return $classFee > 0 ? $classFee : 0;
+    }
+
+    /**
+     * Fast path: resolve using pre-loaded Section and Class data.
+     * Used by the bulk-update endpoint to avoid N query chains.
+     */
+    public function resolveBulk(
+        int $studentSectionId,
+        string $studentType,
+        int $sectionId,
+        int $classId,
+        Carbon $monthStart,
+        bool $sectionHasPeriod,
+        bool $classHasPeriod,
+    ): int {
+        if ($studentType === 'free') {
+            return 0;
+        }
+
+        if ($sectionHasPeriod) {
+            $amount = $this->findPeriodAmount('section', $sectionId, $monthStart);
+            if ($amount > 0) return $amount;
+        }
+
+        if ($classHasPeriod) {
+            $amount = $this->findPeriodAmount('class', $classId, $monthStart);
+            if ($amount > 0) return $amount;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Check which scope IDs have any active fee rate periods.
+     * This allows the caller to skip the findPeriodAmount query entirely
+     * when no period exists for a scope.
+     */
+    public function scopeHasPeriods(string $scopeType, array $scopeIds): array
+    {
+        if (empty($scopeIds)) return [];
+
+        return DB::table('fee_rate_periods')
+            ->where('scope_type', $scopeType)
+            ->whereIn('scope_id', $scopeIds)
+            ->pluck('scope_id')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function findPeriodAmount(string $scopeType, int $scopeId, Carbon $monthStart): int
