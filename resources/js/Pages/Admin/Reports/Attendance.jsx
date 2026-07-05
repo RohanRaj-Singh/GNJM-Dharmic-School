@@ -62,6 +62,7 @@ export default function AttendanceReport() {
 
     const [report, setReport]           = useState(null);
     const [loading, setLoading]         = useState(false);
+    const [error, setError]             = useState(null);
 
     /* Data */
     const [classes, setClasses]         = useState([]);
@@ -120,19 +121,23 @@ export default function AttendanceReport() {
     /* Build */
     async function buildReport() {
         if (!classIds.length) return;
+        setError(null);
         setLoading(true);
         setReport(null);
         try {
-            const res = await fetch("/admin/reports/build", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content"),
-                },
-                body: JSON.stringify(buildPayload()),
-            });
-            const json = await res.json();
-            setReport(json);
+            const res = await axios.post("/admin/reports/build",
+                buildPayload(),
+                { headers: { Accept: "application/json" } }
+            );
+            setReport(res.data);
+        } catch (err) {
+            if (err.response?.status === 419) {
+                setError("Session expired. Please refresh the page and try again.");
+            } else if (err.response?.status === 422) {
+                setError("Invalid filter values. Please check your selections.");
+            } else {
+                setError(err.response ? `Build failed: ${err.response.status}` : String(err));
+            }
         } finally { setLoading(false); }
     }
 
@@ -229,6 +234,21 @@ export default function AttendanceReport() {
                     ))}
                 </div>
             </div>
+
+            {/* ERROR */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded p-3 mb-4 text-sm">
+                    {error}
+                    {error.includes("Session expired") && (
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="ml-2 underline font-medium"
+                        >
+                            Refresh page
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* SUMMARY CARDS */}
             {summary && (

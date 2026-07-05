@@ -108,6 +108,7 @@ export default function ReportsIndex() {
     const [summary, setSummary] = useState(null);
     const [byClass, setByClass] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
@@ -227,28 +228,27 @@ export default function ReportsIndex() {
         if (!classIds.length) return;
 
         setLoading(true);
+        setError(null);
         setRows([]);
         setSummary(null);
         setByClass([]);
 
         try {
-            const res = await fetch("/admin/reports/build", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document
-                        .querySelector('meta[name="csrf-token"]')
-                        ?.getAttribute("content"),
-                },
-                body: JSON.stringify(buildPayload()),
-            });
-
-            const json = await res.json();
-            setSummary(json.summary ?? null);
-            setByClass(json.breakdowns?.by_class ?? []);
-            setRows(json.tables?.rows ?? []);
-        } catch {
-            // 401/419 handled globally by bootstrap.js interceptor
+            const res = await axios.post("/admin/reports/build",
+                buildPayload(),
+                { headers: { Accept: "application/json" } }
+            );
+            setSummary(res.data.summary ?? null);
+            setByClass(res.data.breakdowns?.by_class ?? []);
+            setRows(res.data.tables?.rows ?? []);
+        } catch (err) {
+            if (err.response?.status === 419) {
+                setError("Session expired. Please refresh the page and try again.");
+            } else if (err.response?.status === 422) {
+                setError("Invalid filter values. Please check your selections.");
+            } else {
+                setError(err.response ? `Build failed: ${err.response.status}` : String(err));
+            }
         } finally {
             setLoading(false);
         }
@@ -505,6 +505,21 @@ export default function ReportsIndex() {
                     ))}
                 </div>
             </div>
+
+            {/* ERROR */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded p-3 mb-4 text-sm">
+                    {error}
+                    {error.includes("Session expired") && (
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="ml-2 underline font-medium"
+                        >
+                            Refresh page
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* SUMMARY */}
             {summary && (

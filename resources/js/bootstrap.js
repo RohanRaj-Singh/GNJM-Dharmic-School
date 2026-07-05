@@ -10,12 +10,11 @@ window.axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
  *    on every request. This is the ONLY way CSRF tokens are wired
  *    on the frontend. No manual token reads, no hidden forms.
  *  - On 401 (unauthenticated) or 419 (CSRF mismatch / session expired)
- *    we redirect to /login. This applies to any axios call anywhere
- *    in the app, including Inertia's router.{get,post,put,delete}.
- *  - We do NOT monkey-patch window.fetch. If a non-Inertia page uses
- *    fetch() it is responsible for handling auth errors itself; we
- *    never want a global side-effect on every fetch call.
+ *    we redirect to /login.
+ *  - Page-local handlers (Fee Report, Attendance Report, Student Center)
+ *    catch 419 separately and show a friendly toast with a refresh button.
  */
+
 const redirectToLogin = () => {
     if (window.location.pathname !== "/login") {
         window.location.assign("/login");

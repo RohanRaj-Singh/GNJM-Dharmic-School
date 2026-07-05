@@ -133,6 +133,10 @@ export default function Index({ students, earliestYear, latestYear, currentYear 
           setError("Server rejected the filter. See highlighted fields below.");
           return;
         }
+        if (err.response?.status === 419) {
+          setError("Session expired. Please refresh the page and try again.");
+          return;
+        }
         setError(err.response ? `Build failed: ${err.response.status}` : String(err));
       })
       .finally(() => setLoading(false));
@@ -235,6 +239,14 @@ export default function Index({ students, earliestYear, latestYear, currentYear 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded p-3 mb-4 text-sm">
           {error}
+          {error.includes("Session expired") && (
+            <button
+              onClick={() => window.location.reload()}
+              className="ml-2 underline font-medium"
+            >
+              Refresh page
+            </button>
+          )}
         </div>
       )}
 
