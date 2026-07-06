@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AcademicSession;
 use Illuminate\Database\Seeder;
 use App\Models\SchoolClass;
 use App\Models\Section;
@@ -10,7 +11,10 @@ class SchoolSetupSeeder extends Seeder
 {
     public function run(): void
     {
-        // Gurmukhi Class
+        // ── Academic Session ──
+        AcademicSession::currentOrCreate();
+
+        // ── Gurmukhi Class ──
         $gurmukhi = SchoolClass::create([
             'name' => 'Gurmukhi',
             'type' => 'gurmukhi',
