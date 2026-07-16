@@ -28,6 +28,7 @@ class AttendanceSummaryController extends Controller
             }
         ])
         ->where('status', 'active')
+        ->whereNull('transferred_at')
         ->whereHas('schoolClass', fn ($q) => $q->where('type', 'gurmukhi'))
         ->get();
 

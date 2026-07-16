@@ -101,6 +101,7 @@ class ReportController extends Controller
                     ->whereNull('payments.deleted_at');
             })
             ->where('student_sections.status', 'active')
+            ->whereNull('student_sections.transferred_at')
             ->whereIn('student_sections.class_id', $request->class_ids);
 
         /* -------------------------------------------------
@@ -422,6 +423,7 @@ class ReportController extends Controller
             ->join('classes', 'student_sections.class_id', '=', 'classes.id')
             ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
             ->where('student_sections.status', 'active')
+            ->whereNull('student_sections.transferred_at')
             ->whereIn('student_sections.class_id', $request->class_ids);
 
         /* -------------------------------

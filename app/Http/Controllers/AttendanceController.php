@@ -38,6 +38,7 @@ class AttendanceController extends Controller
             $studentSection = StudentSection::where('section_id', $validated['section_id'])
                 ->where('student_id', $record['student_id'])
                 ->where('status', 'active')
+                ->whereNull('transferred_at')
                 ->firstOrFail();
 
             /**

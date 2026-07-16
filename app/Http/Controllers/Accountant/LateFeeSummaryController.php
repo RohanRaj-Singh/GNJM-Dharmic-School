@@ -24,7 +24,7 @@ class LateFeeSummaryController extends Controller
         ])
             ->where('type', 'monthly')
             ->whereDoesntHave('payments', fn ($q) => $q->whereNull('deleted_at'))
-            ->whereHas('enrollment', fn ($q) => $q->where('status', 'active'))
+            ->whereHas('enrollment', fn ($q) => $q->where('status', 'active')->whereNull('transferred_at'))
             ->get();
 
         foreach ($unpaidFees as $fee) {

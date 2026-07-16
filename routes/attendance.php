@@ -60,7 +60,7 @@ Route::get('/', fn () =>
         /* ---------- Load relations ---------- */
         $section->load([
             'schoolClass',
-            'studentSections' => fn ($q) => $q->where('status', 'active'),
+            'studentSections' => fn ($q) => $q->where('status', 'active')->whereNull('transferred_at'),
             'studentSections.student',
         ]);
 
@@ -181,6 +181,7 @@ Route::get('/', fn () =>
             'attendance' => fn ($q) => $q->orderByDesc('date'),
         ])
             ->where('status', 'active')
+            ->whereNull('transferred_at')
             ->whereIn('section_id', $allowedSectionIds)
             ->get();
 

@@ -47,6 +47,13 @@ export default function Utilities() {
           badge="New"
         />
 
+        <UtilityCard
+          emoji="📖"
+          title="Master Directory"
+          description="Browse all students by lifecycle status — promoted, passed out, inactive, left"
+          href="/admin/utilities/master-directory"
+        />
+
       </div>
     </AdminLayout>
   );

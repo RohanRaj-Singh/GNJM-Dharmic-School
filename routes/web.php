@@ -58,4 +58,16 @@ Route::middleware(['auth'])->group(function () {
         });
 
     require __DIR__.'/students.php';
+
+    // Student Lifecycle routes (admin only)
+    Route::middleware('role:admin')
+        ->prefix('students/{student}')
+        ->name('students.lifecycle.')
+        ->group(function () {
+            Route::post('/promote', [\App\Http\Controllers\StudentLifecycleController::class, 'promote'])->name('promote');
+            Route::post('/pass-out', [\App\Http\Controllers\StudentLifecycleController::class, 'passOut'])->name('pass-out');
+            Route::post('/leave-school', [\App\Http\Controllers\StudentLifecycleController::class, 'leaveSchool'])->name('leave-school');
+            Route::post('/make-inactive', [\App\Http\Controllers\StudentLifecycleController::class, 'makeInactive'])->name('make-inactive');
+            Route::post('/reactivate', [\App\Http\Controllers\StudentLifecycleController::class, 'reactivate'])->name('reactivate');
+        });
 });

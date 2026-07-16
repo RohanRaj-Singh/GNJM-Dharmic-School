@@ -1,50 +1,66 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import axios from "axios";
 import Modal from "@/Components/Modal";
 import ImpactSummary from "./ImpactSummary";
-import { MOCK_CLASSES, MOCK_SECTIONS, MOCK_ENROLLMENTS, MOCK_STUDENTS, resolveNextClassForEnrollments } from "./mockData";
 
-const STEPS = ["Destination", "Impact", "Confirm"];
-
-export default function PromoteFlow({ student, onClose, preselectedIds = null }) {
+export default function PromoteFlow({ student, students, classes, sections, onClose, preselectedIds = null }) {
   const allIds = preselectedIds || [student.id];
-  const students = useMemo(
-    () => allIds.map((id) => MOCK_STUDENTS.find((s) => s.id === id)).filter(Boolean),
-    [allIds]
+  const selectedStudents = useMemo(
+    () => allIds.map((id) => students.find((s) => s.id === id)).filter(Boolean),
+    [allIds, students]
   );
-  const isBulk = students.length > 1;
-  const leadStudent = students[0];
+  const isBulk = selectedStudents.length > 1;
+  const leadStudent = selectedStudents[0];
 
   const [step, setStep] = useState(0);
+  const [targetClassId, setTargetClassId] = useState("");
   const [targetSectionId, setTargetSectionId] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split("T")[0]);
   const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState(null);
 
-  const leadEnrollments = MOCK_ENROLLMENTS[leadStudent.id] || [];
-  const autoTargets = useMemo(
-    () => resolveNextClassForEnrollments(leadEnrollments),
-    [leadEnrollments]
-  );
-
-  const firstTarget = autoTargets[0] || null;
-  const targetClassId = firstTarget ? String(firstTarget.nextClass.id) : null;
-  const targetClass = firstTarget ? firstTarget.nextClass : null;
-
-  const sections = useMemo(
-    () => (targetClassId ? MOCK_SECTIONS[targetClassId] || [] : []),
-    [targetClassId]
+  const sectionOpts = useMemo(
+    () => sections.filter((s) => String(s.class_id) === String(targetClassId)),
+    [sections, targetClassId]
   );
 
   const validTarget = targetClassId && targetSectionId && effectiveDate;
 
   const totalOutstandings = useMemo(
-    () => students.reduce((sum, s) => sum + s.outstandings, 0),
-    [students]
+    () => selectedStudents.reduce((sum, s) => sum + (s.outstandings || 0), 0),
+    [selectedStudents]
   );
 
-  const handleExecute = () => {
-    setDone(true);
-  };
+  const targetClassName = useMemo(
+    () => classes.find((c) => String(c.id) === String(targetClassId))?.name || "",
+    [classes, targetClassId]
+  );
+  const targetSectionName = useMemo(
+    () => sectionOpts.find((s) => String(s.id) === String(targetSectionId))?.name || "",
+    [sectionOpts, targetSectionId]
+  );
+
+  const submitAll = useCallback(async () => {
+    setSubmitting(true);
+    setError(null);
+    const promises = selectedStudents.map((s) =>
+      axios.post(`/students/${s.id}/promote`, {
+        section_id: targetSectionId,
+        effective_date: effectiveDate,
+      })
+    );
+    try {
+      await Promise.all(promises);
+      setDone(true);
+    } catch (e) {
+      const msg = e.response?.data?.errors?.lifecycle?.[0] || e.response?.data?.message || "Promotion failed.";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [selectedStudents, targetSectionId, effectiveDate]);
 
   if (done) {
     return (
@@ -54,7 +70,7 @@ export default function PromoteFlow({ student, onClose, preselectedIds = null })
           <h2 className="text-lg font-semibold text-gray-800">Promotion Complete</h2>
           <p className="text-sm text-gray-500">
             {isBulk
-              ? <>{students.length} students have been promoted.</>
+              ? <>{selectedStudents.length} students have been promoted.</>
               : <><strong>{leadStudent.name}</strong> has been promoted.</>}
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 text-left max-w-sm mx-auto space-y-1">
@@ -69,24 +85,6 @@ export default function PromoteFlow({ student, onClose, preselectedIds = null })
     );
   }
 
-  if (!targetClass) {
-    return (
-      <Modal show maxWidth="sm" onClose={onClose}>
-        <div className="p-6 text-center space-y-4">
-          <div className="text-5xl">🚫</div>
-          <h2 className="text-lg font-semibold text-gray-800">Cannot Promote</h2>
-          <p className="text-sm text-gray-500">
-            <strong>{leadStudent.name}</strong> is already in the highest available class and cannot be promoted further.
-          </p>
-          <p className="text-sm text-gray-400">
-            Consider using <strong>Pass Out</strong> if the student has completed their studies.
-          </p>
-          <button onClick={onClose} className="px-5 py-2 rounded text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Close</button>
-        </div>
-      </Modal>
-    );
-  }
-
   return (
     <Modal show maxWidth="lg" onClose={onClose}>
       <div className="max-h-[85vh] min-h-0 flex flex-col">
@@ -95,27 +93,26 @@ export default function PromoteFlow({ student, onClose, preselectedIds = null })
             <h2 className="text-lg font-semibold text-gray-800">Promote Student{isBulk ? "s" : ""}</h2>
             <p className="text-sm text-gray-500 mt-0.5">
               {isBulk
-                ? `${students.length} students selected for promotion`
+                ? `${selectedStudents.length} students selected for promotion`
                 : `Move ${leadStudent.name} to the next class.`}
             </p>
           </div>
 
           {isBulk && (
             <div className="flex-shrink-0 border rounded-lg divide-y text-sm max-h-32 overflow-y-auto bg-white">
-              {students.map((s) => {
-                const enrollments = MOCK_ENROLLMENTS[s.id] || [];
-                return (
-                  <div key={s.id} className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50">
-                    <span className="font-medium text-gray-800">{s.name}</span>
-                    <span className="text-xs text-gray-500">{enrollments.map((e) => e.className).join(", ")}</span>
-                  </div>
-                );
-              })}
+              {selectedStudents.map((s) => (
+                <div key={s.id} className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50">
+                  <span className="font-medium text-gray-800">{s.name}</span>
+                  <span className="text-xs text-gray-500">
+                    {s.enrollments?.map((e) => e.className).join(", ")}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
 
           <div className="flex items-center gap-2 text-xs flex-shrink-0">
-            {STEPS.map((label, i) => (
+            {["Destination", "Impact", "Confirm"].map((label, i) => (
               <div key={label} className="flex items-center gap-2">
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -125,51 +122,54 @@ export default function PromoteFlow({ student, onClose, preselectedIds = null })
                   {i < step ? "✓" : i + 1}
                 </div>
                 <span className={i === step ? "font-medium text-gray-800" : "text-gray-400"}>{label}</span>
-                {i < STEPS.length - 1 && <span className="text-gray-200 mx-0.5">→</span>}
+                {i < 2 && <span className="text-gray-200 mx-0.5">→</span>}
               </div>
             ))}
           </div>
 
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 flex-shrink-0">
+              {error}
+            </div>
+          )}
+
           {step === 0 && (
             <div className="space-y-4 flex-shrink-0">
-              <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+              <div className="bg-gray-50 rounded-lg p-3 text-sm">
                 <p className="font-medium text-gray-700">Current Enrollment{isBulk ? "s" : ""}</p>
                 {isBulk ? (
-                  <p className="text-gray-500">{students.length} active enrollment(s) across selected students.</p>
+                  <p className="text-gray-500 mt-1">{selectedStudents.length} active student(s) selected.</p>
                 ) : (
-                  leadEnrollments.map((e, i) => (
-                    <p key={i} className="text-gray-500">{e.className} — {e.sectionName} (since {e.startedAt})</p>
+                  leadStudent.enrollments?.map((e, i) => (
+                    <p key={i} className="text-gray-500 mt-1">{e.className} — {e.sectionName}{e.startedAt ? ` (since ${e.startedAt})` : ""}</p>
                   ))
                 )}
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 flex items-start gap-2.5">
-                <span className="text-lg mt-0.5">🔄</span>
-                <div>
-                  <p className="font-medium">Target class auto-detected</p>
-                  <p className="text-blue-700 mt-0.5">
-                    Based on the current enrollment, the next class is <strong>{targetClass.name}</strong>.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Target Class</label>
-                  <div className="border rounded px-3 py-2 text-sm w-full bg-gray-50 text-gray-700 flex items-center gap-2">
-                    {targetClass.name}
-                    <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded">Auto</span>
-                  </div>
+                  <select
+                    value={targetClassId}
+                    onChange={(e) => { setTargetClassId(e.target.value); setTargetSectionId(""); }}
+                    className="border rounded px-3 py-2 text-sm w-full"
+                  >
+                    <option value="">Select class</option>
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Target Section</label>
                   <select
                     value={targetSectionId}
                     onChange={(e) => setTargetSectionId(e.target.value)}
-                    className="border rounded px-3 py-2 text-sm w-full"
+                    disabled={!targetClassId}
+                    className="border rounded px-3 py-2 text-sm w-full disabled:bg-gray-100"
                   >
                     <option value="">Select section</option>
-                    {sections.map((s) => (
+                    {sectionOpts.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>
@@ -202,20 +202,20 @@ export default function PromoteFlow({ student, onClose, preselectedIds = null })
             <div className="space-y-4 flex-shrink-0">
               <ImpactSummary
                 type="promote"
-                studentName={leadStudent.name}
-                currentEnrollments={leadEnrollments}
-                targetClassName={targetClass.name}
-                targetSectionName={sections.find((s) => s.id == targetSectionId)?.name}
+                studentName={leadStudent?.name}
+                currentEnrollments={leadStudent?.enrollments || []}
+                targetClassName={targetClassName}
+                targetSectionName={targetSectionName}
                 effectiveDate={effectiveDate}
                 outstandings={totalOutstandings}
-                students={isBulk ? students : null}
+                students={isBulk ? selectedStudents : null}
               />
 
               {totalOutstandings > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-start gap-2">
                   <span className="text-lg">⚠️</span>
                   <p>
-                    <strong>Outstanding fees:</strong> Rs. {totalOutstandings.toLocaleString()} across {students.length} student(s).
+                    <strong>Outstanding fees:</strong> Rs. {totalOutstandings.toLocaleString()} across {selectedStudents.length} student(s).
                     These remain collectible on the previous enrollment(s) and will NOT be moved.
                   </p>
                 </div>
@@ -232,14 +232,14 @@ export default function PromoteFlow({ student, onClose, preselectedIds = null })
             <div className="space-y-4 flex-shrink-0">
               <ImpactSummary
                 type="promote"
-                studentName={leadStudent.name}
-                currentEnrollments={leadEnrollments}
-                targetClassName={targetClass.name}
-                targetSectionName={sections.find((s) => s.id == targetSectionId)?.name}
+                studentName={leadStudent?.name}
+                currentEnrollments={leadStudent?.enrollments || []}
+                targetClassName={targetClassName}
+                targetSectionName={targetSectionName}
                 effectiveDate={effectiveDate}
                 outstandings={totalOutstandings}
                 compact
-                students={isBulk ? students : null}
+                students={isBulk ? selectedStudents : null}
               />
 
               <div className="flex items-start gap-3 pt-1">
@@ -251,7 +251,7 @@ export default function PromoteFlow({ student, onClose, preselectedIds = null })
                   className="mt-1 w-4 h-4"
                 />
                 <label htmlFor="confirm" className="text-sm text-gray-700">
-                  I understand that this will close {isBulk ? `${students.length} enrollments` : "the current enrollment"} and create {isBulk ? "new ones" : "a new one"}.
+                  I understand that this will close {isBulk ? `${selectedStudents.length} enrollments` : "the current enrollment"} and create {isBulk ? "new ones" : "a new one"}.
                   All historical data will be preserved.
                 </label>
               </div>
@@ -259,11 +259,11 @@ export default function PromoteFlow({ student, onClose, preselectedIds = null })
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => setStep(1)} className="px-4 py-2 rounded text-sm font-medium text-gray-700 bg-white border hover:bg-gray-50">Back</button>
                 <button
-                  onClick={handleExecute}
-                  disabled={!confirmed}
+                  onClick={submitAll}
+                  disabled={!confirmed || submitting}
                   className="px-6 py-2 rounded text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Execute Promotion
+                  {submitting ? "Submitting..." : "Execute Promotion"}
                 </button>
               </div>
             </div>

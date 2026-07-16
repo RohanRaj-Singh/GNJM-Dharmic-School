@@ -1,10 +1,19 @@
 import AdminLayout from "@/Layouts/AdminLayout";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { usePage } from "@inertiajs/react";
+import axios from "axios";
+import toast from "react-hot-toast";
 import PromoteFlow from "./StudentProgression/PromoteFlow";
 import PassOutFlow from "./StudentProgression/PassOutFlow";
-import { MOCK_STUDENTS, MOCK_CLASSES, MOCK_SECTIONS, MOCK_ENROLLMENTS, resolveNextClassForEnrollments } from "./StudentProgression/mockData";
+import StatusBadge from "@/Components/StatusBadge";
 
 export default function StudentProgression() {
+  const { flash } = usePage().props;
+  const [students, setStudents] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
@@ -12,48 +21,48 @@ export default function StudentProgression() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [activeModal, setActiveModal] = useState(null);
 
-  const sectionOptions = useMemo(
-    () => (classFilter ? MOCK_SECTIONS[classFilter] || [] : []),
-    [classFilter]
-  );
-
-  const filtered = useMemo(() => {
-    let list = MOCK_STUDENTS.filter((s) => s.status === "active");
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          (s.fatherName && s.fatherName.toLowerCase().includes(q))
-      );
-    }
-    if (classFilter) {
-      list = list.filter((s) => {
-        const enrollments = MOCK_ENROLLMENTS[s.id] || [];
-        return enrollments.some((e) => e.classId === Number(classFilter));
-      });
-    }
-    if (sectionFilter) {
-      list = list.filter((s) => {
-        const enrollments = MOCK_ENROLLMENTS[s.id] || [];
-        return enrollments.some((e) => e.sectionId === Number(sectionFilter));
-      });
-    }
-    return list;
+  const fetchStudents = useCallback(() => {
+    const params = new URLSearchParams();
+    if (search) params.append("search", search);
+    if (classFilter) params.append("class_id", classFilter);
+    if (sectionFilter) params.append("section_id", sectionFilter);
+    setLoading(true);
+    axios.get(`/admin/utilities/student-progression/data?${params}`)
+      .then((r) => setStudents(r.data))
+      .catch(() => setStudents([]))
+      .finally(() => setLoading(false));
   }, [search, classFilter, sectionFilter]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  useEffect(() => {
+    axios.get("/admin/classes/options").then((r) => setClasses(r.data)).catch(() => {});
+    axios.get("/admin/sections/options").then((r) => setSections(r.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (flash?.success) toast.success(flash.success);
+    if (flash?.error) toast.error(flash.error);
+  }, [flash]);
+
+  const sectionOptions = useMemo(
+    () => sections.filter((s) => String(s.class_id) === classFilter),
+    [sections, classFilter]
+  );
 
   const toggleOne = useCallback((id) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }, []);
 
   const toggleAll = useCallback(() => {
     setSelectedIds((prev) => {
-      const ids = filtered.map((s) => s.id);
+      const ids = students.map((s) => s.id);
       const allSelected = ids.every((id) => prev.has(id));
       if (allSelected) {
         const next = new Set(prev);
@@ -64,7 +73,7 @@ export default function StudentProgression() {
       ids.forEach((id) => next.add(id));
       return next;
     });
-  }, [filtered]);
+  }, [students]);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
@@ -76,34 +85,18 @@ export default function StudentProgression() {
   const closeModal = useCallback(() => {
     setActiveModal(null);
     setSelectedStudent(null);
-  }, []);
+    fetchStudents();
+  }, [fetchStudents]);
 
-  const canPromote = useMemo(
-    () =>
-      selectedIds.size > 0 &&
-      Array.from(selectedIds).every((id) => {
-        const s = MOCK_STUDENTS.find((st) => st.id === id);
-        if (!s) return false;
-        const enrollments = MOCK_ENROLLMENTS[id] || [];
-        return resolveNextClassForEnrollments(enrollments).length > 0;
-      }),
-    [selectedIds]
-  );
-
-  const hasOutstanding = (student) => student.outstandings > 0;
-  const classLabel = (student) => {
-    const enrollments = MOCK_ENROLLMENTS[student.id] || [];
-    return enrollments.map((e) => e.className).join(", ") || "—";
-  };
+  const classLabel = (student) =>
+    student.enrollments?.map((e) => e.className).join(", ") || "—";
 
   return (
     <AdminLayout title="Student Progression">
       <div className="max-w-6xl space-y-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-800">Student Progression</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Promote or pass out active students.
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Promote or pass out active students.</p>
         </div>
 
         <div className="bg-white rounded-lg shadow p-4 flex flex-wrap items-end gap-3">
@@ -121,14 +114,11 @@ export default function StudentProgression() {
             <label className="block text-xs text-gray-500 mb-1">Class</label>
             <select
               value={classFilter}
-              onChange={(e) => {
-                setClassFilter(e.target.value);
-                setSectionFilter("");
-              }}
+              onChange={(e) => { setClassFilter(e.target.value); setSectionFilter(""); }}
               className="border rounded px-3 py-1.5 text-sm min-w-[160px]"
             >
               <option value="">All Classes</option>
-              {MOCK_CLASSES.map((c) => (
+              {classes.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
@@ -148,7 +138,7 @@ export default function StudentProgression() {
             </select>
           </div>
           <div className="text-xs text-gray-400 self-center pb-1">
-            {filtered.length} student(s)
+            {!loading && `${students.length} student(s)`}
             {selectedIds.size > 0 && ` · ${selectedIds.size} selected`}
           </div>
         </div>
@@ -160,22 +150,20 @@ export default function StudentProgression() {
             </span>
             <div className="flex gap-2 ml-auto">
               <button
-                disabled={!canPromote}
                 onClick={() => {
-                  const first = MOCK_STUDENTS.find((s) => selectedIds.has(s.id));
+                  const first = students.find((s) => selectedIds.has(s.id));
                   if (first) openFlow(first, "promote");
                 }}
-                className="px-3 py-1.5 rounded text-sm font-medium bg-blue-600 text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
               >
                 Promote Selected
               </button>
               <button
-                disabled={selectedIds.size === 0}
                 onClick={() => {
-                  const first = MOCK_STUDENTS.find((s) => selectedIds.has(s.id));
+                  const first = students.find((s) => selectedIds.has(s.id));
                   if (first) openFlow(first, "passOut");
                 }}
-                className="px-3 py-1.5 rounded text-sm font-medium bg-green-600 text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700"
               >
                 Pass Out Selected
               </button>
@@ -190,7 +178,9 @@ export default function StudentProgression() {
         )}
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">Loading...</div>
+          ) : students.length === 0 ? (
             <div className="p-8 text-center text-sm text-gray-400">
               {search || classFilter || sectionFilter
                 ? "No students match the current filters."
@@ -203,7 +193,7 @@ export default function StudentProgression() {
                   <th className="px-4 py-2 w-10">
                     <input
                       type="checkbox"
-                      checked={filtered.length > 0 && filtered.every((s) => selectedIds.has(s.id))}
+                      checked={students.length > 0 && students.every((s) => selectedIds.has(s.id))}
                       onChange={toggleAll}
                       className="w-4 h-4"
                     />
@@ -211,13 +201,14 @@ export default function StudentProgression() {
                   <th className="px-4 py-2 text-left font-medium text-gray-600">Student Name</th>
                   <th className="px-4 py-2 text-left font-medium text-gray-600">Father Name</th>
                   <th className="px-4 py-2 text-left font-medium text-gray-600">Current Class</th>
+                  <th className="px-4 py-2 text-center font-medium text-gray-600">Status</th>
                   <th className="px-4 py-2 text-center font-medium text-gray-600">Type</th>
                   <th className="px-4 py-2 text-right font-medium text-gray-600">Outstanding</th>
                   <th className="px-4 py-2 text-right font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filtered.map((student) => (
+                {students.map((student) => (
                   <tr key={student.id} className="hover:bg-blue-50">
                     <td className="px-4 py-2">
                       <input
@@ -230,39 +221,35 @@ export default function StudentProgression() {
                     <td className="px-4 py-2 font-medium">{student.name}</td>
                     <td className="px-4 py-2 text-gray-500">{student.fatherName || "—"}</td>
                     <td className="px-4 py-2 text-gray-600 text-xs">{classLabel(student)}</td>
+                    <td className="px-4 py-2 text-center"><StatusBadge status={student.status} /></td>
                     <td className="px-4 py-2 text-center">
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          student.studentType === "free"
-                            ? "bg-purple-100 text-purple-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {student.studentType}
-                      </span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        student.studentType === "free"
+                          ? "bg-purple-100 text-purple-700"
+                          : "bg-green-100 text-green-700"
+                      }`}>{student.studentType}</span>
                     </td>
                     <td className="px-4 py-2 text-right">
-                      {hasOutstanding(student) ? (
-                        <span className="text-red-600 font-medium text-xs">
-                          Rs. {student.outstandings.toLocaleString()}
-                        </span>
+                      {student.outstandings > 0 ? (
+                        <span className="text-red-600 font-medium text-xs">Rs. {student.outstandings.toLocaleString()}</span>
                       ) : (
                         <span className="text-gray-300">—</span>
                       )}
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex gap-1.5 justify-end">
-                        <ActionButton
-                          label="Promote"
-                          color="blue"
-                          disabled={!resolveNextClassForEnrollments(MOCK_ENROLLMENTS[student.id] || []).length}
+                        <button
                           onClick={() => openFlow(student, "promote")}
-                        />
-                        <ActionButton
-                          label="Pass Out"
-                          color="green"
+                          className="px-2 py-1 rounded text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+                        >
+                          Promote
+                        </button>
+                        <button
                           onClick={() => openFlow(student, "passOut")}
-                        />
+                          className="px-2 py-1 rounded text-[11px] font-medium bg-green-50 text-green-700 hover:bg-green-100 transition"
+                        >
+                          Pass Out
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -276,6 +263,9 @@ export default function StudentProgression() {
       {activeModal === "promote" && selectedStudent && (
         <PromoteFlow
           student={selectedStudent}
+          students={students}
+          classes={classes}
+          sections={sections}
           onClose={closeModal}
           preselectedIds={selectedIds.size >= 1 ? Array.from(selectedIds) : null}
         />
@@ -283,32 +273,11 @@ export default function StudentProgression() {
       {activeModal === "passOut" && selectedStudent && (
         <PassOutFlow
           student={selectedStudent}
+          students={students}
           onClose={closeModal}
           preselectedIds={selectedIds.size >= 1 ? Array.from(selectedIds) : null}
         />
       )}
     </AdminLayout>
-  );
-}
-
-function ActionButton({ label, color, disabled, onClick }) {
-  const colors = {
-    blue: "bg-blue-50 text-blue-700 hover:bg-blue-100",
-    green: "bg-green-50 text-green-700 hover:bg-green-100",
-  };
-  if (disabled) {
-    return (
-      <span className="text-[11px] text-gray-300 italic" title="No next class available">
-        {label}
-      </span>
-    );
-  }
-  return (
-    <button
-      onClick={onClick}
-      className={`px-2 py-1 rounded text-[11px] font-medium transition ${colors[color] || colors.blue}`}
-    >
-      {label}
-    </button>
   );
 }

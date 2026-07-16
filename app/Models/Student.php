@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Student extends Model
 {
+    public const STATUS_ACTIVE = 'active';
+    public const STATUS_INACTIVE = 'inactive';
+    public const STATUS_PROMOTED = 'promoted';
+    public const STATUS_PASSED_OUT = 'passed_out';
+    public const STATUS_LEFT = 'left';
+
     protected $fillable = [
         'name',
         'father_name',

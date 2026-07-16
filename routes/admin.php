@@ -162,6 +162,117 @@ Route::get(
     fn() => Inertia::render('Admin/Utilities/StudentProgression')
 )->name('utilities.student-progression');
 
+// Master Directory
+Route::get(
+    '/utilities/master-directory',
+    fn() => Inertia::render('Admin/Utilities/MasterDirectory')
+)->name('utilities.master-directory');
+
+// Student Progression data — active students with current enrollments + outstanding fees
+Route::get('/utilities/student-progression/data', function (Request $request) {
+    $query = Student::query()
+        ->where('students.status', Student::STATUS_ACTIVE)
+        ->whereHas('enrollments', fn ($q) =>
+            $q->where('status', StudentSection::STATUS_ACTIVE)->whereNull('transferred_at')
+        )
+        ->orderBy('name');
+
+    if ($search = $request->input('search')) {
+        $query->where(function ($q) use ($search) {
+            $q->where('students.name', 'like', "%{$search}%")
+              ->orWhere('students.father_name', 'like', "%{$search}%");
+        });
+    }
+
+    if ($classId = $request->input('class_id')) {
+        $query->whereHas('enrollments', fn ($q) =>
+            $q->where('class_id', $classId)->where('status', StudentSection::STATUS_ACTIVE)->whereNull('transferred_at')
+        );
+    }
+
+    if ($sectionId = $request->input('section_id')) {
+        $query->whereHas('enrollments', fn ($q) =>
+            $q->where('section_id', $sectionId)->where('status', StudentSection::STATUS_ACTIVE)->whereNull('transferred_at')
+        );
+    }
+
+    return $query->with(['enrollments' => fn ($q) =>
+        $q->where('status', StudentSection::STATUS_ACTIVE)->whereNull('transferred_at'),
+        'enrollments.schoolClass', 'enrollments.section',
+    ])->get()->map(fn ($s) => [
+        'id' => $s->id,
+        'name' => $s->name,
+        'fatherName' => $s->father_name,
+        'status' => $s->status,
+        'studentType' => $s->enrollments->first()?->student_type ?? 'paid',
+        'enrollments' => $s->enrollments->map(fn ($e) => [
+            'id' => $e->id,
+            'classId' => $e->class_id,
+            'className' => $e->schoolClass->name,
+            'sectionId' => $e->section_id,
+            'sectionName' => $e->section->name,
+            'studentType' => $e->student_type,
+            'startedAt' => $e->started_at?->toDateString(),
+        ])->values(),
+        'outstandings' => (int) DB::table('fees')
+            ->whereIn('student_section_id', $s->enrollments->pluck('id'))
+            ->where('type', 'monthly')
+            ->whereNotExists(fn ($q) =>
+                $q->selectRaw('1')->from('payments')
+                  ->whereColumn('payments.fee_id', '=', 'fees.id')
+                  ->whereNull('payments.deleted_at')
+            )
+            ->sum('fees.amount'),
+    ]);
+})->name('utilities.student-progression.data');
+
+Route::get('/utilities/master-directory/data', function (Request $request) {
+    $query = Student::query()
+        ->where(function ($q) {
+            $q->whereIn('students.status', ['inactive', 'passed_out', 'left'])
+              ->orWhereHas('enrollments', fn ($qq) =>
+                  $qq->whereIn('status', ['promoted', 'passed_out', 'left'])
+              );
+        });
+
+    // Search filter
+    if ($search = $request->input('search')) {
+        $query->where(function ($q) use ($search) {
+            $q->where('students.name', 'like', "%{$search}%")
+              ->orWhere('students.father_name', 'like', "%{$search}%");
+        });
+    }
+
+    // Status filter
+    if ($status = $request->input('status')) {
+        if ($status === 'active') {
+            $query->where('students.status', 'active');
+        } else {
+            $query->where('students.status', $status);
+        }
+    }
+
+    // Class filter (via enrollment)
+    if ($classId = $request->input('class_id')) {
+        $query->whereHas('enrollments', fn ($q) => $q->where('class_id', $classId));
+    }
+
+    return $query->with(['enrollments' => fn ($q) => $q->latest('started_at')->take(1), 'enrollments.schoolClass', 'enrollments.section'])
+        ->get()
+        ->map(fn ($s) => [
+            'id' => $s->id,
+            'name' => $s->name,
+            'father_name' => $s->father_name,
+            'status' => $s->status,
+            'last_enrollment' => $s->enrollments->first() ? [
+                'class_name' => $s->enrollments->first()->schoolClass->name,
+                'section_name' => $s->enrollments->first()->section->name,
+                'outcome' => $s->enrollments->first()->outcome,
+            ] : null,
+            'outstanding_fees' => 0, // Placeholder; computed in future
+        ]);
+})->name('utilities.master-directory.data');
+
 Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardController::class, 'summary'])
     ->name('admin.dashboard.summary');
 
@@ -172,11 +283,49 @@ Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardControlle
 
 Route::prefix('students')->name('students.')->group(function () {
 
-    Route::get(
-        '/',
-        fn() =>
-        Inertia::render('Admin/Students/Index')
-    )->name('index');
+    Route::get('/', function (Request $request) {
+        $includeInactive = $request->boolean('include_inactive');
+
+        $query = Student::with([
+            'enrollments' => fn($q) => $includeInactive
+                ? $q
+                : $q->where('status', 'active')->whereNull('transferred_at'),
+            'enrollments.schoolClass',
+            'enrollments.section',
+        ])->orderBy('name');
+
+        // When not including inactive, only show students with active enrollments
+        if (!$includeInactive) {
+            $query->whereHas('enrollments', fn($q) =>
+                $q->where('status', 'active')->whereNull('transferred_at')
+            );
+        }
+
+        $students = $query->get()
+            ->map(fn($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'father_name' => $s->father_name,
+                'father_phone' => $s->father_phone,
+                'mother_phone' => $s->mother_phone,
+                'status' => $s->status,
+                'enrollments' => $s->enrollments->map(fn($e) => [
+                    'id' => $e->id,
+                    'class_id' => (string) $e->class_id,
+                    'section_id' => (string) $e->section_id,
+                    'class_name' => $e->schoolClass->name,
+                    'section_name' => $e->section->name,
+                    'student_type' => $e->student_type,
+                    'status' => $e->status,
+                ]),
+            ]);
+
+        return Inertia::render('Admin/Students/Index', [
+            'students' => $students,
+            'classes' => SchoolClass::select('id', 'name')->orderBy('name')->get(),
+            'filters' => $request->only(['include_inactive']),
+        ]);
+    })->name('index');
     Route::get('/list', function (Request $request) {
         $user = auth()->user();
 
@@ -185,14 +334,14 @@ Route::prefix('students')->name('students.')->group(function () {
                 $q->whereIn(
                     'section_id',
                     $user->sections->pluck('id')
-                )->where('status', 'active');
+                )->where('status', 'active')->whereNull('transferred_at');
             })
             ->with(['enrollments' => function ($q) {
-                $q->where('status', 'active');
+                $q->where('status', 'active')->whereNull('transferred_at');
             }, 'enrollments.schoolClass', 'enrollments.section'])
             ->get()
             : Student::with(['enrollments' => function ($q) {
-                $q->where('status', 'active');
+                $q->where('status', 'active')->whereNull('transferred_at');
             }, 'enrollments.schoolClass', 'enrollments.section'])->get();
 
         return $students;
@@ -204,16 +353,17 @@ Route::prefix('students')->name('students.')->group(function () {
         $query = Student::with([
             'enrollments' => function ($q) use ($includeInactive) {
                 if (!$includeInactive) {
-                    $q->where('status', 'active');
+                    $q->where('status', 'active')->whereNull('transferred_at');
                 }
             },
-            'enrollments.section.schoolClass',
+            'enrollments.schoolClass',
+            'enrollments.section',
         ])->orderBy('name');
 
         // When not including inactive enrollments, also filter out students
         // who have no active enrollments at all.
         if (!$includeInactive) {
-            $query->whereHas('enrollments', fn ($q) => $q->where('status', 'active'));
+            $query->whereHas('enrollments', fn ($q) => $q->where('status', 'active')->whereNull('transferred_at'));
         }
 
         return $query->get()->map(fn($s) => [
@@ -224,8 +374,11 @@ Route::prefix('students')->name('students.')->group(function () {
             'mother_phone' => $s->mother_phone,
             'status' => $s->status,
             'enrollments' => $s->enrollments->map(fn($e) => [
+                'id' => $e->id,
                 'class_id' => (string) $e->class_id,
                 'section_id' => (string) $e->section_id,
+                'class_name' => $e->schoolClass->name,
+                'section_name' => $e->section->name,
                 'student_type' => $e->student_type,
                 'status' => $e->status ?? 'active',
             ])->values(),
@@ -247,6 +400,7 @@ Route::prefix('students')->name('students.')->group(function () {
             ->join('student_sections', 'students.id', '=', 'student_sections.student_id')
             ->whereIn('student_sections.class_id', $classIds)
             ->where('student_sections.status', 'active')
+            ->whereNull('student_sections.transferred_at')
             ->select('students.id', 'students.name', 'students.father_name');
 
         if (!empty($sectionIds)) {
@@ -307,6 +461,7 @@ Route::prefix('students')->name('students.')->group(function () {
                 // ---- 3. Remove orphaned active enrollments (single DELETE) ----
                 StudentSection::where('student_id', $student->id)
                     ->where('status', 'active')
+                    ->whereNull('transferred_at')
                     ->whereNotIn('section_id', $incoming->keys())
                     ->delete();
 

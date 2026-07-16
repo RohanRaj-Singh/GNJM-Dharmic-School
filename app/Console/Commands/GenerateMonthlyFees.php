@@ -28,6 +28,7 @@ class GenerateMonthlyFees extends Command
 
         $enrollments = StudentSection::with(['schoolClass', 'section'])
             ->where('status', 'active')
+            ->whereNull('transferred_at')
             ->get();
 
         $affectedStudentIds = [];

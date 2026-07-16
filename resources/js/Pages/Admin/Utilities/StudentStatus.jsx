@@ -2,10 +2,13 @@ import AdminLayout from "@/Layouts/AdminLayout";
 import { router, usePage } from "@inertiajs/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import StatusBadge from "@/Components/StatusBadge";
 
 const STATUS_ALL = "all";
 const STATUS_ACTIVE = "active";
 const STATUS_INACTIVE = "inactive";
+const STATUS_PROMOTED = "promoted";
+const STATUS_PASSED_OUT = "passed_out";
 const STATUS_LEFT = "left";
 
 export default function StudentStatus() {
@@ -82,8 +85,14 @@ export default function StudentStatus() {
             list = list.filter((e) => e.enrollment_status === "active");
         } else if (statusFilter === STATUS_INACTIVE) {
             list = list.filter((e) => e.enrollment_status === "inactive");
+        } else if (statusFilter === STATUS_PROMOTED) {
+            list = list.filter((e) => e.enrollment_status === "promoted");
+        } else if (statusFilter === STATUS_PASSED_OUT) {
+            list = list.filter((e) => e.enrollment_status === "passed_out");
         } else if (statusFilter === STATUS_LEFT) {
             list = list.filter((e) => e.enrollment_status === "left");
+        } else if (statusFilter === STATUS_ALL) {
+            list = list.filter((e) => e.enrollment_status !== "active");
         }
         if (search.trim()) {
             const q = search.toLowerCase();
@@ -183,8 +192,10 @@ export default function StudentStatus() {
     const stats = useMemo(() => {
         const active = enrollments.filter((e) => e.enrollment_status === "active").length;
         const inactive = enrollments.filter((e) => e.enrollment_status === "inactive").length;
+        const promoted = enrollments.filter((e) => e.enrollment_status === "promoted").length;
+        const passed_out = enrollments.filter((e) => e.enrollment_status === "passed_out").length;
         const left = enrollments.filter((e) => e.enrollment_status === "left").length;
-        return { total: enrollments.length, active, inactive, left };
+        return { total: enrollments.length, active, inactive, promoted, passed_out, left };
     }, [enrollments]);
 
     return (
@@ -200,7 +211,9 @@ export default function StudentStatus() {
                     <div className="flex gap-3 text-sm">
                         <StatBadge label="Total" value={stats.total} />
                         <StatBadge label="Active" value={stats.active} color="bg-green-100 text-green-800" />
-                        <StatBadge label="Inactive" value={stats.inactive} color="bg-red-100 text-red-800" />
+                        <StatBadge label="Inactive" value={stats.inactive} color="bg-amber-100 text-amber-800" />
+                        <StatBadge label="Completed" value={stats.promoted} color="bg-blue-100 text-blue-800" />
+                        <StatBadge label="Passed Out" value={stats.passed_out} color="bg-purple-100 text-purple-800" />
                         <StatBadge label="Left" value={stats.left} color="bg-gray-200 text-gray-700" />
                     </div>
                 </div>
@@ -243,6 +256,8 @@ export default function StudentStatus() {
                             <option value={STATUS_ALL}>All</option>
                             <option value={STATUS_ACTIVE}>Active</option>
                             <option value={STATUS_INACTIVE}>Inactive</option>
+                            <option value={STATUS_PROMOTED}>Completed</option>
+                            <option value={STATUS_PASSED_OUT}>Passed Out</option>
                             <option value={STATUS_LEFT}>Left</option>
                         </select>
                     </div>
@@ -333,7 +348,7 @@ export default function StudentStatus() {
                                     <tr
                                         key={e.enrollment_id}
                                         className={`${
-                                            e.enrollment_status === "inactive" || e.enrollment_status === "left"
+                                            e.enrollment_status !== "active"
                                                 ? "bg-gray-50"
                                                 : ""
                                         } hover:bg-blue-50`}
@@ -461,12 +476,4 @@ function StatBadge({ label, value, color = "bg-gray-100 text-gray-800" }) {
     );
 }
 
-function StatusBadge({ status }) {
-    if (status === "inactive") {
-        return <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-800 font-medium">Inactive</span>;
-    }
-    if (status === "left") {
-        return <span className="px-2 py-0.5 rounded-full text-xs bg-gray-200 text-gray-700 font-medium">Left</span>;
-    }
-    return <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800 font-medium">Active</span>;
-}
+

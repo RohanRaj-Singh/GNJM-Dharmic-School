@@ -93,7 +93,7 @@ class DashboardController extends Controller
             'students' => [
                 'total' => DB::table('students')->where('status', 'active')->count(),
                 'active' => DB::table('students')->where('status', 'active')->count(),
-                'enrollments' => DB::table('student_sections')->where('status', 'active')->count(),
+                'enrollments' => DB::table('student_sections')->where('status', 'active')->whereNull('transferred_at')->count(),
             ],
         ];
     }
@@ -127,12 +127,14 @@ class DashboardController extends Controller
                 'students_count' => (int) DB::table('student_sections')
                     ->whereIn('class_id', $classIds)
                     ->where('status', 'active')
+                    ->whereNull('transferred_at')
                     ->distinct('student_id')
                     ->count('student_id'),
                 'free_students_count' => (int) DB::table('student_sections')
                     ->whereIn('class_id', $classIds)
                     ->where('student_type', 'free')
                     ->where('status', 'active')
+                    ->whereNull('transferred_at')
                     ->distinct('student_id')
                     ->count('student_id'),
                 'active_students_count' => (int) DB::table('student_sections')
@@ -144,6 +146,7 @@ class DashboardController extends Controller
                 'enrollments_count' => (int) DB::table('student_sections')
                     ->whereIn('class_id', $classIds)
                     ->where('status', 'active')
+                    ->whereNull('transferred_at')
                     ->count(),
             ];
 

@@ -75,7 +75,7 @@ Route::get('/', fn () =>
     /* Fees */
     Route::get('/receive-fee', function () {
         $student = Student::with([
-            'enrollments' => fn ($q) => $q->where('status', 'active'),
+            'enrollments' => fn ($q) => $q,  // Load all enrollments regardless of status
             'enrollments.fees' => fn ($q) =>
                 $q->whereDoesntHave('payments', fn ($qq) => $qq->whereNull('deleted_at')),
             'enrollments.schoolClass',

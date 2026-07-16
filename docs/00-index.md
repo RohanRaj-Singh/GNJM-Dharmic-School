@@ -49,6 +49,7 @@
 | 21 | [21-student-progression-prototype.md](21-student-progression-prototype.md) | React prototype — Student Progression page, four workflow modals, Academic History on Student Profile |
 | 22 | [22-student-lifecycle-system.md](22-student-lifecycle-system.md) | Full student lifecycle system — two-level state model, transition matrix, lifecycle events, business rules, effects on fees and attendance, master directory |
 | 23 | [23-lifecycle-ui-plan.md](23-lifecycle-ui-plan.md) | Lifecycle UI plan — every frontend change: shared StatusBadge, Master Directory page, Student Status filters, Academic History timeline, IdentityBlock vocabulary update |
+| 24 | [24-students-page-redesign-plan.md](24-students-page-redesign-plan.md) | Students page redesign — split monolithic 711-line TanStack spreadsheet into directory + editor modal, responsive cards/table, remove inline editing |
 
 ---
 

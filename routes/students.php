@@ -28,15 +28,15 @@ Route::prefix('students')->group(function () {
             $q->whereIn(
                 'section_id',
                 $user->sections->pluck('id')
-            )->where('status', 'active');
+            )->where('status', 'active')->whereNull('transferred_at');
         })
         ->with(['enrollments' => function ($q) {
-            $q->where('status', 'active');
+            $q->where('status', 'active')->whereNull('transferred_at');
         }, 'enrollments.schoolClass', 'enrollments.section'])
         ->get()
         : Student::with([
             'enrollments' => function ($q) {
-                $q->where('status', 'active');
+                $q->where('status', 'active')->whereNull('transferred_at');
             },
             'enrollments.schoolClass',
             'enrollments.section',
@@ -66,6 +66,7 @@ Route::prefix('students')->group(function () {
     if ($user->isTeacher()) {
         $allowed = $student->enrollments()
             ->where('status', 'active')
+            ->whereNull('transferred_at')
             ->whereIn('section_id', $user->sections->pluck('id'))
             ->exists();
 
@@ -74,7 +75,7 @@ Route::prefix('students')->group(function () {
 
     $student->load([
         'enrollments' => function ($q) {
-            $q->where('status', 'active');
+            $q->where('status', 'active')->whereNull('transferred_at');
         },
         'enrollments.schoolClass',
         'enrollments.section',

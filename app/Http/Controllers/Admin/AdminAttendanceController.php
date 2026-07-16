@@ -51,7 +51,7 @@ class AdminAttendanceController extends Controller
 
         $section = Section::with([
             'schoolClass',
-            'studentSections' => fn ($q) => $q->where('status', 'active'),
+            'studentSections' => fn ($q) => $q->where('status', 'active')->whereNull('transferred_at'),
             'studentSections.student',
         ])->findOrFail($request->section_id);
 
@@ -127,7 +127,7 @@ public function save(Request $request)
         'records'    => 'array',
     ]);
 
-    $section = Section::with(['studentSections' => fn ($q) => $q->where('status', 'active')])->findOrFail($request->section_id);
+    $section = Section::with(['studentSections' => fn ($q) => $q->where('status', 'active')->whereNull('transferred_at')])->findOrFail($request->section_id);
 
     // Build lookup set
     $validIds = $section->studentSections
