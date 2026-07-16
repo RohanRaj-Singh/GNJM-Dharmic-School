@@ -228,12 +228,8 @@ Route::get('/utilities/student-progression/data', function (Request $request) {
 
 Route::get('/utilities/master-directory/data', function (Request $request) {
     $query = Student::query()
-        ->where(function ($q) {
-            $q->whereIn('students.status', ['inactive', 'passed_out', 'left'])
-              ->orWhereHas('enrollments', fn ($qq) =>
-                  $qq->whereIn('status', ['promoted', 'passed_out', 'left'])
-              );
-        });
+        ->with(['enrollments' => fn ($q) => $q->latest('started_at')->take(1), 'enrollments.schoolClass', 'enrollments.section'])
+        ->orderBy('name');
 
     // Search filter
     if ($search = $request->input('search')) {
@@ -243,13 +239,9 @@ Route::get('/utilities/master-directory/data', function (Request $request) {
         });
     }
 
-    // Status filter
+    // Status filter — includes all statuses including active
     if ($status = $request->input('status')) {
-        if ($status === 'active') {
-            $query->where('students.status', 'active');
-        } else {
-            $query->where('students.status', $status);
-        }
+        $query->where('students.status', $status);
     }
 
     // Class filter (via enrollment)
@@ -257,19 +249,27 @@ Route::get('/utilities/master-directory/data', function (Request $request) {
         $query->whereHas('enrollments', fn ($q) => $q->where('class_id', $classId));
     }
 
-    return $query->with(['enrollments' => fn ($q) => $q->latest('started_at')->take(1), 'enrollments.schoolClass', 'enrollments.section'])
-        ->get()
+    return $query->get()
         ->map(fn ($s) => [
             'id' => $s->id,
             'name' => $s->name,
-            'father_name' => $s->father_name,
+            'fatherName' => $s->father_name,
             'status' => $s->status,
-            'last_enrollment' => $s->enrollments->first() ? [
-                'class_name' => $s->enrollments->first()->schoolClass->name,
-                'section_name' => $s->enrollments->first()->section->name,
+            'lastEnrollment' => $s->enrollments->first() ? [
+                'className' => $s->enrollments->first()->schoolClass->name,
+                'sectionName' => $s->enrollments->first()->section->name,
                 'outcome' => $s->enrollments->first()->outcome,
             ] : null,
-            'outstanding_fees' => 0, // Placeholder; computed in future
+            'outstandings' => (int) DB::table('fees')
+                ->join('student_sections', 'fees.student_section_id', '=', 'student_sections.id')
+                ->where('student_sections.student_id', $s->id)
+                ->where('fees.type', 'monthly')
+                ->whereNotExists(fn ($q) =>
+                    $q->selectRaw('1')->from('payments')
+                      ->whereColumn('payments.fee_id', '=', 'fees.id')
+                      ->whereNull('payments.deleted_at')
+                )
+                ->sum('fees.amount'),
         ]);
 })->name('utilities.master-directory.data');
 
