@@ -227,65 +227,38 @@ Route::get('/utilities/student-progression/data', function (Request $request) {
 })->name('utilities.student-progression.data');
 
 Route::get('/utilities/master-directory/data', function (Request $request) {
-    $query = DB::table('students')
-        ->leftJoin('student_sections', 'students.id', '=', 'student_sections.student_id')
-        ->leftJoin('classes', 'student_sections.class_id', '=', 'classes.id')
-        ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
-        ->select('students.id', 'students.name', 'students.father_name', 'students.status',
-                 DB::raw('COALESCE(SUM(CASE WHEN fees.id IS NOT NULL AND payments.id IS NULL THEN fees.amount ELSE 0 END), 0) as outstandings'))
-        ->leftJoin('fees', function ($j) {
-            $j->on('fees.student_section_id', '=', 'student_sections.id')
-              ->where('fees.type', '=', 'monthly');
-        })
-        ->leftJoin('payments', function ($j) {
-            $j->on('payments.fee_id', '=', 'fees.id')
-              ->whereNull('payments.deleted_at');
-        })
-        ->groupBy('students.id', 'students.name', 'students.father_name', 'students.status')
-        ->orderBy('students.name');
+    $query = Student::with([
+        'enrollments' => fn ($q) => $q->latest('started_at')->take(1),
+        'enrollments.schoolClass',
+        'enrollments.section',
+    ])->orderBy('name');
 
-    $search = $request->input('search');
-    $status = $request->input('status');
-    $classId = $request->input('class_id');
-
-    if ($search) {
+    if ($search = $request->input('search')) {
         $query->where(function ($q) use ($search) {
-            $q->where('students.name', 'like', "%{$search}%")
-              ->orWhere('students.father_name', 'like', "%{$search}%");
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('father_name', 'like', "%{$search}%");
         });
     }
-    if ($status) {
-        $query->where('students.status', $status);
-    }
-    if ($classId) {
-        $query->where('student_sections.class_id', $classId);
+
+    if ($status = $request->input('status')) {
+        $query->where('status', $status);
     }
 
-    // Get raw student rows
-    $rows = $query->get();
+    if ($classId = $request->input('class_id')) {
+        $query->whereHas('enrollments', fn ($q) => $q->where('class_id', $classId));
+    }
 
-    // Build last enrollment data per student (separate query to avoid group-by conflicts)
-    $studentIds = $rows->pluck('id');
-    $lastEnrollments = DB::table('student_sections')
-        ->join('classes', 'student_sections.class_id', '=', 'classes.id')
-        ->join('sections', 'student_sections.section_id', '=', 'sections.id')
-        ->whereIn('student_sections.student_id', $studentIds)
-        ->whereRaw('student_sections.id = (SELECT ss2.id FROM student_sections ss2 WHERE ss2.student_id = student_sections.student_id ORDER BY ss2.started_at DESC LIMIT 1)')
-        ->select('student_sections.student_id', 'classes.name as class_name', 'sections.name as section_name', 'student_sections.outcome')
-        ->get()
-        ->keyBy('student_id');
-
-    return $rows->map(fn ($r) => [
-        'id' => $r->id,
-        'name' => $r->name,
-        'fatherName' => $r->father_name,
-        'status' => $r->status,
-        'lastEnrollment' => isset($lastEnrollments[$r->id]) ? [
-            'className' => $lastEnrollments[$r->id]->class_name,
-            'sectionName' => $lastEnrollments[$r->id]->section_name,
-            'outcome' => $lastEnrollments[$r->id]->outcome,
+    return $query->get()->map(fn ($s) => [
+        'id' => $s->id,
+        'name' => $s->name,
+        'fatherName' => $s->father_name,
+        'status' => $s->status,
+        'lastEnrollment' => $s->enrollments->first() ? [
+            'className' => $s->enrollments->first()->schoolClass->name,
+            'sectionName' => $s->enrollments->first()->section->name,
+            'outcome' => $s->enrollments->first()->outcome,
         ] : null,
-        'outstandings' => (int) $r->outstandings,
+        'outstandings' => 0,
     ]);
 })->name('utilities.master-directory.data');
 
