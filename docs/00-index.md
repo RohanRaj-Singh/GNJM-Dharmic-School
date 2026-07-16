@@ -45,6 +45,10 @@
 | 14 | [14-student-report-center-v1-kickoff.md](14-student-report-center-v1-kickoff.md) | the **V1 implementation kickoff** — current state, gap analysis, V1 architecture, schema footprint, 3-phase plan, business-rule approvals needed |
 | 15 | [15-authentication-audit-and-migration.md](15-authentication-audit-and-migration.md) | the full auth audit — root-cause analysis of 419, security review, migration plan |
 | 16 | [16-auth-cleanup-final-report.md](16-auth-cleanup-final-report.md) | the auth cleanup execution — files removed/modified, test results, security improvements |
+| 20 | [20-student-promotion-v2-architecture.md](20-student-promotion-v2-architecture.md) | promotion V2 architecture — batch removal, enrollment-centric model, historical data, reporting reuse |
+| 21 | [21-student-progression-prototype.md](21-student-progression-prototype.md) | React prototype — Student Progression page, four workflow modals, Academic History on Student Profile |
+| 22 | [22-student-lifecycle-system.md](22-student-lifecycle-system.md) | Full student lifecycle system — two-level state model, transition matrix, lifecycle events, business rules, effects on fees and attendance, master directory |
+| 23 | [23-lifecycle-ui-plan.md](23-lifecycle-ui-plan.md) | Lifecycle UI plan — every frontend change: shared StatusBadge, Master Directory page, Student Status filters, Academic History timeline, IdentityBlock vocabulary update |
 
 ---
 

@@ -156,17 +156,11 @@ Route::post(
     }
 )->name('utilities.student-status.bulk-update');
 
-// Student Promotion (prototype mockup)
+// Student Progression (prototype)
 Route::get(
-    '/utilities/student-promotion',
-    fn() => Inertia::render('Admin/Utilities/StudentPromotion')
-)->name('utilities.student-promotion');
-
-// Batches (prototype mockup)
-Route::get(
-    '/utilities/batches',
-    fn() => Inertia::render('Admin/Utilities/Batches')
-)->name('utilities.batches');
+    '/utilities/student-progression',
+    fn() => Inertia::render('Admin/Utilities/StudentProgression')
+)->name('utilities.student-progression');
 
 Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardController::class, 'summary'])
     ->name('admin.dashboard.summary');

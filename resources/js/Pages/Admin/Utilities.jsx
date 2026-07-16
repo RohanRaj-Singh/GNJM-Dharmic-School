@@ -41,17 +41,9 @@ export default function Utilities() {
 
         <UtilityCard
           emoji="📈"
-          title="Student Promotion"
-          description="Promote students to the next class for a new academic session"
-          href="/admin/utilities/student-promotion"
-          badge="New"
-        />
-
-        <UtilityCard
-          emoji="🏷️"
-          title="Batches"
-          description="Manage admission cohorts for reporting"
-          href="/admin/utilities/batches"
+          title="Student Progression"
+          description="Promote, repeat, pass out, or mark a student as left school"
+          href="/admin/utilities/student-progression"
           badge="New"
         />
 
