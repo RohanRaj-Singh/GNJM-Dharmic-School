@@ -1,7 +1,6 @@
 import AdminLayout from "@/Layouts/AdminLayout";
 import { useState, useCallback, useEffect } from "react";
 import { Link } from "@inertiajs/react";
-import axios from "axios";
 import StatusBadge from "@/Components/StatusBadge";
 import Modal from "@/Components/Modal";
 
@@ -25,7 +24,7 @@ export default function MasterDirectory() {
   const [viewingStudent, setViewingStudent] = useState(null);
 
   useEffect(() => {
-    axios.get("/admin/classes/options").then((r) => setClasses(r.data)).catch(() => {});
+    window.axios.get("/admin/classes/options").then((r) => setClasses(r.data)).catch(() => {});
   }, []);
 
   const fetchStudents = useCallback(() => {
@@ -35,9 +34,9 @@ export default function MasterDirectory() {
     if (statusFilter) params.append("status", statusFilter);
     if (classFilter) params.append("class_id", classFilter);
 
-    axios.get(`/admin/utilities/master-directory/data?${params}`)
+    window.axios.get(`/admin/utilities/master-directory/data?${params}`)
       .then((r) => setStudents(r.data))
-      .catch(() => setStudents([]))
+      .catch((e) => { console.error("MasterDirectory fetch failed:", e.response?.status, e.response?.data); setStudents([]); })
       .finally(() => setLoading(false));
   }, [search, statusFilter, classFilter]);
 

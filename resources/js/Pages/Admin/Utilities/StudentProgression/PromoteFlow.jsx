@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import axios from "axios";
 import Modal from "@/Components/Modal";
 import ImpactSummary from "./ImpactSummary";
 
@@ -42,7 +41,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
     if (!targetClassId) return;
     const hasSections = (propSections || []).some((s) => String(s.class_id) === String(targetClassId));
     if (hasSections) return;
-    axios.get(`/admin/sections/options?class_id=${targetClassId}`)
+    window.axios.get(`/admin/sections/options?class_id=${targetClassId}`)
       .then((r) => setLazySections(r.data))
       .catch(() => setLazySections([]));
   }, [targetClassId, propSections]);
@@ -72,7 +71,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
     setSubmitting(true);
     setError(null);
     const promises = selectedStudents.map((s) =>
-      axios.post(`/students/${s.id}/promote`, {
+      window.axios.post(`/students/${s.id}/promote`, {
         section_id: targetSectionId,
         effective_date: effectiveDate,
       })

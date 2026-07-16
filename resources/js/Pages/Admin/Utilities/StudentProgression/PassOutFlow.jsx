@@ -1,5 +1,4 @@
 ﻿import { useState, useMemo, useCallback } from "react";
-import axios from "axios";
 import Modal from "@/Components/Modal";
 import ImpactSummary from "./ImpactSummary";
 
@@ -27,7 +26,7 @@ export default function PassOutFlow({ student, students, onClose, preselectedIds
     setError(null);
     try {
       await Promise.all(
-        selectedStudents.map((s) => axios.post("/students/" + s.id + "/pass-out"))
+        selectedStudents.map((s) => window.axios.post("/students/" + s.id + "/pass-out"))
       );
       setDone(true);
     } catch (e) {

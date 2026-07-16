@@ -1,7 +1,6 @@
 import AdminLayout from "@/Layouts/AdminLayout";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { usePage } from "@inertiajs/react";
-import axios from "axios";
 import toast from "react-hot-toast";
 import PromoteFlow from "./StudentProgression/PromoteFlow";
 import PassOutFlow from "./StudentProgression/PassOutFlow";
@@ -27,7 +26,7 @@ export default function StudentProgression() {
     if (classFilter) params.append("class_id", classFilter);
     if (sectionFilter) params.append("section_id", sectionFilter);
     setLoading(true);
-    axios.get(`/admin/utilities/student-progression/data?${params}`)
+    window.axios.get(`/admin/utilities/student-progression/data?${params}`)
       .then((r) => setStudents(r.data))
       .catch(() => setStudents([]))
       .finally(() => setLoading(false));
@@ -38,13 +37,13 @@ export default function StudentProgression() {
   }, [fetchStudents]);
 
   useEffect(() => {
-    axios.get("/admin/classes/options").then((r) => setClasses(r.data)).catch(() => {});
+    window.axios.get("/admin/classes/options").then((r) => setClasses(r.data)).catch(() => {});
   }, []);
 
   // Fetch sections when class filter changes
   useEffect(() => {
     if (!classFilter) { setSections([]); return; }
-    axios.get(`/admin/sections/options?class_id=${classFilter}`)
+    window.axios.get(`/admin/sections/options?class_id=${classFilter}`)
       .then((r) => setSections(r.data))
       .catch(() => setSections([]));
   }, [classFilter]);
