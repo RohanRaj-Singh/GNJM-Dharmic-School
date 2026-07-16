@@ -168,48 +168,329 @@ export default function MasterDirectory() {
 }
 
 function StudentProfileModal({ student, onClose }) {
+  const [enrollments, setEnrollments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!student?.id) return;
+    setLoading(true);
+    setError(null);
+    window.axios
+      .get(`/admin/students/${student.id}/enrollment-history`)
+      .then((r) => setEnrollments(r.data))
+      .catch(() => setError("Could not load enrollment history."))
+      .finally(() => setLoading(false));
+  }, [student?.id]);
+
+  // ── Derived totals across all enrollments ──
+  const totals = enrollments.reduce(
+    (acc, e) => {
+      acc.present += e.attendance.present;
+      acc.absent += e.attendance.absent;
+      acc.leave += e.attendance.leave;
+      acc.charged += e.fees.charged;
+      acc.paid += e.fees.paid;
+      return acc;
+    },
+    { present: 0, absent: 0, leave: 0, charged: 0, paid: 0 }
+  );
+  const totalDays = totals.present + totals.absent + totals.leave;
+  const attendancePct = totalDays > 0 ? Math.round((totals.present / totalDays) * 100) : 0;
+  const pendingFees = totals.charged - totals.paid;
+
+  const isCurrent = (e) => !e.transferredAt;
+
+  const formatDuration = (start, end) => {
+    if (!start) return "—";
+    const s = new Date(start);
+    const e = end ? new Date(end) : new Date();
+    let months = (e.getFullYear() - s.getFullYear()) * 12 + e.getMonth() - s.getMonth();
+    if (months < 0) months = 0;
+    const years = Math.floor(months / 12);
+    const rem = months % 12;
+    if (years > 0) return rem > 0 ? `${years}y ${rem}m` : `${years} yr`;
+    return `${months} mo`;
+  };
+
   return (
-    <Modal show maxWidth="sm" onClose={onClose}>
-      <div className="p-6 space-y-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-800">{student.name}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Father: {student.fatherName || "—"}</p>
+    <Modal show maxWidth="2xl" onClose={onClose}>
+      <div className="max-h-[85vh] min-h-0 flex flex-col">
+        {/* ── Fixed Header ── */}
+        <div className="shrink-0 flex items-start justify-between px-6 py-4 border-b border-gray-200">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-gray-800 truncate">{student.name}</h2>
+              <StatusBadge status={student.status} size="md" />
+            </div>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Father: {student.fatherName || "—"}
+            </p>
           </div>
-          <StatusBadge status={student.status} size="md" />
+          <button
+            onClick={onClose}
+            className="shrink-0 ml-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1 transition"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        {student.outstandings > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-start gap-2">
-            <span className="text-lg">💰</span>
-            <p><strong>Outstanding fees:</strong> Rs. {student.outstandings.toLocaleString()}</p>
-          </div>
-        )}
+        {/* ── Scrollable Body ── */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+          {/* Loading */}
+          {loading && (
+            <div className="flex items-center justify-center py-16">
+              <div className="flex items-center gap-3 text-gray-500">
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span className="text-sm">Loading enrollment history…</span>
+              </div>
+            </div>
+          )}
 
-        {student.lastEnrollment && (
-          <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
-            <p className="text-xs text-gray-500">Last Enrollment</p>
-            <p className="font-medium text-gray-800">{student.lastEnrollment.className}</p>
-            <p className="text-gray-500">{student.lastEnrollment.sectionName}</p>
-            {student.lastEnrollment.outcome && (
-              <p className="text-xs text-gray-400">Outcome: {student.lastEnrollment.outcome}</p>
-            )}
-          </div>
-        )}
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 flex items-center justify-between">
+              <span>{error}</span>
+              <button
+                onClick={() => {
+                  setLoading(true);
+                  setError(null);
+                  window.axios
+                    .get(`/admin/students/${student.id}/enrollment-history`)
+                    .then((r) => setEnrollments(r.data))
+                    .catch(() => setError("Could not load enrollment history."))
+                    .finally(() => setLoading(false));
+                }}
+                className="px-3 py-1 rounded bg-red-100 hover:bg-red-200 text-red-800 font-medium transition shrink-0"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
-        <div className="flex gap-2 pt-1">
-          <Link
-            href="/admin/student-report-center"
-            className="flex-1 text-center px-3 py-2 rounded text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
-          >
-            Full Report
-          </Link>
-          <Link
-            href={`/students/${student.id}`}
-            className="flex-1 text-center px-3 py-2 rounded text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
-          >
-            Profile
-          </Link>
+          {/* Data loaded */}
+          {!loading && !error && (
+            <>
+              {/* ── Summary Cards ── */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Overall Summary</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Attendance % */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-gray-800">
+                        {totalDays > 0 ? attendancePct : "—"}
+                      </span>
+                      {totalDays > 0 && <span className="text-sm text-gray-500">%</span>}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Attendance</p>
+                    {totalDays > 0 && (
+                      <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-100 mt-2">
+                        <div className="bg-green-500 transition-all" style={{ width: `${attendancePct}%` }} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Days Attended */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="text-2xl font-bold text-gray-800">{totals.present}</div>
+                    <p className="text-xs text-gray-500 mt-1">Days Attended</p>
+                  </div>
+
+                  {/* Fees Paid */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="text-2xl font-bold text-green-700">
+                      Rs. {totals.paid.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Fees Paid</p>
+                  </div>
+
+                  {/* Pending */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className={`text-2xl font-bold ${pendingFees > 0 ? "text-red-600" : "text-gray-800"}`}>
+                      {pendingFees > 0 ? `Rs. ${pendingFees.toLocaleString()}` : "—"}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Pending Fees</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Enrollment Timeline ── */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Enrollment History</h3>
+
+                {enrollments.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center text-sm text-gray-500">
+                    No enrollment records found for this student.
+                  </div>
+                ) : (
+                  <div className="relative">
+                    {/* Vertical timeline line */}
+                    <div className="absolute left-[19px] top-0 bottom-0 w-[2px] bg-gray-100" aria-hidden="true" />
+
+                    <div className="space-y-5">
+                      {enrollments.map((e) => {
+                        const current = isCurrent(e);
+                        const totalE = e.attendance.present + e.attendance.absent + e.attendance.leave;
+                        const pct = totalE > 0 ? Math.round((e.attendance.present / totalE) * 100) : 0;
+                        const pPct = totalE > 0 ? (e.attendance.present / totalE) * 100 : 0;
+                        const aPct = totalE > 0 ? (e.attendance.absent / totalE) * 100 : 0;
+                        const lPct = totalE > 0 ? (e.attendance.leave / totalE) * 100 : 0;
+                        const pending = e.fees.charged - e.fees.paid;
+
+                        return (
+                          <div key={e.id} className="relative pl-12">
+                            {/* Timeline dot */}
+                            <div
+                              className={`absolute left-[11px] top-[5px] w-[18px] h-[18px] rounded-full border-2 bg-white flex items-center justify-center z-10 ${
+                                current ? "border-green-500" : "border-gray-300"
+                              }`}
+                            >
+                              {current && <div className="w-[8px] h-[8px] rounded-full bg-green-500" />}
+                            </div>
+
+                            {/* Card */}
+                            <div
+                              className={`rounded-lg border p-4 ${
+                                current
+                                  ? "border-green-300 bg-green-50/30"
+                                  : "border-gray-200 bg-white"
+                              }`}
+                            >
+                              {/* Header row */}
+                              <div className="flex items-start justify-between gap-2 flex-wrap">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-gray-800 text-sm">
+                                      {e.className}
+                                    </span>
+                                    <span className="text-gray-400">—</span>
+                                    <span className="text-gray-600 text-sm">{e.sectionName}</span>
+                                    {current && (
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">
+                                        Current
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {e.startedAt || "?"}
+                                    <span className="mx-1">→</span>
+                                    {e.transferredAt || "Present"}
+                                    <span className="mx-1.5 text-gray-300">·</span>
+                                    <span className="text-gray-400">
+                                      {formatDuration(e.startedAt, e.transferredAt)}
+                                    </span>
+                                  </p>
+                                </div>
+
+                                {/* Outcome */}
+                                <div className="shrink-0">
+                                  {e.outcome === "promoted" ? (
+                                    <span className="text-xs font-semibold text-blue-600 flex items-center gap-0.5 whitespace-nowrap">
+                                      <span aria-hidden="true">↑</span> Promoted
+                                    </span>
+                                  ) : e.outcome === "passed_out" ? (
+                                    <StatusBadge status="passed_out" size="sm" />
+                                  ) : e.outcome === "left" ? (
+                                    <StatusBadge status="left" size="sm" />
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              {/* Attendance breakdown */}
+                              {totalE > 0 && (
+                                <div className="mt-3 pt-3 border-t border-gray-100">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs font-medium text-gray-600">Attendance</span>
+                                    <span className="text-xs text-gray-500">{pct}%</span>
+                                  </div>
+                                  <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-100">
+                                    {pPct > 0 && (
+                                      <div className="bg-green-500 transition-all" style={{ width: `${pPct}%` }} />
+                                    )}
+                                    {aPct > 0 && (
+                                      <div className="bg-red-500 transition-all" style={{ width: `${aPct}%` }} />
+                                    )}
+                                    {lPct > 0 && (
+                                      <div className="bg-yellow-500 transition-all" style={{ width: `${lPct}%` }} />
+                                    )}
+                                  </div>
+                                  <div className="flex gap-3 mt-1">
+                                    <span className="text-[11px] text-green-700 font-medium">
+                                      P: {e.attendance.present}
+                                    </span>
+                                    <span className="text-[11px] text-red-600 font-medium">
+                                      A: {e.attendance.absent}
+                                    </span>
+                                    <span className="text-[11px] text-yellow-600 font-medium">
+                                      L: {e.attendance.leave}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Fees breakdown */}
+                              {e.fees.charged > 0 && (
+                                <div className="mt-3 pt-3 border-t border-gray-100">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-medium text-gray-600">Fees</span>
+                                    <span className="font-semibold text-gray-800">
+                                      Rs. {e.fees.paid.toLocaleString()} / Rs. {e.fees.charged.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  {pending > 0 ? (
+                                    <p className="text-[11px] text-red-600 font-medium mt-0.5">
+                                      Pending: Rs. {pending.toLocaleString()}
+                                    </p>
+                                  ) : (
+                                    <p className="text-[11px] text-green-600 font-medium mt-0.5">
+                                      Cleared
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── Quick Links ── */}
+          {!loading && !error && (
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Links</h3>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/admin/student-report-center"
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+                >
+                  Full Report
+                </Link>
+                <Link
+                  href={`/students/${student.id}`}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
+                >
+                  Fees Report
+                </Link>
+                <Link
+                  href={`/students/${student.id}`}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-purple-50 text-purple-700 hover:bg-purple-100 transition"
+                >
+                  Attendance Report
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Modal>

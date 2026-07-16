@@ -514,6 +514,33 @@ Route::prefix('students')->name('students.')->group(function () {
         return back()->with('success', 'Students updated');
     })->name('bulk');
 
+    Route::get('/{student}/enrollment-history', function (Student $student) {
+        $enrollments = StudentSection::where('student_id', $student->id)
+            ->with(['schoolClass', 'section', 'attendance', 'fees.payments'])
+            ->orderBy('started_at')
+            ->get()
+            ->map(fn ($e) => [
+                'id' => $e->id,
+                'className' => $e->schoolClass->name,
+                'sectionName' => $e->section->name,
+                'startedAt' => $e->started_at?->toDateString(),
+                'transferredAt' => $e->transferred_at?->toDateString(),
+                'outcome' => $e->outcome,
+                'status' => $e->status,
+                'attendance' => [
+                    'present' => $e->attendance->where('status', 'present')->count(),
+                    'absent' => $e->attendance->where('status', 'absent')->count(),
+                    'leave' => $e->attendance->where('status', 'leave')->count(),
+                ],
+                'fees' => [
+                    'charged' => (int) $e->fees->sum('amount'),
+                    'paid' => (int) $e->fees->filter(fn ($f) => $f->payments->whereNull('deleted_at')->isNotEmpty())->sum('amount'),
+                ],
+            ]);
+
+        return response()->json($enrollments);
+    })->name('enrollment-history');
+
     Route::delete('/{student}', function (Student $student) {
         $student->delete();
         return back(303);
