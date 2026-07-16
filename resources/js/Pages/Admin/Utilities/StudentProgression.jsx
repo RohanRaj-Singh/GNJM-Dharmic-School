@@ -39,8 +39,15 @@ export default function StudentProgression() {
 
   useEffect(() => {
     axios.get("/admin/classes/options").then((r) => setClasses(r.data)).catch(() => {});
-    axios.get("/admin/sections/options").then((r) => setSections(r.data)).catch(() => {});
   }, []);
+
+  // Fetch sections when class filter changes
+  useEffect(() => {
+    if (!classFilter) { setSections([]); return; }
+    axios.get(`/admin/sections/options?class_id=${classFilter}`)
+      .then((r) => setSections(r.data))
+      .catch(() => setSections([]));
+  }, [classFilter]);
 
   useEffect(() => {
     if (flash?.success) toast.success(flash.success);

@@ -1,9 +1,9 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import axios from "axios";
 import Modal from "@/Components/Modal";
 import ImpactSummary from "./ImpactSummary";
 
-export default function PromoteFlow({ student, students, classes, sections, onClose, preselectedIds = null }) {
+export default function PromoteFlow({ student, students, classes, sections: propSections, onClose, preselectedIds = null }) {
   const allIds = preselectedIds || [student.id];
   const selectedStudents = useMemo(
     () => allIds.map((id) => students.find((s) => s.id === id)).filter(Boolean),
@@ -12,18 +12,44 @@ export default function PromoteFlow({ student, students, classes, sections, onCl
   const isBulk = selectedStudents.length > 1;
   const leadStudent = selectedStudents[0];
 
+  // Suggest the current class as default — admin can change to any class
+  const suggestedClassId = useMemo(() => {
+    if (!leadStudent?.enrollments?.length) return "";
+    const gurmukhi = leadStudent.enrollments.find(
+      (e) => !e.className?.toLowerCase().includes("kirtan")
+    );
+    return gurmukhi ? String(gurmukhi.classId) : String(leadStudent.enrollments[0].classId);
+  }, [leadStudent]);
+
   const [step, setStep] = useState(0);
-  const [targetClassId, setTargetClassId] = useState("");
+  const [targetClassId, setTargetClassId] = useState(suggestedClassId);
   const [targetSectionId, setTargetSectionId] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split("T")[0]);
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(null);
+  const [lazySections, setLazySections] = useState([]);
+
+  // Merge prop sections with lazily fetched sections for the target class
+  const allSections = useMemo(
+    () => (propSections?.length ? propSections : lazySections),
+    [propSections, lazySections]
+  );
+
+  // Fetch sections lazily when target class changes and parent hasn't loaded them
+  useEffect(() => {
+    if (!targetClassId) return;
+    const hasSections = (propSections || []).some((s) => String(s.class_id) === String(targetClassId));
+    if (hasSections) return;
+    axios.get(`/admin/sections/options?class_id=${targetClassId}`)
+      .then((r) => setLazySections(r.data))
+      .catch(() => setLazySections([]));
+  }, [targetClassId, propSections]);
 
   const sectionOpts = useMemo(
-    () => sections.filter((s) => String(s.class_id) === String(targetClassId)),
-    [sections, targetClassId]
+    () => allSections.filter((s) => String(s.class_id) === String(targetClassId)),
+    [allSections, targetClassId]
   );
 
   const validTarget = targetClassId && targetSectionId && effectiveDate;
@@ -94,7 +120,7 @@ export default function PromoteFlow({ student, students, classes, sections, onCl
             <p className="text-sm text-gray-500 mt-0.5">
               {isBulk
                 ? `${selectedStudents.length} students selected for promotion`
-                : `Move ${leadStudent.name} to the next class.`}
+                : `Choose a target class for ${leadStudent.name}.`}
             </p>
           </div>
 
@@ -146,7 +172,7 @@ export default function PromoteFlow({ student, students, classes, sections, onCl
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Target Class</label>
                   <select
