@@ -2,6 +2,7 @@
 import { usePage } from "@inertiajs/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { Trash2 } from "lucide-react";
 
 import DirectoryToolbar from "./Components/DirectoryToolbar";
 import SummaryBar from "./Components/SummaryBar";
@@ -9,20 +10,14 @@ import DataTable from "./Components/DataTable";
 import StudentCard from "./Components/StudentCard";
 import StudentEditorModal from "./Components/StudentEditorModal";
 
-/* ----------------------------------------
- | Helpers
- ---------------------------------------- */
 const safeUUID = () =>
   globalThis.crypto?.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-/**
- * Derive the effective display status from a student's enrollments.
- * Priority: left > passed_out > inactive > promoted > active
- * This is needed because student.status may not reflect the true state
- * when enrollments were changed individually via the Student Status page.
- */
+function csrf() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ?? "";
+}
 function effectiveStatus(student) {
   const enrollments = student.enrollments || [];
   if (enrollments.length === 0) return student.status || "active";
@@ -32,7 +27,7 @@ function effectiveStatus(student) {
   for (const e of enrollments) {
     const idx = statusPriority.indexOf(e.status);
     const worstIdx = statusPriority.indexOf(worst);
-    if (idx < worstIdx) worst = e.status;
+    if (idx >= 0 && idx < worstIdx) worst = e.status;
   }
   return worst;
 }
@@ -53,17 +48,9 @@ function normalizeStudent(s) {
 }
 
 export default function Index() {
-  /* ----------------------------------------
-   | Page props — initial data from the server
-   ---------------------------------------- */
   const { students: initialStudents, classes: initialClasses } = usePage().props;
 
-  /* ----------------------------------------
-   | State
-   ---------------------------------------- */
-  const [students, setStudents] = useState(
-    () => (initialStudents || []).map(normalizeStudent)
-  );
+  const [students, setStudents] = useState(() => (initialStudents || []).map(normalizeStudent));
   const [classes] = useState(initialClasses || []);
 
   const [loading, setLoading] = useState(false);
@@ -71,17 +58,18 @@ export default function Index() {
   const [classFilter, setClassFilter] = useState("all");
   const [sectionFilter, setSectionFilter] = useState("all");
   const [feeFilter, setFeeFilter] = useState("all");
-  const [includeInactive, setIncludeInactive] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("active");
   const [sectionOptions, setSectionOptions] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: null, dir: "asc" });
 
-  // Editor modal
   const [editingStudent, setEditingStudent] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
-  /* ----------------------------------------
-   | Load sections when class filter changes
-   ---------------------------------------- */
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteDone, setDeleteDone] = useState(false);
+
   useEffect(() => {
     if (classFilter === "all") {
       setSectionOptions([]);
@@ -90,20 +78,13 @@ export default function Index() {
     fetch(`/admin/sections/options?class_id=${classFilter}`)
       .then((r) => r.json())
       .then((sections) => {
-        setSectionOptions(
-          sections.map((s) => ({ id: String(s.id), name: s.name }))
-        );
+        setSectionOptions(sections.map((s) => ({ id: String(s.id), name: s.name })));
       })
       .catch(() => setSectionOptions([]));
   }, [classFilter]);
 
-  /* ----------------------------------------
-   | Filtered + sorted students
-   ---------------------------------------- */
   const filteredStudents = useMemo(() => {
     let result = students;
-
-    // Search
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -112,40 +93,26 @@ export default function Index() {
           (s.father_name || "").toLowerCase().includes(q)
       );
     }
-
-    // Class filter
     if (classFilter !== "all") {
       result = result.filter((s) =>
-        (s.enrollments || []).some(
-          (e) => String(e.class_id) === String(classFilter)
-        )
+        (s.enrollments || []).some((e) => String(e.class_id) === String(classFilter))
       );
     }
-
-    // Section filter
     if (sectionFilter !== "all") {
       result = result.filter((s) =>
-        (s.enrollments || []).some(
-          (e) => String(e.section_id) === String(sectionFilter)
-        )
+        (s.enrollments || []).some((e) => String(e.section_id) === String(sectionFilter))
       );
     }
-
-    // Fee type filter
     if (feeFilter !== "all") {
       result = result.filter((s) =>
         (s.enrollments || []).some((e) =>
-          feeFilter === "free"
-            ? e.student_type === "free"
-            : e.student_type !== "free"
+          feeFilter === "free" ? e.student_type === "free" : e.student_type !== "free"
         )
       );
     }
-
     return result;
   }, [students, search, classFilter, sectionFilter, feeFilter]);
 
-  // Sort
   const sortedStudents = useMemo(() => {
     if (!sortConfig.key) return filteredStudents;
     return [...filteredStudents].sort((a, b) => {
@@ -156,9 +123,6 @@ export default function Index() {
     });
   }, [filteredStudents, sortConfig]);
 
-  /* ----------------------------------------
-   | Handlers
-   ---------------------------------------- */
   const handleSort = useCallback((key) => {
     setSortConfig((prev) => ({
       key,
@@ -172,16 +136,17 @@ export default function Index() {
     setSectionFilter("all");
     setFeeFilter("all");
     setSortConfig({ key: null, dir: "asc" });
+    setSelectedIds(new Set());
+    setStatusFilter("active");
   }, []);
 
-  const handleIncludeInactiveToggle = useCallback((newVal) => {
-    setIncludeInactive(newVal);
+  const handleStatusFilterChange = useCallback((newVal) => {
+    setStatusFilter(newVal);
+    setSelectedIds(new Set());
     setLoading(true);
-    fetch(`/admin/students/data${newVal ? "?include_inactive=1" : ""}`)
+    fetch(`/admin/students/data?status=${newVal}`)
       .then((r) => r.json())
-      .then((data) => {
-        setStudents((data || []).map(normalizeStudent));
-      })
+      .then((data) => setStudents((data || []).map(normalizeStudent)))
       .catch(() => toast.error("Failed to load students"))
       .finally(() => setLoading(false));
   }, []);
@@ -203,22 +168,79 @@ export default function Index() {
 
   const handleSaved = useCallback(() => {
     setLoading(true);
-    fetch(`/admin/students/data${includeInactive ? "?include_inactive=1" : ""}`)
+    setSelectedIds(new Set());
+    fetch(`/admin/students/data?status=${statusFilter}`)
       .then((r) => r.json())
-      .then((data) => {
-        setStudents((data || []).map(normalizeStudent));
-      })
+      .then((data) => setStudents((data || []).map(normalizeStudent)))
       .catch(() => toast.error("Failed to refresh data"))
       .finally(() => setLoading(false));
-  }, [includeInactive]);
+  }, [statusFilter]);
 
-  /* ----------------------------------------
-   | Render
-   ---------------------------------------- */
+  const toggleOne = useCallback((id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const visibleIds = new Set(sortedStudents.map((s) => s.id));
+      const allSelected = sortedStudents.every((s) => prev.has(s.id));
+      if (allSelected) {
+        const next = new Set(prev);
+        visibleIds.forEach((id) => next.delete(id));
+        return next;
+      } else {
+        const next = new Set(prev);
+        visibleIds.forEach((id) => next.add(id));
+        return next;
+      }
+    });
+  }, [sortedStudents]);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const handleBulkDeleteConfirm = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    fetch("/admin/students/bulk-delete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-TOKEN": csrf(),
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ student_ids: Array.from(selectedIds) }),
+    })
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.message || "Delete failed");
+        return data;
+      })
+      .then((data) => {
+        setStudents((prev) => prev.filter((s) => !selectedIds.has(s.id)));
+        setSelectedIds(new Set());
+        setDeleting(false);
+        setDeleteDone(true);
+        toast.success(`${data.deleted} student(s) deleted`);
+      })
+      .catch((e) => {
+        setDeleting(false);
+        toast.error(e.message || "Failed to delete students");
+      });
+  }, [selectedIds]);
+
+  const handleCloseBulkDelete = useCallback(() => {
+    setShowBulkDelete(false);
+    setDeleteDone(false);
+  }, []);
+
   return (
     <AdminLayout title="Students">
       <div className="max-w-7xl mx-auto space-y-4">
-        {/* Page heading */}
         <div>
           <h1 className="text-xl font-semibold text-gray-800">Student Directory</h1>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -226,7 +248,6 @@ export default function Index() {
           </p>
         </div>
 
-        {/* Toolbar */}
         <DirectoryToolbar
           search={search}
           onSearchChange={setSearch}
@@ -237,24 +258,42 @@ export default function Index() {
           sectionOptions={sectionOptions}
           feeFilter={feeFilter}
           onFeeFilterChange={setFeeFilter}
-          includeInactive={includeInactive}
-          onIncludeInactiveToggle={handleIncludeInactiveToggle}
+          statusFilter={statusFilter}
+          onStatusFilterChange={handleStatusFilterChange}
           onReset={handleReset}
           onAddStudent={handleAddStudent}
           classes={classes}
         />
 
-        {/* Summary */}
         <SummaryBar students={filteredStudents} />
 
-        {/* Loading state */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+            <span className="text-sm text-blue-800 font-medium">
+              {selectedIds.size} student(s) selected
+            </span>
+            <button
+              onClick={clearSelection}
+              className="text-sm text-blue-600 hover:text-blue-800 underline"
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => setShowBulkDelete(true)}
+              className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Selected
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="bg-white border rounded-lg p-12 text-center text-sm text-gray-400">
             Loading...
           </div>
         ) : (
           <>
-            {/* Desktop table */}
             <div className="hidden md:block">
               <DataTable
                 students={sortedStudents}
@@ -262,21 +301,24 @@ export default function Index() {
                 onSort={handleSort}
                 onEdit={handleEdit}
                 effectiveStatus={effectiveStatus}
+                selectedIds={selectedIds}
+                onToggleOne={toggleOne}
+                onToggleAll={toggleAll}
               />
             </div>
 
-            {/* Mobile cards */}
             <div className="block md:hidden">
               <StudentCard
                 students={sortedStudents}
                 onEdit={handleEdit}
                 effectiveStatus={effectiveStatus}
+                selectedIds={selectedIds}
+                onToggleOne={toggleOne}
               />
             </div>
           </>
         )}
 
-        {/* Editor modal */}
         <StudentEditorModal
           isOpen={isEditorOpen}
           onClose={handleEditorClose}
@@ -285,7 +327,74 @@ export default function Index() {
           onSaved={handleSaved}
         />
       </div>
+
+      {showBulkDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={!deleting ? handleCloseBulkDelete : undefined}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            {deleteDone ? (
+              <div className="p-6 text-center space-y-4">
+                <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <span className="text-2xl">✓</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">Students Deleted</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    The selected students and all related records have been permanently removed.
+                  </p>
+                </div>
+                <button
+                  onClick={handleCloseBulkDelete}
+                  className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div className="p-6 space-y-5">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-800">Delete Students</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Are you sure you want to permanently delete{" "}
+                      <strong>{selectedIds.size} student(s)</strong>?
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                  <p className="font-medium">This will permanently remove:</p>
+                  <ul className="list-disc pl-5 mt-1 space-y-0.5 text-red-700">
+                    <li>All student records</li>
+                    <li>All enrollment history</li>
+                    <li>All attendance records</li>
+                    <li>All fee and payment records</li>
+                  </ul>
+                  <p className="mt-2 font-medium">This action cannot be undone.</p>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={handleCloseBulkDelete}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleBulkDeleteConfirm}
+                    disabled={deleting}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300 transition-colors"
+                  >
+                    {deleting ? "Deleting..." : "Delete Permanently"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
-

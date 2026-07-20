@@ -10,15 +10,14 @@ export default function DirectoryToolbar({
   sectionOptions,
   feeFilter,
   onFeeFilterChange,
-  includeInactive,
-  onIncludeInactiveToggle,
+  statusFilter,
+  onStatusFilterChange,
   onReset,
   onAddStudent,
   classes,
 }) {
   return (
     <div className="flex flex-wrap gap-3 items-center justify-between">
-      {/* LEFT: Filters */}
       <div className="flex flex-wrap gap-2 items-center">
         <SearchInput
           value={search}
@@ -27,7 +26,6 @@ export default function DirectoryToolbar({
           className="px-3 py-2 border rounded text-sm w-56 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
         />
 
-        {/* Class */}
         <select
           value={classFilter}
           onChange={(e) => {
@@ -44,18 +42,13 @@ export default function DirectoryToolbar({
           ))}
         </select>
 
-        {/* Section */}
         <select
           value={sectionFilter}
           onChange={(e) => onSectionFilterChange(e.target.value)}
           disabled={classFilter === "all"}
           className="px-3 py-2 border rounded text-sm disabled:bg-gray-100"
         >
-          <option value="all">
-            {classFilter === "all"
-              ? "All Sections"
-              : "All Sections"}
-          </option>
+          <option value="all">All Sections</option>
           {sectionOptions.map((s) => (
             <option key={s.id} value={String(s.id)}>
               {s.name}
@@ -63,7 +56,6 @@ export default function DirectoryToolbar({
           ))}
         </select>
 
-        {/* Fee type */}
         <select
           value={feeFilter}
           onChange={(e) => onFeeFilterChange(e.target.value)}
@@ -74,18 +66,15 @@ export default function DirectoryToolbar({
           <option value="free">Free</option>
         </select>
 
-        {/* Include Inactive */}
-        <label className="flex items-center gap-2 px-3 py-2 border rounded text-sm cursor-pointer select-none hover:bg-gray-50 transition-colors">
-          <input
-            type="checkbox"
-            checked={includeInactive}
-            onChange={(e) => onIncludeInactiveToggle(e.target.checked)}
-            className="w-4 h-4"
-          />
-          Include Inactive
-        </label>
+        <select
+          value={statusFilter}
+          onChange={(e) => onStatusFilterChange(e.target.value)}
+          className="px-3 py-2 border rounded text-sm"
+        >
+          <option value="active">Active Students</option>
+          <option value="all">All Statuses</option>
+        </select>
 
-        {/* Reset */}
         <button
           onClick={onReset}
           className="px-3 py-2 border rounded text-sm text-gray-600 hover:bg-gray-50 transition-colors"
@@ -94,7 +83,6 @@ export default function DirectoryToolbar({
         </button>
       </div>
 
-      {/* RIGHT: Add */}
       <button
         onClick={onAddStudent}
         className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors"

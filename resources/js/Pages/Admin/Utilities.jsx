@@ -54,6 +54,14 @@ export default function Utilities() {
           href="/admin/utilities/master-directory"
         />
 
+        <UtilityCard
+          emoji="💾"
+          title="Database Backup & Restore"
+          description="Create, download, and restore database backups safely"
+          href="/admin/utilities/backup"
+          badge="New"
+        />
+
       </div>
     </AdminLayout>
   );

@@ -17,6 +17,7 @@ use App\Models\{
 
 use App\Http\Controllers\Admin\{
     AdminAttendanceController,
+    BackupController,
     FeesController,
     FeeRatePeriodController,
     ReportController,
@@ -168,6 +169,18 @@ Route::get(
     fn() => Inertia::render('Admin/Utilities/MasterDirectory')
 )->name('utilities.master-directory');
 
+// Database Backup & Restore
+Route::prefix('utilities/backup')->name('utilities.backup.')->group(function () {
+    Route::get('/', fn() => Inertia::render('Admin/Utilities/Backup'))->name('page');
+    Route::get('/overview', [BackupController::class, 'overview'])->name('overview');
+    Route::get('/history', [BackupController::class, 'history'])->name('history');
+    Route::post('/create', [BackupController::class, 'create'])->name('create');
+    Route::get('/{id}/download', [BackupController::class, 'download'])->name('download');
+    Route::post('/{id}/restore', [BackupController::class, 'restore'])->name('restore');
+    Route::delete('/{id}', [BackupController::class, 'destroy'])->name('destroy');
+    Route::get('/{id}/compatibility', [BackupController::class, 'compatibility'])->name('compatibility');
+});
+
 // Student Progression data — active students with current enrollments + outstanding fees
 Route::get('/utilities/student-progression/data', function (Request $request) {
     $query = Student::query()
@@ -273,18 +286,15 @@ Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardControlle
 Route::prefix('students')->name('students.')->group(function () {
 
     Route::get('/', function (Request $request) {
-        $includeInactive = $request->boolean('include_inactive');
+        $statusFilter = $request->get('status', 'active');
 
         $query = Student::with([
-            'enrollments' => fn($q) => $includeInactive
-                ? $q
-                : $q->where('status', 'active')->whereNull('transferred_at'),
+            'enrollments' => fn($q) => $q->whereNull('transferred_at'),
             'enrollments.schoolClass',
             'enrollments.section',
         ])->orderBy('name');
 
-        // When not including inactive, only show students with active enrollments
-        if (!$includeInactive) {
+        if ($statusFilter === 'active') {
             $query->whereHas('enrollments', fn($q) =>
                 $q->where('status', 'active')->whereNull('transferred_at')
             );
@@ -312,7 +322,7 @@ Route::prefix('students')->name('students.')->group(function () {
         return Inertia::render('Admin/Students/Index', [
             'students' => $students,
             'classes' => SchoolClass::select('id', 'name')->orderBy('name')->get(),
-            'filters' => $request->only(['include_inactive']),
+            'filters' => $request->only(['status']),
         ]);
     })->name('index');
     Route::get('/list', function (Request $request) {
@@ -337,21 +347,15 @@ Route::prefix('students')->name('students.')->group(function () {
     })->name('list');
 
     Route::get('/data', function (Request $request) {
-        $includeInactive = $request->boolean('include_inactive');
+        $statusFilter = $request->get('status', 'active');
 
         $query = Student::with([
-            'enrollments' => function ($q) use ($includeInactive) {
-                if (!$includeInactive) {
-                    $q->where('status', 'active')->whereNull('transferred_at');
-                }
-            },
+            'enrollments' => fn ($q) => $q->whereNull('transferred_at'),
             'enrollments.schoolClass',
             'enrollments.section',
         ])->orderBy('name');
 
-        // When not including inactive enrollments, also filter out students
-        // who have no active enrollments at all.
-        if (!$includeInactive) {
+        if ($statusFilter === 'active') {
             $query->whereHas('enrollments', fn ($q) => $q->where('status', 'active')->whereNull('transferred_at'));
         }
 
@@ -461,6 +465,7 @@ Route::prefix('students')->name('students.')->group(function () {
                     if (!$classId) continue;
 
                     $studentType = $e['student_type'] === 'free' ? 'free' : 'paid';
+                    $enrollmentStatus = $e['status'] ?? 'active';
 
                     $enrollment = StudentSection::firstOrCreate(
                         [
@@ -468,14 +473,18 @@ Route::prefix('students')->name('students.')->group(function () {
                             'class_id'   => $classId,
                             'section_id' => $sectionId,
                         ],
-                        ['student_type' => $studentType, 'status' => 'active']
+                        ['student_type' => $studentType, 'status' => $enrollmentStatus]
                     );
 
-                    if ($enrollment->status === 'inactive') continue;
+                    if ($enrollment->status !== $enrollmentStatus) {
+                        $enrollment->update(['status' => $enrollmentStatus]);
+                    }
 
                     if ($enrollment->student_type !== $studentType) {
                         $enrollment->update(['student_type' => $studentType]);
                     }
+
+                    if ($enrollmentStatus !== 'active') continue;
 
                     if ($studentType === 'free') {
                         // Bulk delete unpaid monthly fees (subquery instead of Eloquent whereDoesntHave)
@@ -542,9 +551,27 @@ Route::prefix('students')->name('students.')->group(function () {
     })->name('enrollment-history');
 
     Route::delete('/{student}', function (Student $student) {
-        $student->delete();
+        DB::transaction(function () use ($student) {
+            $student->delete();
+        });
         return back(303);
     })->name('delete');
+
+    Route::post('/bulk-delete', function (Request $request) {
+        $request->validate([
+            'student_ids' => 'required|array|min:1',
+            'student_ids.*' => 'integer|exists:students,id',
+        ]);
+
+        DB::transaction(function () use ($request) {
+            Student::whereIn('id', $request->student_ids)->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'deleted' => count($request->student_ids),
+        ]);
+    })->name('bulk-delete');
 });
 
 /* =========================================================
@@ -593,7 +620,7 @@ Route::prefix('classes')->name('classes.')->group(function () {
 
             SchoolClass::create([
                 'name' => $row['name'],
-                'type' => $row['type'],
+                'type' => $row['type'] ?? 'gurmukhi',
                 'default_monthly_fee' => 0,
             ]);
         }
@@ -802,9 +829,9 @@ Route::prefix('users')->name('users.')->group(function () {
     Route::post('/', [UserController::class, 'store'])
         ->name('store');
 
-    // // 🔑 RESET PASSWORD
-    // Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])
-    //     ->name('reset-password');
+    // 🔑 RESET PASSWORD
+    Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])
+        ->name('reset-password');
 
     // ❌ DELETE (SAFE)
     Route::delete('/{user}', [UserController::class, 'destroy'])

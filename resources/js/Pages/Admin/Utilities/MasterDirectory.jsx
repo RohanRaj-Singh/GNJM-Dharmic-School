@@ -98,7 +98,7 @@ export default function MasterDirectory() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
           {loading ? (
             <div className="p-8 text-center text-gray-500">Loading...</div>
           ) : students.length === 0 ? (

@@ -83,6 +83,17 @@ export default function StudentEditorModal({
     setValidationErrors((prev) => ({ ...prev, [key]: null }));
   }, []);
 
+  const handleStatusChange = useCallback((newStatus) => {
+    setFormData((prev) => ({
+      ...prev,
+      status: newStatus,
+      enrollments: prev.enrollments.map((e) => ({
+        ...e,
+        status: newStatus,
+      })),
+    }));
+  }, []);
+
   const handleEnrollmentChange = useCallback((enrollmentId, key, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -288,9 +299,7 @@ export default function StudentEditorModal({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() =>
-                setFormData((prev) => ({ ...prev, status: "active" }))
-              }
+              onClick={() => handleStatusChange("active")}
               className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
                 formData.status === "active"
                   ? "bg-green-600 text-white"
@@ -301,9 +310,7 @@ export default function StudentEditorModal({
             </button>
             <button
               type="button"
-              onClick={() =>
-                setFormData((prev) => ({ ...prev, status: "inactive" }))
-              }
+              onClick={() => handleStatusChange("inactive")}
               className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
                 formData.status === "inactive"
                   ? "bg-amber-500 text-white"
@@ -314,8 +321,9 @@ export default function StudentEditorModal({
             </button>
           </div>
           <p className="mt-2 text-xs text-gray-400">
-            Inactive students are excluded from attendance, fees, and most reports.
-            Their enrollments are preserved but marked inactive.
+            {formData.status === "inactive"
+              ? "Inactive students are excluded from attendance, fees, and reports. All enrollments will be marked inactive."
+              : "Active students appear in attendance, fees, and all reports."}
           </p>
         </div>
 

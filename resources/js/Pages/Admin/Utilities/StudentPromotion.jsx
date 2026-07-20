@@ -255,7 +255,7 @@ export default function StudentPromotion() {
 
         {/* ── STEP 2: Select Students ── */}
         {step === 2 && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white rounded-lg shadow overflow-x-auto">
             <div className="p-4 border-b bg-gray-50 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-gray-800">
@@ -473,7 +473,7 @@ export default function StudentPromotion() {
         {/* ── STEP 4: Confirm ── */}
         {step === 4 && (
           <div className="space-y-4">
-            <div className="bg-white rounded-lg shadow p-6 space-y-4">
+            <div className="bg-white rounded-lg shadow p-6 space-y-4 overflow-x-auto">
               <h2 className="text-base font-semibold text-gray-800">
                 Confirm Promotion
               </h2>

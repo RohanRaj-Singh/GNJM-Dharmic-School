@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\StudentSection;
@@ -37,20 +38,23 @@ class StudentLifecycleController extends Controller
             return back()->withErrors(['lifecycle' => implode(' ', $result->warnings)]);
         }
 
-        $targetSection = Section::findOrFail($data['section_id']);
+        $targetSection = Section::with('schoolClass')->findOrFail($data['section_id']);
+        $targetType = $targetSection->schoolClass->type; // 'gurmukhi' or 'kirtan'
 
-        DB::transaction(function () use ($student, $targetSection, $data) {
+        DB::transaction(function () use ($student, $targetSection, $targetType, $data) {
             $effectiveDate = !empty($data['effective_date'])
                 ? now()->parse($data['effective_date'])
                 : now();
 
-            // Close all active enrollments
-            $activeEnrollments = StudentSection::where('student_id', $student->id)
+            // Close only enrollments of the same class type as the target
+            // (e.g., promoting Gurmukhi should not close Kirtan enrollment)
+            $enrollmentsToPromote = StudentSection::where('student_id', $student->id)
                 ->where('status', StudentSection::STATUS_ACTIVE)
                 ->whereNull('transferred_at')
+                ->whereHas('schoolClass', fn ($q) => $q->where('type', $targetType))
                 ->get();
 
-            foreach ($activeEnrollments as $enrollment) {
+            foreach ($enrollmentsToPromote as $enrollment) {
                 $enrollment->update([
                     'status'         => StudentSection::STATUS_PROMOTED,
                     'transferred_at' => $effectiveDate,
@@ -65,7 +69,7 @@ class StudentLifecycleController extends Controller
                 'section_id'  => $targetSection->id,
                 'status'      => StudentSection::STATUS_ACTIVE,
                 'started_at'  => $effectiveDate,
-                'student_type' => $activeEnrollments->first()?->student_type ?? 'paid',
+                'student_type' => $enrollmentsToPromote->first()?->student_type ?? 'paid',
             ]);
 
             // Student stays active (they have a new active enrollment)

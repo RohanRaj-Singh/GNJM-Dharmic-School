@@ -6,31 +6,32 @@ export default function DataTable({
   onSort,
   onEdit,
   effectiveStatus,
+  selectedIds,
+  onToggleOne,
+  onToggleAll,
 }) {
-  /* ----------------------------------------
-   | Sort indicator
-   ---------------------------------------- */
   function SortIcon({ column }) {
     if (sortConfig.key !== column) {
-      return (
-        <span className="ml-1 text-gray-300">⇅</span>
-      );
+      return <span className="ml-1 text-gray-300">⇅</span>;
     }
-    return (
-      <span className="ml-1 text-gray-600">
-        {sortConfig.dir === "asc" ? "↑" : "↓"}
-      </span>
-    );
+    return <span className="ml-1 text-gray-600">{sortConfig.dir === "asc" ? "↑" : "↓"}</span>;
   }
 
-  /* ----------------------------------------
-   | Render
-   ---------------------------------------- */
+  const allSelected = students.length > 0 && students.every((s) => selectedIds.has(s.id));
+
   return (
     <div className="bg-white border rounded-lg overflow-hidden">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b">
           <tr>
+            <th className="px-3 py-3 w-10">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={onToggleAll}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </th>
             <th className="px-4 py-3 text-left font-medium text-gray-600 w-12">#</th>
             <th
               className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer select-none hover:bg-gray-100 transition-colors"
@@ -44,30 +45,17 @@ export default function DataTable({
             >
               Father <SortIcon column="father_name" />
             </th>
-            <th className="px-4 py-3 text-left font-medium text-gray-600">
-              Class / Section
-            </th>
-            <th className="px-4 py-3 text-center font-medium text-gray-600">
-              Type
-            </th>
-            <th className="px-4 py-3 text-center font-medium text-gray-600">
-              Status
-            </th>
-            <th className="px-4 py-3 text-right font-medium text-gray-600">
-              Outstanding
-            </th>
-            <th className="px-4 py-3 text-right font-medium text-gray-600">
-              Actions
-            </th>
+            <th className="px-4 py-3 text-left font-medium text-gray-600">Class / Section</th>
+            <th className="px-4 py-3 text-center font-medium text-gray-600">Type</th>
+            <th className="px-4 py-3 text-center font-medium text-gray-600">Status</th>
+            <th className="px-4 py-3 text-right font-medium text-gray-600">Outstanding</th>
+            <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {students.length === 0 ? (
             <tr>
-              <td
-                colSpan={8}
-                className="px-4 py-12 text-center text-sm text-gray-400"
-              >
+              <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">
                 No students found
               </td>
             </tr>
@@ -75,23 +63,24 @@ export default function DataTable({
             students.map((student, idx) => (
               <tr
                 key={student.id || idx}
-                className="hover:bg-blue-50 transition-colors"
+                className={`hover:bg-blue-50 transition-colors ${selectedIds.has(student.id) ? "bg-blue-50/50" : ""}`}
               >
+                <td className="px-3 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(student.id)}
+                    onChange={() => onToggleOne(student.id)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </td>
                 <td className="px-4 py-3 text-gray-400 text-xs">{idx + 1}</td>
 
-                {/* Name */}
                 <td className="px-4 py-3">
-                  <div className="font-medium text-gray-800">
-                    {student.name}
-                  </div>
+                  <div className="font-medium text-gray-800">{student.name}</div>
                 </td>
 
-                {/* Father */}
-                <td className="px-4 py-3 text-gray-500">
-                  {student.father_name || "—"}
-                </td>
+                <td className="px-4 py-3 text-gray-500">{student.father_name || "—"}</td>
 
-                {/* Class / Section badges */}
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {(student.enrollments || []).length === 0 ? (
@@ -103,9 +92,7 @@ export default function DataTable({
                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700 border border-indigo-200"
                         >
                           {e.class_name || "?"}
-                          {e.section_name && (
-                            <span className="opacity-60">·</span>
-                          )}
+                          {e.section_name && <span className="opacity-60">·</span>}
                           {e.section_name || ""}
                         </span>
                       ))
@@ -113,7 +100,6 @@ export default function DataTable({
                   </div>
                 </td>
 
-                {/* Type (per-enrollment badges) */}
                 <td className="px-4 py-3 text-center">
                   <div className="flex flex-wrap gap-1 justify-center">
                     {(student.enrollments || []).length === 0 ? (
@@ -135,17 +121,12 @@ export default function DataTable({
                   </div>
                 </td>
 
-                {/* Status — derived from enrollments for accuracy */}
                 <td className="px-4 py-3 text-center">
                   <StatusBadge status={effectiveStatus ? effectiveStatus(student) : student.status} />
                 </td>
 
-                {/* Outstanding */}
-                <td className="px-4 py-3 text-right text-xs text-gray-300">
-                  —
-                </td>
+                <td className="px-4 py-3 text-right text-xs text-gray-300">—</td>
 
-                {/* Actions */}
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => onEdit(student)}

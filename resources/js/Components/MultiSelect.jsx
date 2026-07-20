@@ -24,7 +24,7 @@ export default function MultiSelect({
   value = [],
   onChange,
   placeholder = "Select…",
-  isMulti = false,
+  isMulti = true,
   single = false,
   clearable = true,
   isDisabled = false,

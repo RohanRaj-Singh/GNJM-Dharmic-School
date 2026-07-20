@@ -11,13 +11,21 @@ export default function PromoteFlow({ student, students, classes, sections: prop
   const isBulk = selectedStudents.length > 1;
   const leadStudent = selectedStudents[0];
 
-  // Suggest the current class as default — admin can change to any class
+  // Suggest the Gurmukhi class as default — only Gurmukhi enrollments are promotable
   const suggestedClassId = useMemo(() => {
     if (!leadStudent?.enrollments?.length) return "";
     const gurmukhi = leadStudent.enrollments.find(
       (e) => !e.className?.toLowerCase().includes("kirtan")
     );
-    return gurmukhi ? String(gurmukhi.classId) : String(leadStudent.enrollments[0].classId);
+    return gurmukhi ? String(gurmukhi.classId) : "";
+  }, [leadStudent]);
+
+  // Enrollments that will NOT be promoted (Kirtan stays untouched)
+  const unchangedEnrollments = useMemo(() => {
+    if (!leadStudent?.enrollments?.length) return [];
+    return leadStudent.enrollments.filter(
+      (e) => e.className?.toLowerCase().includes("kirtan")
+    );
   }, [leadStudent]);
 
   const [step, setStep] = useState(0);
@@ -160,14 +168,25 @@ export default function PromoteFlow({ student, students, classes, sections: prop
 
           {step === 0 && (
             <div className="space-y-4 flex-shrink-0">
-              <div className="bg-gray-50 rounded-lg p-3 text-sm">
+              <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1.5">
                 <p className="font-medium text-gray-700">Current Enrollment{isBulk ? "s" : ""}</p>
                 {isBulk ? (
-                  <p className="text-gray-500 mt-1">{selectedStudents.length} active student(s) selected.</p>
+                  <p className="text-gray-500">{selectedStudents.length} active student(s) selected.</p>
                 ) : (
-                  leadStudent.enrollments?.map((e, i) => (
-                    <p key={i} className="text-gray-500 mt-1">{e.className} — {e.sectionName}{e.startedAt ? ` (since ${e.startedAt})` : ""}</p>
-                  ))
+                  leadStudent.enrollments?.map((e, i) => {
+                    const isGurmukhi = e.className && !e.className.toLowerCase().includes("kirtan");
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isGurmukhi ? "bg-blue-400" : "bg-purple-400"}`} />
+                        <span className="text-gray-600">{e.className} — {e.sectionName}</span>
+                        {isGurmukhi ? (
+                          <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded">Will be promoted</span>
+                        ) : (
+                          <span className="text-[10px] bg-green-100 text-green-700 font-medium px-1.5 py-0.5 rounded">Will remain</span>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
 
