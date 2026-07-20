@@ -14,6 +14,7 @@ class Attendance extends Model
     'date',
     'status',
     'lesson_learned',
+    'lesson_note',
 ];
 
 

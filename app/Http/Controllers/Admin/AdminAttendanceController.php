@@ -196,6 +196,10 @@ public function save(Request $request)
                 'lesson_learned' => $status === 'present'
                     ? (bool) ($payload['lesson_learned'] ?? false)
                     : null,
+                'lesson_note'    =>
+                    !empty($payload['lesson_note'])
+                        ? $payload['lesson_note']
+                        : null,
             ]
         );
 

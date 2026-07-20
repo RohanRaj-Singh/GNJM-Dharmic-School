@@ -27,6 +27,7 @@ class AttendanceController extends Controller
             'attendance.*.student_id' => ['required', 'exists:students,id'],
             'attendance.*.status' => ['required', 'in:present,absent,leave'],
             'attendance.*.lesson_learned' => ['nullable', 'boolean'],
+            'attendance.*.lesson_note' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $today = Carbon::today();
@@ -57,6 +58,10 @@ class AttendanceController extends Controller
                         $record['status'] === 'present'
                             ? ($record['lesson_learned'] ?? false)
                             : false,
+                    'lesson_note' =>
+                        !empty($record['lesson_note'])
+                            ? $record['lesson_note']
+                            : null,
                 ]
             );
 

@@ -39,26 +39,32 @@ export default function Mark({
   });
 
   const normalizeExisting = (r) => ({
+    student_section_id: r.student_section_id,
     student_id: r.student_section?.student?.id,
     name: r.student_section?.student?.name ?? "Unknown",
     father_name: r.student_section?.student?.father_name ?? null,
     status: r.status ?? "present",
     lesson_learned: parseLessonLearned(r.lesson_learned),
+    lesson_note: r.lesson_note ?? "",
   });
 
   const normalizeFresh = (ss) => ({
+    student_section_id: ss.id,
     student_id: ss.student.id,
     name: ss.student.name,
     father_name: ss.student.father_name ?? null,
     status: "present",
     lesson_learned: false,
+    lesson_note: "",
   });
 
   const normalizeChange = (changes) => {
-    if (changes.status === "absent" || changes.status === "leave") {
-      return { ...changes, lesson_learned: false };
+    const updated = { ...changes };
+    // lesson_learned forced off for absent/leave
+    if (updated.status === "absent" || updated.status === "leave") {
+      updated.lesson_learned = false;
     }
-    return changes;
+    return updated;
   };
 
   const sortRecordsByName = (rows) =>
@@ -74,6 +80,7 @@ export default function Mark({
         student_id: row.student_id,
         status: row.status,
         lesson_learned: !!row.lesson_learned,
+        lesson_note: row.lesson_note ?? "",
       }))
     );
 

@@ -6,6 +6,7 @@ use App\Models\Section;
 use App\Models\StudentSection;
 use App\Models\SchoolClass;
 use App\Http\Controllers\AttendanceController;
+use App\Models\Attendance;
 use Carbon\Carbon;
 
 // Note: prefix 'attendance' is already added in web.php
@@ -120,6 +121,18 @@ Route::get('/', fn () =>
     ================================ */
     Route::post('/', [AttendanceController::class, 'store'])
         ->name('attendance.store');
+
+    /* ===============================
+       LESSON NOTES
+    ================================ */
+    Route::get('/lesson-notes/{studentSection}', function (StudentSection $studentSection) {
+        return Attendance::where('student_section_id', $studentSection->id)
+            ->whereNotNull('lesson_note')
+            ->where('lesson_note', '!=', '')
+            ->orderByDesc('date')
+            ->limit(3)
+            ->get(['date', 'lesson_note', 'lesson_learned']);
+    })->name('attendance.lesson-notes');
 
     /* ===============================
        ABSENTEES

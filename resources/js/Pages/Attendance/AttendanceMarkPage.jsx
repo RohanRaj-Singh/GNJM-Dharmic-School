@@ -19,12 +19,9 @@ export default function AttendanceMarkPage({
       <AttendanceStudentCard
         student={current}
         isKirtan={isKirtan}
-        onStatusChange={(status) =>
-          updateCurrent({ status })
-        }
-        onLessonChange={(value) =>
-          updateCurrent({ lesson_learned: value })
-        }
+        onStatusChange={(status) => updateCurrent({ status })}
+        onLessonChange={(value) => updateCurrent({ lesson_learned: value })}
+        onLessonNoteChange={(value) => updateCurrent({ lesson_note: value })}
       />
 
       <div className="flex gap-3 mt-6">
