@@ -182,26 +182,40 @@ class FeesController extends Controller
         });
 
     $grouped = $fees->groupBy(function ($f) {
-        // Split by student AND class_type so a student with both
-        // Gurmukhi and Kirtan fees appears in both sections.
-        return $f->student_id . '-' . $f->class_type;
+        return $f->student_id;
     })->map(function ($items) {
         $first = $items->first();
         $paid = $items->where('is_paid', true);
         $unpaid = $items->where('is_paid', false);
 
-        $classType = $this->normalizeDivisionType(
-            (string) ($first->class_type ?? ''),
-            (string) ($first->class_name ?? '')
-        );
+        // Collect unique class/section names across all of this student's fees
+        $classNames = $items->pluck('class_name')->filter()->unique()->values()->toArray();
+        $sectionNames = $items->pluck('section_name')->filter()->unique()->values()->toArray();
+        $classTypes = $items
+            ->map(fn ($f) => $this->normalizeDivisionType(
+                (string) ($f->class_type ?? ''),
+                (string) ($f->class_name ?? '')
+            ))
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
+        $combinedClass = implode(', ', $classNames);
+        $hasKirtan = in_array('kirtan', $classTypes);
 
         return [
             'student_id'   => $first->student_id,
             'student_name' => $first->student_name,
             'father_name'  => $first->father_name ?? '',
-            'class_name'   => $first->class_name ?? '',
-            'class_type'   => $classType,
-            'section_name' => $first->section_name ?? '',
+            'class_name'   => $combinedClass,
+            'class_type'   => $hasKirtan
+                ? 'kirtan'
+                : $this->normalizeDivisionType(
+                    (string) ($first->class_type ?? ''),
+                    (string) ($first->class_name ?? '')
+                ),
+            'section_name' => implode(', ', $sectionNames),
             'paid_count'   => $paid->count(),
             'paid_amount'  => $paid->sum('amount'),
             'unpaid_count' => $unpaid->count(),
@@ -209,18 +223,18 @@ class FeesController extends Controller
             'total_amount' => $items->sum('amount'),
             'fees' => $items->map(function ($f) {
                 return [
-                    'id'        => $f->id,
-                    'type'      => $f->type,
-                    'source'    => $f->source,
-                    'month'     => $f->month,
-                    'title'     => $f->title,
-                    'amount'    => $f->amount,
-                    'paid_at'   => $f->paid_at,
+                    'id'         => $f->id,
+                    'type'       => $f->type,
+                    'source'     => $f->source,
+                    'month'      => $f->month,
+                    'title'      => $f->title,
+                    'amount'     => $f->amount,
+                    'paid_at'    => $f->paid_at,
                     'class_type' => $this->normalizeDivisionType(
                         (string) ($f->class_type ?? ''),
                         (string) ($f->class_name ?? '')
                     ),
-                    'is_paid'   => (bool) $f->is_paid,
+                    'is_paid'    => (bool) $f->is_paid,
                 ];
             })->values(),
         ];
