@@ -35,10 +35,7 @@ class FeesController extends Controller
     $monthTo = $request->string('month_to')->toString();
 
     $fees = Fee::query()
-        ->join('student_sections', 'fees.student_section_id', '=', 'student_sections.id')
-        ->join('students', 'student_sections.student_id', '=', 'students.id')
-        ->join('classes', 'student_sections.class_id', '=', 'classes.id')
-        ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
+        ->join('students', 'fees.student_id', '=', 'students.id')
         // Show ALL fees regardless of enrollment status — paid fees
         // stay visible even after a student changes section/class
         // (the old enrollment is archived, not deleted).
@@ -48,22 +45,41 @@ class FeesController extends Controller
                  ->whereNull('payments.deleted_at');
         })
 
-        ->select([
-            'fees.id',
-            'fees.type',
-            'fees.source',
-            'fees.month',
-            'fees.title',
-            'fees.amount',
-            'fees.batch_id',
-            'student_sections.class_id',
-            'student_sections.section_id',
+        ->addSelect([
+            'fees.*',
             'students.id as student_id',
             'students.name as student_name',
             'students.father_name as father_name',
-            'classes.name as class_name',
-            'classes.type as class_type',
-            'sections.name as section_name',
+            // Current class/section from student's active enrollment (may have
+            // changed since the fee was originally created on an older enrollment).
+            DB::raw('(SELECT ss.class_id FROM student_sections ss
+                       WHERE ss.student_id = fees.student_id
+                         AND ss.status = "active"
+                         AND ss.transferred_at IS NULL
+                       LIMIT 1) as class_id'),
+            DB::raw('(SELECT ss.section_id FROM student_sections ss
+                       WHERE ss.student_id = fees.student_id
+                         AND ss.status = "active"
+                         AND ss.transferred_at IS NULL
+                       LIMIT 1) as section_id'),
+            DB::raw('(SELECT c.name FROM student_sections ss
+                       JOIN classes c ON c.id = ss.class_id
+                       WHERE ss.student_id = fees.student_id
+                         AND ss.status = "active"
+                         AND ss.transferred_at IS NULL
+                       LIMIT 1) as class_name'),
+            DB::raw('(SELECT c.type FROM student_sections ss
+                       JOIN classes c ON c.id = ss.class_id
+                       WHERE ss.student_id = fees.student_id
+                         AND ss.status = "active"
+                         AND ss.transferred_at IS NULL
+                       LIMIT 1) as class_type'),
+            DB::raw('(SELECT s.name FROM student_sections ss
+                       JOIN sections s ON s.id = ss.section_id
+                       WHERE ss.student_id = fees.student_id
+                         AND ss.status = "active"
+                         AND ss.transferred_at IS NULL
+                       LIMIT 1) as section_name'),
             'payments.paid_at',
             DB::raw('payments.id IS NOT NULL as is_paid'),
         ])
@@ -78,11 +94,25 @@ class FeesController extends Controller
         })
 
         ->when($request->class_id, fn ($q, $classId) =>
-            $q->where('student_sections.class_id', $classId)
+            $q->whereExists(function ($qq) use ($classId) {
+                $qq->selectRaw('1')
+                   ->from('student_sections')
+                   ->whereColumn('student_sections.student_id', 'fees.student_id')
+                   ->where('status', 'active')
+                   ->whereNull('transferred_at')
+                   ->where('class_id', $classId);
+            })
         )
 
         ->when($request->section_id, fn ($q, $sectionId) =>
-            $q->where('student_sections.section_id', $sectionId)
+            $q->whereExists(function ($qq) use ($sectionId) {
+                $qq->selectRaw('1')
+                   ->from('student_sections')
+                   ->whereColumn('student_sections.student_id', 'fees.student_id')
+                   ->where('status', 'active')
+                   ->whereNull('transferred_at')
+                   ->where('section_id', $sectionId);
+            })
         )
 
         ->when($month !== '', fn ($q) =>
