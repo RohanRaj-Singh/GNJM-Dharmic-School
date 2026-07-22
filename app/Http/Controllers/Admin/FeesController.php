@@ -36,50 +36,66 @@ class FeesController extends Controller
 
     $fees = Fee::query()
         ->join('students', 'fees.student_id', '=', 'students.id')
-        // Show ALL fees regardless of enrollment status — paid fees
-        // stay visible even after a student changes section/class
-        // (the old enrollment is archived, not deleted).
-
+        // Join the fee's original enrollment to know what class type/section it
+        // was originally created for — this ensures Kirtan fees stay Kirtan and
+        // Gurmukhi fees stay Gurmukhi, even if the student has both.
+        ->join('student_sections as orig_enrollment', 'fees.student_section_id', '=', 'orig_enrollment.id')
+        ->join('classes as orig_class', 'orig_enrollment.class_id', '=', 'orig_class.id')
         ->leftJoin('payments', function ($join) {
             $join->on('payments.fee_id', '=', 'fees.id')
                  ->whereNull('payments.deleted_at');
         })
 
-        ->addSelect([
+        ->select([
             'fees.*',
             'students.id as student_id',
             'students.name as student_name',
             'students.father_name as father_name',
-            // Current class/section from student's active enrollment (may have
-            // changed since the fee was originally created on an older enrollment).
-            DB::raw('(SELECT ss.class_id FROM student_sections ss
-                       WHERE ss.student_id = fees.student_id
-                         AND ss.status = "active"
-                         AND ss.transferred_at IS NULL
-                       LIMIT 1) as class_id'),
-            DB::raw('(SELECT ss.section_id FROM student_sections ss
-                       WHERE ss.student_id = fees.student_id
-                         AND ss.status = "active"
-                         AND ss.transferred_at IS NULL
-                       LIMIT 1) as section_id'),
-            DB::raw('(SELECT c.name FROM student_sections ss
-                       JOIN classes c ON c.id = ss.class_id
-                       WHERE ss.student_id = fees.student_id
-                         AND ss.status = "active"
-                         AND ss.transferred_at IS NULL
-                       LIMIT 1) as class_name'),
-            DB::raw('(SELECT c.type FROM student_sections ss
-                       JOIN classes c ON c.id = ss.class_id
-                       WHERE ss.student_id = fees.student_id
-                         AND ss.status = "active"
-                         AND ss.transferred_at IS NULL
-                       LIMIT 1) as class_type'),
-            DB::raw('(SELECT s.name FROM student_sections ss
-                       JOIN sections s ON s.id = ss.section_id
-                       WHERE ss.student_id = fees.student_id
-                         AND ss.status = "active"
-                         AND ss.transferred_at IS NULL
-                       LIMIT 1) as section_name'),
+            // class_type from the ORIGINAL enrollment — correctly resolves
+            // Kirtan vs Gurmukhi per fee, even for students with both.
+            'orig_class.type as class_type',
+            // Current section/class: use the student's active enrollment in
+            // the SAME class (handles within-class section changes). If none
+            // exists (student was promoted to a different class), fall back
+            // to the original enrollment's data via COALESCE.
+            DB::raw('COALESCE(
+                (SELECT s.name FROM student_sections ss
+                 JOIN sections s ON s.id = ss.section_id
+                 WHERE ss.student_id = fees.student_id
+                   AND ss.status = "active"
+                   AND ss.transferred_at IS NULL
+                   AND ss.class_id = orig_enrollment.class_id
+                 LIMIT 1),
+                (SELECT s2.name FROM sections s2 WHERE s2.id = orig_enrollment.section_id)
+            ) as section_name'),
+            DB::raw('COALESCE(
+                (SELECT c.name FROM student_sections ss
+                 JOIN classes c ON c.id = ss.class_id
+                 WHERE ss.student_id = fees.student_id
+                   AND ss.status = "active"
+                   AND ss.transferred_at IS NULL
+                   AND ss.class_id = orig_enrollment.class_id
+                 LIMIT 1),
+                orig_class.name
+            ) as class_name'),
+            DB::raw('COALESCE(
+                (SELECT ss.class_id FROM student_sections ss
+                 WHERE ss.student_id = fees.student_id
+                   AND ss.status = "active"
+                   AND ss.transferred_at IS NULL
+                   AND ss.class_id = orig_enrollment.class_id
+                 LIMIT 1),
+                orig_enrollment.class_id
+            ) as class_id'),
+            DB::raw('COALESCE(
+                (SELECT ss.section_id FROM student_sections ss
+                 WHERE ss.student_id = fees.student_id
+                   AND ss.status = "active"
+                   AND ss.transferred_at IS NULL
+                   AND ss.class_id = orig_enrollment.class_id
+                 LIMIT 1),
+                orig_enrollment.section_id
+            ) as section_id'),
             'payments.paid_at',
             DB::raw('payments.id IS NOT NULL as is_paid'),
         ])
@@ -166,53 +182,45 @@ class FeesController extends Controller
         });
 
     $grouped = $fees->groupBy(function ($f) {
-        return $f->student_id;
+        // Split by student AND class_type so a student with both
+        // Gurmukhi and Kirtan fees appears in both sections.
+        return $f->student_id . '-' . $f->class_type;
     })->map(function ($items) {
         $first = $items->first();
         $paid = $items->where('is_paid', true);
         $unpaid = $items->where('is_paid', false);
 
-        // Get unique class names and normalized types for this student
-        $classNames = $items->pluck('class_name')->filter()->unique()->values()->toArray();
-        $classTypes = $items
-            ->map(fn ($f) => $this->normalizeDivisionType((string) ($f->class_type ?? ''), (string) ($f->class_name ?? '')))
-            ->filter()
-            ->unique()
-            ->values()
-            ->toArray();
-        $sectionNames = $items->pluck('section_name')->filter()->unique()->values()->toArray();
-
-        $combinedClass = implode(', ', $classNames);
-        $hasKirtan = in_array('kirtan', $classTypes);
+        $classType = $this->normalizeDivisionType(
+            (string) ($first->class_type ?? ''),
+            (string) ($first->class_name ?? '')
+        );
 
         return [
-            'student_id' => $first->student_id,
+            'student_id'   => $first->student_id,
             'student_name' => $first->student_name,
-            'father_name' => $first->father_name ?? '',
-            'class_name' => $combinedClass,
-            'class_type' => $hasKirtan
-                ? 'kirtan'
-                : $this->normalizeDivisionType((string) ($first->class_type ?? ''), (string) ($first->class_name ?? '')),
-            'section_name' => implode(', ', $sectionNames),
-            'paid_count' => $paid->count(),
-            'paid_amount' => $paid->sum('amount'),
+            'father_name'  => $first->father_name ?? '',
+            'class_name'   => $first->class_name ?? '',
+            'class_type'   => $classType,
+            'section_name' => $first->section_name ?? '',
+            'paid_count'   => $paid->count(),
+            'paid_amount'  => $paid->sum('amount'),
             'unpaid_count' => $unpaid->count(),
             'unpaid_amount' => $unpaid->sum('amount'),
             'total_amount' => $items->sum('amount'),
             'fees' => $items->map(function ($f) {
                 return [
-                    'id' => $f->id,
-                    'type' => $f->type,
-                    'source' => $f->source,
-                    'month' => $f->month,
-                    'title' => $f->title,
-                    'amount' => $f->amount,
-                    'paid_at' => $f->paid_at,
+                    'id'        => $f->id,
+                    'type'      => $f->type,
+                    'source'    => $f->source,
+                    'month'     => $f->month,
+                    'title'     => $f->title,
+                    'amount'    => $f->amount,
+                    'paid_at'   => $f->paid_at,
                     'class_type' => $this->normalizeDivisionType(
                         (string) ($f->class_type ?? ''),
                         (string) ($f->class_name ?? '')
                     ),
-                    'is_paid' => (bool) $f->is_paid,
+                    'is_paid'   => (bool) $f->is_paid,
                 ];
             })->values(),
         ];
