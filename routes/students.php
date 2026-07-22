@@ -75,7 +75,7 @@ Route::prefix('students')->group(function () {
 
     $student->load([
         'enrollments' => function ($q) {
-            $q->where('status', 'active')->whereNull('transferred_at');
+            $q->orderByDesc('started_at');
         },
         'enrollments.schoolClass',
         'enrollments.section',

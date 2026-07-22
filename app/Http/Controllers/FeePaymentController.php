@@ -27,10 +27,9 @@ class FeePaymentController extends Controller
 
     // Collect distinct student IDs that this write will affect, so we can
     // invalidate their reports in a single pass.
-    $studentIds = DB::table('fees as f')
-        ->join('student_sections as ss', 'ss.id', '=', 'f.student_section_id')
-        ->whereIn('f.id', $request->fee_ids)
-        ->pluck('ss.student_id')
+    $studentIds = DB::table('fees')
+        ->whereIn('id', $request->fee_ids)
+        ->pluck('student_id')
         ->unique()
         ->all();
 
