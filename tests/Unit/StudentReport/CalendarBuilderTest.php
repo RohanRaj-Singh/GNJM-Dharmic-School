@@ -14,7 +14,7 @@ class CalendarBuilderTest extends TestCase
     {
         $builder = new CalendarBuilder();
         $range = MonthRange::forMonth('2026-03');
-        $months = $builder->build($range, [], Division::Gurmukhi, [1, 2]);
+        $months = $builder->build($range, [], Division::Gurmukhi);
 
         $this->assertCount(1, $months);
         $this->assertSame(31, count($months[0]->days)); // March has 31 days
@@ -29,7 +29,7 @@ class CalendarBuilderTest extends TestCase
             (object)['student_section_id' => 1, 'date' => '2026-03-05', 'status' => 'present', 'lesson_learned' => 1],
             (object)['student_section_id' => 1, 'date' => '2026-03-12', 'status' => 'present', 'lesson_learned' => 0],
         ];
-        $months = $builder->build($range, $rows, Division::Gurmukhi, [1]);
+        $months = $builder->build($range, $rows, Division::Gurmukhi);
 
         $this->assertSame(2, $months[0]->presentCount);
         $this->assertSame(0, $months[0]->absentCount);
@@ -46,8 +46,9 @@ class CalendarBuilderTest extends TestCase
             (object)['student_section_id' => 1, 'date' => '2026-03-05', 'status' => 'present', 'lesson_learned' => 0],
             (object)['student_section_id' => 99, 'date' => '2026-03-05', 'status' => 'absent',  'lesson_learned' => 0],
         ];
-        // Only section id 1 belongs to the Gurmukhi division; 99 is Kirtan's.
-        $months = $builder->build($range, $rows, Division::Gurmukhi, [1]);
+        // The builder no longer filters by sectionIds — the service pre-filters.
+        // All rows are processed; present beats absent in merge.
+        $months = $builder->build($range, $rows, Division::Gurmukhi);
 
         $this->assertSame(1, $months[0]->presentCount);
         $this->assertSame(0, $months[0]->absentCount);
@@ -62,7 +63,7 @@ class CalendarBuilderTest extends TestCase
             (object)['student_section_id' => 2, 'date' => '2026-03-05', 'status' => 'leave',  'lesson_learned' => 0],
             (object)['student_section_id' => 3, 'date' => '2026-03-05', 'status' => 'present','lesson_learned' => 1],
         ];
-        $months = $builder->build($range, $rows, Division::Gurmukhi, [1, 2, 3]);
+        $months = $builder->build($range, $rows, Division::Gurmukhi);
 
         $cell = $months[0]->days[5];
         $this->assertSame(AttendanceStatus::Present, $cell->status);
@@ -78,7 +79,7 @@ class CalendarBuilderTest extends TestCase
             (object)['student_section_id' => 1, 'date' => '2026-03-05', 'status' => 'leave',  'lesson_learned' => 0],
             (object)['student_section_id' => 2, 'date' => '2026-03-05', 'status' => 'absent', 'lesson_learned' => 0],
         ];
-        $months = $builder->build($range, $rows, Division::Gurmukhi, [1, 2]);
+        $months = $builder->build($range, $rows, Division::Gurmukhi);
 
         $this->assertSame(AttendanceStatus::Leave, $months[0]->days[5]->status);
         $this->assertSame(0, $months[0]->presentCount);

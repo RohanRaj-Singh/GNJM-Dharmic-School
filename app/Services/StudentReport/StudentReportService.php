@@ -4,6 +4,7 @@ namespace App\Services\StudentReport;
 
 use App\Support\StudentReport\AttendanceSummary;
 use App\Support\StudentReport\DivisionReport;
+use App\Support\StudentReport\EnrollmentHistory;
 use App\Support\StudentReport\Enums\Division;
 use App\Support\StudentReport\FeeSummary;
 use App\Support\StudentReport\KirtanScore;
@@ -20,16 +21,17 @@ use Illuminate\Support\Facades\DB;
  * Pure orchestrator: accepts a StudentReportRequest, returns a StudentReport
  * value object. All DB access is delegated to the resolver classes.
  *
- * V1 algorithm:
- *  1. Resolve identity (StudentIdentityResolver).
+ * Algorithm:
+ *  1. Resolve identity (StudentIdentityResolver) — loads ALL enrollments.
  *  2. Resolve month range from request (MonthRange::fromXxx).
- *  3. For each requested division:
- *     a. Determine section IDs for that division.
- *     b. Build attendance summary (AttendanceResolver).
- *     c. Build fee summary (FeeResolver).
- *     d. Build calendar (CalendarBuilder) using attendance rows for that division.
- *     e. If Kirtan: compute Kirtan score from attendance counts + lessons_learned.
- *  4. Return StudentReport.
+ *  3. Group CLASS IDs (not section IDs) by division from ALL enrollments.
+ *  4. For each requested division:
+ *     a. Build attendance summary via AttendanceResolver (student_id + class_ids).
+ *     b. Build fee summary via FeeResolver (student_id + class_ids).
+ *     c. Build calendar (CalendarBuilder) using pre-filtered attendance rows.
+ *     d. If Kirtan: compute Kirtan score from attendance + lessons.
+ *  5. Load history timeline (all enrollments with rolled-up stats).
+ *  6. Return StudentReport.
  */
 final class StudentReportService
 {
@@ -54,31 +56,41 @@ final class StudentReportService
             $startDate = $startMonth . '-01';
             $endDate = Carbon::createFromFormat('Y-m', $endMonth)->endOfMonth()->toDateString();
 
-            // Group section IDs by division from the identity.
-            $sectionsByDivision = [
+            // Group CLASS IDs (not student_section_ids) by division from
+            // ALL enrollments — this captures fees/attendance even from
+            // archived (section-changed) enrollments.
+            $classIdsByDivision = [
                 Division::Gurmukhi->value => [],
                 Division::Kirtan->value => [],
             ];
             foreach ($identity->enrollments as $e) {
-                $sectionsByDivision[$e->division->value][] = $e->studentSectionId;
+                $classIdsByDivision[$e->division->value][] = $e->classId;
             }
+            // Deduplicate — many enrollments may share the same class_id.
+            $classIdsByDivision = array_map(fn ($ids) => array_values(array_unique($ids)), $classIdsByDivision);
 
             $divisions = [];
 
             if ($req->wantsGurmukhi()) {
                 $divisions['gurmukhi'] = $this->buildDivisionReport(
                     Division::Gurmukhi,
-                    $sectionsByDivision[Division::Gurmukhi->value],
+                    $identity->id,
+                    $classIdsByDivision[Division::Gurmukhi->value],
                     $startMonth, $endMonth, $startDate, $endDate,
                 );
             }
             if ($req->wantsKirtan()) {
                 $divisions['kirtan'] = $this->buildDivisionReport(
                     Division::Kirtan,
-                    $sectionsByDivision[Division::Kirtan->value],
+                    $identity->id,
+                    $classIdsByDivision[Division::Kirtan->value],
                     $startMonth, $endMonth, $startDate, $endDate,
                 );
             }
+
+            // Load history timeline — all enrollments with rolled-up stats,
+            // independent of the selected date range.
+            $history = $this->loadHistory($req->studentId);
 
             $meta = new StudentReportMeta(
                 reportType: 'performance',
@@ -92,22 +104,24 @@ final class StudentReportService
                 range: $range,
                 divisions: $divisions,
                 meta: $meta,
+                history: $history,
             );
         });
     }
 
     /**
-     * @param  list<int>  $sectionIds
+     * @param  list<int>  $classIds  class_ids for this division
      */
     private function buildDivisionReport(
         Division $division,
-        array $sectionIds,
+        int $studentId,
+        array $classIds,
         string $startMonth,
         string $endMonth,
         string $startDate,
         string $endDate,
     ): DivisionReport {
-        $enrolled = !empty($sectionIds);
+        $enrolled = !empty($classIds);
 
         if (!$enrolled) {
             return new DivisionReport(
@@ -120,23 +134,22 @@ final class StudentReportService
             );
         }
 
-        $attendance = $this->attendanceResolver->resolve($sectionIds, $startDate, $endDate);
-        $fees = $this->feeResolver->resolve($sectionIds, $startMonth, $endMonth);
+        $attendance = $this->attendanceResolver->resolve($studentId, $classIds, $startDate, $endDate);
+        $fees = $this->feeResolver->resolve($studentId, $classIds, $startMonth, $endMonth);
 
-        // Build the calendar: load attendance rows, hand to builder.
+        // Load attendance rows pre-filtered to this division's class_ids.
         $attendanceRows = DB::table('attendance')
-            ->whereIn('student_section_id', $sectionIds)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get(['student_section_id', 'date', 'status', 'lesson_learned']);
+            ->join('student_sections', 'attendance.student_section_id', '=', 'student_sections.id')
+            ->where('attendance.student_id', $studentId)
+            ->whereIn('student_sections.class_id', $classIds)
+            ->whereBetween('attendance.date', [$startDate, $endDate])
+            ->get(['attendance.student_section_id', 'attendance.date', 'attendance.status', 'attendance.lesson_learned']);
 
-        // We need a MonthRange here, but we only have start/end labels and
-        // total months. Re-expand it.
         $range = \App\Support\StudentReport\MonthRange::forRange($startMonth, $endMonth);
         $months = $this->calendarBuilder->build(
             range: $range,
             attendanceRows: $attendanceRows->all(),
             division: $division,
-            divisionSectionIds: $sectionIds,
         );
 
         $kirtanScore = null;
@@ -158,6 +171,35 @@ final class StudentReportService
             kirtanScore: $kirtanScore,
             months: $months,
         );
+    }
+
+    /**
+     * Load all enrollments with rolled-up attendance and fee stats for the
+     * history timeline (shown regardless of the selected date range).
+     *
+     * @return list<EnrollmentHistory>
+     */
+    private function loadHistory(int $studentId): array
+    {
+        $enrollments = \App\Models\StudentSection::where('student_id', $studentId)
+            ->with(['schoolClass', 'section', 'attendance', 'fees.payments'])
+            ->orderBy('started_at')
+            ->get();
+
+        return $enrollments->map(fn ($e) => new EnrollmentHistory(
+            id: $e->id,
+            className: $e->schoolClass->name,
+            sectionName: $e->section->name,
+            startedAt: $e->started_at?->toDateString(),
+            transferredAt: $e->transferred_at?->toDateString(),
+            outcome: $e->outcome,
+            status: $e->status,
+            present: $e->attendance->where('status', 'present')->count(),
+            absent: $e->attendance->where('status', 'absent')->count(),
+            leave: $e->attendance->where('status', 'leave')->count(),
+            feesCharged: (int) $e->fees->sum('amount'),
+            feesPaid: (int) $e->fees->filter(fn ($f) => $f->payments->whereNull('deleted_at')->isNotEmpty())->sum('amount'),
+        ))->all();
     }
 
     private function sumLessons(iterable $rows): int

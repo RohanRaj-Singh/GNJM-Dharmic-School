@@ -11,23 +11,28 @@ use Illuminate\Support\Facades\DB;
 /**
  * Loads attendance for one division and computes the summary
  * (counts, percentage, current streak).
+ *
+ * Queries by student_id + class_ids so attendance from every enrollment
+ * (current and archived) is captured.
  */
 final class AttendanceResolver
 {
     /**
-     * @param  list<int>  $sectionIds  student_section_ids for this division
+     * @param  list<int>  $classIds  class_ids for this division
      */
-    public function resolve(array $sectionIds, string $startDate, string $endDate): AttendanceSummary
+    public function resolve(int $studentId, array $classIds, string $startDate, string $endDate): AttendanceSummary
     {
-        if (empty($sectionIds)) {
+        if (empty($classIds)) {
             return new AttendanceSummary(0, 0, 0, 0, 0.0, null, null);
         }
 
         $rows = DB::table('attendance')
-            ->whereIn('student_section_id', $sectionIds)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
-            ->get(['date', 'status']);
+            ->join('student_sections', 'attendance.student_section_id', '=', 'student_sections.id')
+            ->where('attendance.student_id', $studentId)
+            ->whereIn('student_sections.class_id', $classIds)
+            ->whereBetween('attendance.date', [$startDate, $endDate])
+            ->orderBy('attendance.date')
+            ->get(['attendance.date', 'attendance.status']);
 
         $present = 0;
         $absent = 0;

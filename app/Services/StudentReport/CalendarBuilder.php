@@ -11,16 +11,16 @@ use Carbon\Carbon;
 
 /**
  * Pure function: takes a MonthRange, a list of attendance rows for the
- * student across both divisions, and a target division. Returns a list
- * of MonthCell, one per month in the range, with day cells populated.
+ * student for one division, and a target division. Returns a list of
+ * MonthCell, one per month in the range, with day cells populated.
  *
- * Merge rule (per day, per division): when the student has multiple
- * `student_section_id`s in the same division, the per-day status is the
- * best-of: present > leave > absent. lesson_learned is true if any record
- * in that day for the same division has lesson_learned=1.
+ * The caller (StudentReportService) is responsible for pre-filtering rows
+ * to only the division's class_ids, so this function receives rows that
+ * already belong to the right division.
  *
- * V1 only considers current enrollments (`transferred_at IS NULL`); V2
- * will support historical section transitions.
+ * When the student has multiple `student_section_id`s in the same division
+ * on the same day, the status is merged as best-of: present > leave > absent.
+ * lesson_learned is true if any record that day has lesson_learned=1.
  */
 final class CalendarBuilder
 {
@@ -32,14 +32,10 @@ final class CalendarBuilder
         MonthRange $range,
         array $attendanceRows,
         Division $division,
-        array $divisionSectionIds,
     ): array {
-        // Group attendance rows by date (within the division's section IDs).
+        // Group attendance rows by date.
         $byDate = [];
         foreach ($attendanceRows as $row) {
-            if (!in_array((int) $row->student_section_id, $divisionSectionIds, true)) {
-                continue;
-            }
             $date = (string) $row->date;
             if (!isset($byDate[$date])) {
                 $byDate[$date] = [];

@@ -23,11 +23,14 @@ final class StudentIdentityResolver
     {
         $student = Student::query()->findOrFail($studentId);
 
+        // Load ALL enrollments (not just current) so that the report
+        // captures fees and attendance from every section the student
+        // has ever been in. The identity header displays all of them;
+        // the service uses them to collect class_ids per division.
         $enrollments = DB::table('student_sections as ss')
             ->join('classes as c', 'c.id', '=', 'ss.class_id')
             ->join('sections as sec', 'sec.id', '=', 'ss.section_id')
             ->where('ss.student_id', $studentId)
-            ->whereNull('ss.transferred_at')
             ->orderBy('c.name')
             ->orderBy('sec.name')
             ->get([
@@ -41,6 +44,7 @@ final class StudentIdentityResolver
             ])
             ->map(fn ($row) => new EnrollmentInfo(
                 studentSectionId: (int) $row->student_section_id,
+                classId: (int) $row->class_id,
                 className: (string) $row->class_name,
                 sectionName: (string) $row->section_name,
                 division: \App\Support\StudentReport\NormalizeDivision::fromClass(
@@ -71,40 +75,33 @@ final class StudentIdentityResolver
             $enrollmentDate = substr((string) $student->enrollment_date, 0, 10);
         }
 
-        // Last attendance date.
-        $lastAttendance = DB::table('attendance as a')
-            ->join('student_sections as ss', 'ss.id', '=', 'a.student_section_id')
-            ->where('ss.student_id', $studentId)
-            ->whereNull('ss.transferred_at')
-            ->orderByDesc('a.date')
-            ->value('a.date');
+        // Last attendance date (across ALL enrollments �� uses student_id).
+        $lastAttendance = DB::table('attendance')
+            ->where('student_id', $studentId)
+            ->orderByDesc('date')
+            ->value('date');
         $lastAttendanceDate = $lastAttendance ? substr((string) $lastAttendance, 0, 10) : null;
 
-        // Last payment date (non-deleted).
+        // Last payment date (non-deleted, across ALL enrollments — uses student_id on fees).
         $lastPayment = DB::table('payments as p')
             ->join('fees as f', 'f.id', '=', 'p.fee_id')
-            ->join('student_sections as ss', 'ss.id', '=', 'f.student_section_id')
-            ->where('ss.student_id', $studentId)
-            ->whereNull('ss.transferred_at')
+            ->where('f.student_id', $studentId)
             ->whereNull('p.deleted_at')
             ->orderByDesc('p.paid_at')
             ->value('p.paid_at');
         $lastPaymentDate = $lastPayment ? substr((string) $lastPayment, 0, 10) : null;
 
-        // Outstanding amount and months (any monthly fee in the system with
-        // no non-deleted payment, across the student's current enrollments).
-        $outstandingRow = DB::table('fees as f')
-            ->join('student_sections as ss', 'ss.id', '=', 'f.student_section_id')
+        // Outstanding amount and months (uses student_id on fees).
+        $outstandingRow = DB::table('fees')
             ->leftJoin('payments as p', function ($join) {
-                $join->on('p.fee_id', '=', 'f.id')->whereNull('p.deleted_at');
+                $join->on('p.fee_id', '=', 'fees.id')->whereNull('p.deleted_at');
             })
-            ->where('ss.student_id', $studentId)
-            ->whereNull('ss.transferred_at')
-            ->where('f.type', 'monthly')
+            ->where('fees.student_id', $studentId)
+            ->where('fees.type', 'monthly')
             ->whereNull('p.id')
             ->selectRaw('
-                COALESCE(SUM(f.amount), 0) as total_amount,
-                COUNT(f.id) as total_count
+                COALESCE(SUM(fees.amount), 0) as total_amount,
+                COUNT(fees.id) as total_count
             ')
             ->first();
 

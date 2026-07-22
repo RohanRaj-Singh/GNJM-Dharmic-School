@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\DB;
 /**
  * Loads fees + payments for a division and computes the summary.
  *
+ * Queries by student_id + class_ids so fees from every enrollment
+ * (current and archived) are captured.
+ *
  * V1 rules:
  *  - Monthly fees: filtered by `month BETWEEN startMonth AND endMonth`.
  *  - Custom fees: included regardless of month (matches Fees report engine).
@@ -22,11 +25,11 @@ use Illuminate\Support\Facades\DB;
 final class FeeResolver
 {
     /**
-     * @param  list<int>  $sectionIds
+     * @param  list<int>  $classIds  class_ids for this division
      */
-    public function resolve(array $sectionIds, string $startMonth, string $endMonth): FeeSummary
+    public function resolve(int $studentId, array $classIds, string $startMonth, string $endMonth): FeeSummary
     {
-        if (empty($sectionIds)) {
+        if (empty($classIds)) {
             return new FeeSummary(0, 0, 0, 0, null, [], []);
         }
 
@@ -34,10 +37,12 @@ final class FeeResolver
         $endMonth = substr($endMonth, 0, 7);
 
         $rows = DB::table('fees as f')
+            ->join('student_sections', 'f.student_section_id', '=', 'student_sections.id')
             ->leftJoin('payments as p', function ($join) {
                 $join->on('p.fee_id', '=', 'f.id')->whereNull('p.deleted_at');
             })
-            ->whereIn('f.student_section_id', $sectionIds)
+            ->where('f.student_id', $studentId)
+            ->whereIn('student_sections.class_id', $classIds)
             ->where(function ($q) use ($startMonth, $endMonth) {
                 $q->where(function ($q2) use ($startMonth, $endMonth) {
                     $q2->where('f.type', 'monthly')

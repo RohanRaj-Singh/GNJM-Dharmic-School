@@ -14,6 +14,7 @@ final class EnrollmentInfo
 {
     public function __construct(
         public readonly int $studentSectionId,
+        public readonly int $classId,
         public readonly string $className,
         public readonly string $sectionName,
         public readonly Division $division,
@@ -28,6 +29,7 @@ final class EnrollmentInfo
     {
         return [
             'student_section_id' => $this->studentSectionId,
+            'class_id' => $this->classId,
             'class_name' => $this->className,
             'section_name' => $this->sectionName,
             'division' => $this->division->value,

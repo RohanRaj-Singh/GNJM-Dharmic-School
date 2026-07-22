@@ -343,6 +343,9 @@ function ReportBody({ report }) {
           />
         </Section>
       )}
+
+      {/* Enrollment History Timeline — shows all sections regardless of range */}
+      <HistoryTimeline history={report.history} />
     </>
   );
 }
@@ -370,3 +373,4 @@ import AttendanceSectionLite from "./components/AttendanceSection";
 import FeeSectionLite from "./components/FeeSection";
 import KirtanSectionLite from "./components/KirtanSection";
 import CalendarSectionLite from "./components/CalendarSection";
+import HistoryTimeline from "./components/HistoryTimeline";

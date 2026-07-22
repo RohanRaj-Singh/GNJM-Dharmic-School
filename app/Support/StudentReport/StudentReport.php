@@ -8,17 +8,20 @@ namespace App\Support\StudentReport;
  *
  * `divisions` is a map keyed by division value ('gurmukhi' | 'kirtan').
  * Empty divisions (student not enrolled) are present with `enrolled=false`.
+ * `history` lists all past enrollments regardless of the date range.
  */
 final class StudentReport
 {
     /**
      * @param  array<string, DivisionReport>  $divisions
+     * @param  list<EnrollmentHistory>         $history
      */
     public function __construct(
         public readonly StudentIdentity $identity,
         public readonly MonthRange $range,
         public readonly array $divisions,
         public readonly StudentReportMeta $meta,
+        public readonly array $history = [],
     ) {}
 
     public function toArray(): array
@@ -32,6 +35,7 @@ final class StudentReport
             'range' => $this->range->toArray(),
             'divisions' => $divisions,
             'meta' => $this->meta->toArray(),
+            'history' => array_map(fn (EnrollmentHistory $e) => $e->toArray(), $this->history),
         ];
     }
 }
