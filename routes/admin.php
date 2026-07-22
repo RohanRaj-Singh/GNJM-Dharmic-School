@@ -495,9 +495,10 @@ Route::prefix('students')->name('students.')->group(function () {
                     if ($enrollmentStatus !== 'active') continue;
 
                     if ($studentType === 'free') {
-                        // Bulk delete unpaid monthly fees (subquery instead of Eloquent whereDoesntHave)
+                        // Delete unpaid monthly fees for this student (may be on any enrollment)
                         DB::table('fees as f')
-                            ->where('f.student_section_id', $enrollment->id)
+                            ->join('student_sections', 'f.student_section_id', '=', 'student_sections.id')
+                            ->where('student_sections.student_id', $student->id)
                             ->where('f.type', 'monthly')
                             ->whereNotExists(function ($q) {
                                 $q->selectRaw('1')
@@ -513,13 +514,16 @@ Route::prefix('students')->name('students.')->group(function () {
                     $fee = $resolver->resolveForMonth($enrollment, $today);
                     if ($fee <= 0) continue;
 
+                    // Key by (student_id, type, month) so changing section/class
+                    // doesn't create a duplicate fee for the same month.
                     Fee::firstOrCreate(
                         [
-                            'student_section_id' => $enrollment->id,
+                            'student_id' => $student->id,
                             'type' => 'monthly',
                             'month' => $today,
                         ],
                         [
+                            'student_section_id' => $enrollment->id,
                             'source' => 'monthly',
                             'amount' => $fee,
                         ]

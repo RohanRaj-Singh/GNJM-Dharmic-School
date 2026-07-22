@@ -45,8 +45,8 @@ class GenerateMonthlyFees extends Command
                 continue;
             }
 
-            // Check if fee already exists
-            $exists = Fee::where('student_section_id', $enrollment->id)
+            // Check if fee already exists for this student this month (may be on any enrollment)
+            $exists = Fee::where('student_id', $enrollment->student_id)
                 ->where('type', 'monthly')
                 ->where('month', $month)
                 ->exists();
