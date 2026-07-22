@@ -223,30 +223,13 @@ class StudentPromotionLifecycleTest extends TestCase
                 'effective_date' => null,
             ]);
 
-        // Query using the logic from FeesController::index (lines 42-59)
-        // This is the same WHERE clause that shows unpaid historical fees
+        // Query using the simplified logic from FeesController::index
+        // All fees show regardless of enrollment status.
         $feesQuery = Fee::query()
             ->join('student_sections', 'fees.student_section_id', '=', 'student_sections.id')
             ->join('students', 'student_sections.student_id', '=', 'students.id')
             ->join('classes', 'student_sections.class_id', '=', 'classes.id')
             ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
-            ->where(function ($q) {
-                // Current active enrollments — always show their fees
-                $q->where('student_sections.status', 'active')
-                  ->whereNull('student_sections.transferred_at');
-
-                // Historical enrollments — show ONLY unpaid fees
-                $q->orWhere(function ($qq) {
-                    $qq->whereIn('student_sections.status', ['promoted', 'passed_out', 'left'])
-                       ->whereNotNull('student_sections.transferred_at')
-                       ->whereNotExists(function ($qqq) {
-                           $qqq->selectRaw('1')
-                               ->from('payments')
-                               ->whereColumn('payments.fee_id', 'fees.id')
-                               ->whereNull('payments.deleted_at');
-                       });
-                });
-            })
             ->leftJoin('payments', function ($join) {
                 $join->on('payments.fee_id', '=', 'fees.id')
                      ->whereNull('payments.deleted_at');
@@ -431,7 +414,7 @@ class StudentPromotionLifecycleTest extends TestCase
     //          historical fees but not paid ones
     // ──────────────────────────────────────────────
 
-    public function test_fees_listing_shows_unpaid_historical_fees_excludes_paid(): void
+    public function test_fees_listing_shows_all_historical_fees_including_paid(): void
     {
         $student = $this->createStudent();
         $enrollment = $this->createEnrollment($student);
@@ -469,27 +452,13 @@ class StudentPromotionLifecycleTest extends TestCase
                 'effective_date' => null,
             ]);
 
-        // Use the exact query from FeesController::index (lines 42-59)
+        // Use the simplified query from FeesController::index — all fees show
+        // regardless of enrollment status or payment status.
         $feesQuery = Fee::query()
             ->join('student_sections', 'fees.student_section_id', '=', 'student_sections.id')
             ->join('students', 'student_sections.student_id', '=', 'students.id')
             ->join('classes', 'student_sections.class_id', '=', 'classes.id')
             ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
-            ->where(function ($q) {
-                $q->where('student_sections.status', 'active')
-                  ->whereNull('student_sections.transferred_at');
-
-                $q->orWhere(function ($qq) {
-                    $qq->whereIn('student_sections.status', ['promoted', 'passed_out', 'left'])
-                       ->whereNotNull('student_sections.transferred_at')
-                       ->whereNotExists(function ($qqq) {
-                           $qqq->selectRaw('1')
-                               ->from('payments')
-                               ->whereColumn('payments.fee_id', 'fees.id')
-                               ->whereNull('payments.deleted_at');
-                       });
-                });
-            })
             ->leftJoin('payments', function ($join) {
                 $join->on('payments.fee_id', '=', 'fees.id')
                      ->whereNull('payments.deleted_at');
@@ -506,9 +475,9 @@ class StudentPromotionLifecycleTest extends TestCase
         $this->assertGreaterThanOrEqual(1, $promotedUnpaid->count(),
             'Unpaid fee from promoted enrollment must appear in listing');
 
-        // The paid fee from promoted enrollment should NOT appear
+        // The paid fee from promoted enrollment SHOULD ALSO appear now
         $promotedPaid = $promotedFees->filter(fn ($f) => (int) $f->id === $paidFee->id);
-        $this->assertSame(0, $promotedPaid->count(),
-            'Paid fee from promoted enrollment must NOT appear in listing');
+        $this->assertGreaterThanOrEqual(1, $promotedPaid->count(),
+            'Paid fee from promoted enrollment must ALSO appear in listing');
     }
 }

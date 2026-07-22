@@ -39,24 +39,9 @@ class FeesController extends Controller
         ->join('students', 'student_sections.student_id', '=', 'students.id')
         ->join('classes', 'student_sections.class_id', '=', 'classes.id')
         ->leftJoin('sections', 'student_sections.section_id', '=', 'sections.id')
-        ->where(function ($q) {
-            // Current active enrollments — always show their fees
-            $q->where('student_sections.status', 'active')
-              ->whereNull('student_sections.transferred_at');
-
-            // Historical enrollments (promoted/passed_out/left) —
-            // show ONLY fees that are still unpaid and need collection
-            $q->orWhere(function ($qq) {
-                $qq->whereIn('student_sections.status', ['promoted', 'passed_out', 'left', 'inactive'])
-                   ->whereNotNull('student_sections.transferred_at')
-                   ->whereNotExists(function ($qqq) {
-                       $qqq->selectRaw('1')
-                           ->from('payments')
-                           ->whereColumn('payments.fee_id', 'fees.id')
-                           ->whereNull('payments.deleted_at');
-                   });
-            });
-        })
+        // Show ALL fees regardless of enrollment status — paid fees
+        // stay visible even after a student changes section/class
+        // (the old enrollment is archived, not deleted).
 
         ->leftJoin('payments', function ($join) {
             $join->on('payments.fee_id', '=', 'fees.id')
