@@ -83,60 +83,51 @@ Route::prefix('students')->group(function () {
         'enrollments.fees.payments',
     ]);
 
-    // summary logic (unchanged)
+    // Group enrollments by class type so a student with both Gurmukhi and
+    // Kirtan appears once per type. Within each group we merge attendance
+    // and fees from all enrollments (current + archived) so no data is lost
+    // after a section change, but sections are NOT duplicated.
+    $grouped = $student->enrollments->groupBy(function ($enrollment) {
+        return $enrollment->schoolClass?->type ?? 'gurmukhi';
+    });
 
-    $summary = $student->enrollments->map(function ($enrollment) {
+    $summary = $grouped->map(function ($enrollments) {
+        $currentEnrollment = $enrollments
+            ->firstWhere(fn ($e) => $e->status === 'active' && $e->transferred_at === null);
+        $displayEnrollment = $currentEnrollment ?? $enrollments->first();
 
-    // Send ALL attendance records (frontend filters by selected month/year)
-    $allAttendance = $enrollment->attendance;
+        // Merge attendance from ALL enrollments in this group
+        $allAttendance = $enrollments->flatMap(fn ($e) => $e->attendance);
 
-    // Attendance counts for current month (for the summary cards)
-    $attendanceMonthStart = Carbon::today()->startOfMonth();
-    $attendanceMonthEnd = Carbon::today()->endOfMonth();
+        // Merge fees from ALL enrollments in this group
+        $allFees = $enrollments->flatMap(fn ($e) => $e->fees);
 
-    $monthlyAttendance = $allAttendance
-        ->filter(fn ($a) => Carbon::parse($a->date)->between($attendanceMonthStart, $attendanceMonthEnd));
+        $paidFees = $allFees->filter(fn ($f) => $f->payments->isNotEmpty());
+        $unpaidFees = $allFees->filter(fn ($f) => $f->payments->isEmpty());
 
-    $present = $monthlyAttendance->where('status', 'present')->count();
-    $absent  = $monthlyAttendance->where('status', 'absent')->count();
-    $leave   = $monthlyAttendance->where('status', 'leave')->count();
-
-    // Fees
-    $fees = $enrollment->fees;
-
-$paidFees = $fees->filter(fn ($f) => $f->payments->isNotEmpty());
-$unpaidFees = $fees->filter(fn ($f) => $f->payments->isEmpty());
-
-return [
-    'class'   => $enrollment->schoolClass->name,
-    'section' => $enrollment->section->name,
-
-    'attendance' => [
-        'present' => $present,
-        'absent'  => $absent,
-        'leave'   => $leave,
-        'recent'  => $allAttendance
-            ->sortBy('date')
-            ->map(fn ($a) => [
-                'date'   => $a->date,
-                'status' => $a->status,
-            ]),
-    ],
-
-    'fees' => [
-        'all_paid' => $unpaidFees->isEmpty(),
-        'total'    => $fees->sum('amount'),
-        'paid'     => $paidFees->sum('amount'),
-        'pending'  => $unpaidFees->sum('amount'),
-
-        // 👇 THIS FIXES YOUR ERROR
-        'unpaid_months' => $unpaidFees
-            ->map(fn ($f) => $f->month ?? $f->title)
-            ->values(),
-    ],
-];
-
-});
+        return [
+            'class'       => $displayEnrollment->schoolClass->name,
+            'section'     => $displayEnrollment->section->name,
+            'attendance'  => [
+                'present' => $allAttendance->where('status', 'present')->count(),
+                'absent'  => $allAttendance->where('status', 'absent')->count(),
+                'leave'   => $allAttendance->where('status', 'leave')->count(),
+                'recent'  => $allAttendance->sortBy('date')->map(fn ($a) => [
+                    'date'   => $a->date,
+                    'status' => $a->status,
+                ])->values(),
+            ],
+            'fees' => [
+                'all_paid'      => $unpaidFees->isEmpty(),
+                'total'         => $allFees->sum('amount'),
+                'paid'          => $paidFees->sum('amount'),
+                'pending'       => $unpaidFees->sum('amount'),
+                'unpaid_months' => $unpaidFees
+                    ->map(fn ($f) => $f->month ?? $f->title)
+                    ->values(),
+            ],
+        ];
+    })->values();
 
 return Inertia::render('Students/Show', [
     'student' => $student,
