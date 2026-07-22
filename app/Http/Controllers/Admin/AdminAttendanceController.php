@@ -83,7 +83,7 @@ class AdminAttendanceController extends Controller
         $students = [];
 
         foreach ($section->studentSections as $enrollment) {
-            $records = Attendance::where('student_section_id', $enrollment->id)
+            $records = Attendance::where('student_id', $enrollment->student->id)
                 ->whereBetween('date', [$start, $end])
                 ->get()
                 ->keyBy(fn ($r) => $enrollment->id . '-' . $r->date);

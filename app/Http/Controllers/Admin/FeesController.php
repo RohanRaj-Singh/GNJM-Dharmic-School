@@ -47,7 +47,7 @@ class FeesController extends Controller
             // Historical enrollments (promoted/passed_out/left) —
             // show ONLY fees that are still unpaid and need collection
             $q->orWhere(function ($qq) {
-                $qq->whereIn('student_sections.status', ['promoted', 'passed_out', 'left'])
+                $qq->whereIn('student_sections.status', ['promoted', 'passed_out', 'left', 'inactive'])
                    ->whereNotNull('student_sections.transferred_at')
                    ->whereNotExists(function ($qqq) {
                        $qqq->selectRaw('1')

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Fee extends Model
 {
     protected $fillable = [
+        'student_id',
         'student_section_id',
         'type',
         'source',
@@ -18,6 +19,25 @@ class Fee extends Model
         'is_locked',
         'month',
     ];
+
+    // ── Boot ──
+
+    protected static function booted(): void
+    {
+        static::creating(function (Fee $fee) {
+            if (!$fee->student_id && $fee->student_section_id) {
+                $fee->student_id = (int) StudentSection::where('id', $fee->student_section_id)
+                    ->value('student_id');
+            }
+        });
+    }
+
+    // ── Relationships ──
+
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class, 'student_id');
+    }
 
     public function studentSection(): BelongsTo
     {

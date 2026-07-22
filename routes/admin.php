@@ -451,12 +451,15 @@ Route::prefix('students')->name('students.')->group(function () {
                     ->unique('section_id')
                     ->keyBy('section_id');
 
-                // ---- 3. Remove orphaned active enrollments (single DELETE) ----
+                // ---- 3. Archive orphaned active enrollments (NOT delete — preserves fees + attendance) ----
                 StudentSection::where('student_id', $student->id)
                     ->where('status', 'active')
                     ->whereNull('transferred_at')
                     ->whereNotIn('section_id', $incoming->keys())
-                    ->delete();
+                    ->update([
+                        'status'         => StudentSection::STATUS_INACTIVE,
+                        'transferred_at' => now(),
+                    ]);
 
                 // ---- 4. Upsert each incoming enrollment ----
                 foreach ($incoming as $e) {
@@ -482,6 +485,11 @@ Route::prefix('students')->name('students.')->group(function () {
 
                     if ($enrollment->student_type !== $studentType) {
                         $enrollment->update(['student_type' => $studentType]);
+                    }
+
+                    // If this was an archived enrollment being re-activated, restore it
+                    if ($enrollment->status === 'active' && $enrollment->transferred_at !== null) {
+                        $enrollment->update(['transferred_at' => null, 'started_at' => now()]);
                     }
 
                     if ($enrollmentStatus !== 'active') continue;

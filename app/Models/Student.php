@@ -28,6 +28,16 @@ class Student extends Model
         return $this->hasMany(StudentSection::class, 'student_id');
     }
 
+    public function fees(): HasMany
+    {
+        return $this->hasMany(Fee::class, 'student_id');
+    }
+
+    public function attendance(): HasMany
+    {
+        return $this->hasMany(Attendance::class, 'student_id');
+    }
+
     public function batch(): BelongsTo
     {
         return $this->belongsTo(Batch::class);
