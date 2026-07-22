@@ -981,23 +981,26 @@ export default function FeesIndex() {
                       <td colSpan={8} className="p-0">
                         <div className="overflow-x-auto min-w-full px-2 py-3">
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                            <FeeGroupColumn
-                              title="Gurmukhi"
-                              titleClassName="text-blue-700"
-                              unpaidFees={gurmukhiUnpaid}
-                              paidFees={gurmukhiPaid}
-                              onCollect={openCollectModal}
-                              onDeCollect={deCollectFee}
-                            />
-
-                            <FeeGroupColumn
-                              title="Kirtan"
-                              titleClassName="text-purple-700"
-                              unpaidFees={kirtanUnpaid}
-                              paidFees={kirtanPaid}
-                              onCollect={openCollectModal}
-                              onDeCollect={deCollectFee}
-                            />
+                            {gurmukhiUnpaid.length + gurmukhiPaid.length > 0 ? (
+                              <FeeGroupColumn
+                                title="Gurmukhi"
+                                titleClassName="text-blue-700"
+                                unpaidFees={gurmukhiUnpaid}
+                                paidFees={gurmukhiPaid}
+                                onCollect={openCollectModal}
+                                onDeCollect={deCollectFee}
+                              />
+                            ) : null}
+                            {kirtanUnpaid.length + kirtanPaid.length > 0 ? (
+                              <FeeGroupColumn
+                                title="Kirtan"
+                                titleClassName="text-purple-700"
+                                unpaidFees={kirtanUnpaid}
+                                paidFees={kirtanPaid}
+                                onCollect={openCollectModal}
+                                onDeCollect={deCollectFee}
+                              />
+                            ) : null}
                           </div>
                         </div>
                       </td>
