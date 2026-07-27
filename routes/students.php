@@ -87,11 +87,24 @@ Route::prefix('students')->group(function () {
     // Kirtan appears once per type. Within each group we merge attendance
     // and fees from all enrollments (current + archived) so no data is lost
     // after a section change, but sections are NOT duplicated.
-    $grouped = $student->enrollments->groupBy(function ($enrollment) {
-        return $enrollment->schoolClass?->type ?? 'gurmukhi';
-    });
+    $grouped = collect();
+    foreach ($student->enrollments as $enrollment) {
+        // Resolve the type from the school class, falling back to the class
+        // name so that a Kirtan class with a missing type field is still
+        // recognised correctly.
+        $class  = $enrollment->schoolClass;
+        $type   = $class?->type;
+        if (!$type || trim($type) === '') {
+            $name = $class?->name ?? '';
+            $type = str_contains(strtolower($name), 'kirtan') ? 'kirtan' : 'gurmukhi';
+        }
+        $type = strtolower(trim($type));
 
-    $summary = $grouped->map(function ($enrollments) {
+        if (!isset($grouped[$type])) $grouped[$type] = collect();
+        $grouped[$type]->push($enrollment);
+    }
+
+    $summary = $grouped->map(function ($enrollments, $type) {
         $currentEnrollment = $enrollments
             ->firstWhere(fn ($e) => $e->status === 'active' && $e->transferred_at === null);
         $displayEnrollment = $currentEnrollment ?? $enrollments->first();
@@ -106,9 +119,10 @@ Route::prefix('students')->group(function () {
         $unpaidFees = $allFees->filter(fn ($f) => $f->payments->isEmpty());
 
         return [
-            'class'       => $displayEnrollment->schoolClass->name,
-            'class_type'  => $displayEnrollment->schoolClass->type,
-            'section'     => $displayEnrollment->section->name,
+            'class_type_key' => $type,   // guaranteed 'gurmukhi' or 'kirtan'
+            'class'          => $displayEnrollment->schoolClass->name,
+            'class_type'     => $displayEnrollment->schoolClass->type,
+            'section'        => $displayEnrollment->section->name,
             'attendance'  => [
                 'present' => $allAttendance->where('status', 'present')->count(),
                 'absent'  => $allAttendance->where('status', 'absent')->count(),
