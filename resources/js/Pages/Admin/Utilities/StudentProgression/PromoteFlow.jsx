@@ -2,7 +2,16 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import Modal from "@/Components/Modal";
 import ImpactSummary from "./ImpactSummary";
 
-export default function PromoteFlow({ student, students, classes, sections: propSections, onClose, preselectedIds = null }) {
+// Normalise a raw class-type value to a consistent key.
+const normaliseType = (raw) => {
+  const s = String(raw ?? "").toLowerCase().trim();
+  if (s === "" || s === "gurmukhi" || s === "gurmukhi class") return "gurmukhi";
+  if (s === "kirtan" || s === "kirtan class") return "kirtan";
+  // Fallback: anything containing "kirtan"
+  return s.includes("kirtan") ? "kirtan" : "gurmukhi";
+};
+
+export default function PromoteFlow({ student, students, classes, sections: propSections, onClose, preselectedIds = null, preselectedType }) {
   const allIds = preselectedIds || [student.id];
   const selectedStudents = useMemo(
     () => allIds.map((id) => students.find((s) => s.id === id)).filter(Boolean),
@@ -11,22 +20,50 @@ export default function PromoteFlow({ student, students, classes, sections: prop
   const isBulk = selectedStudents.length > 1;
   const leadStudent = selectedStudents[0];
 
-  // Suggest the Gurmukhi class as default — only Gurmukhi enrollments are promotable
-  const suggestedClassId = useMemo(() => {
-    if (!leadStudent?.enrollments?.length) return "";
-    const gurmukhi = leadStudent.enrollments.find(
-      (e) => !e.className?.toLowerCase().includes("kirtan")
-    );
-    return gurmukhi ? String(gurmukhi.classId) : "";
-  }, [leadStudent]);
+  // Discover which class types are available among the selected students.
+  const availableTypes = useMemo(() => {
+    const types = new Set();
+    selectedStudents.forEach((s) => {
+      (s.enrollments || []).forEach((e) => {
+        if (e.classType) types.add(normaliseType(e.classType));
+      });
+    });
+    return Array.from(types);
+  }, [selectedStudents]);
 
-  // Enrollments that will NOT be promoted (Kirtan stays untouched)
+  // Pick the first available type as default, or preselectedType if provided.
+  const [selectedType, setSelectedType] = useState(
+    preselectedType && availableTypes.includes(preselectedType) ? preselectedType : availableTypes[0] || "gurmukhi"
+  );
+
+  // Reset selected type when available types change (e.g. modal re-opens).
+  useEffect(() => {
+    if (availableTypes.length > 0 && !availableTypes.includes(selectedType)) {
+      setSelectedType(availableTypes[0]);
+    }
+  }, [availableTypes, selectedType]);
+
+  // Enrollments that match the selected type (will be promoted).
+  const promotableEnrollments = useMemo(() => {
+    if (!leadStudent?.enrollments?.length) return [];
+    return leadStudent.enrollments.filter(
+      (e) => normaliseType(e.classType) === selectedType
+    );
+  }, [leadStudent, selectedType]);
+
+  // Enrollments NOT matching the selected type (will remain).
   const unchangedEnrollments = useMemo(() => {
     if (!leadStudent?.enrollments?.length) return [];
     return leadStudent.enrollments.filter(
-      (e) => e.className?.toLowerCase().includes("kirtan")
+      (e) => normaliseType(e.classType) !== selectedType
     );
-  }, [leadStudent]);
+  }, [leadStudent, selectedType]);
+
+  // Suggest the class of the first promotable enrollment as default target.
+  const suggestedClassId = useMemo(() => {
+    const first = promotableEnrollments[0];
+    return first ? String(first.classId) : "";
+  }, [promotableEnrollments]);
 
   const [step, setStep] = useState(0);
   const [targetClassId, setTargetClassId] = useState(suggestedClassId);
@@ -54,6 +91,12 @@ export default function PromoteFlow({ student, students, classes, sections: prop
       .catch(() => setLazySections([]));
   }, [targetClassId, propSections]);
 
+  // Filter classes to only the selected type.
+  const filteredClasses = useMemo(
+    () => classes.filter((c) => normaliseType(c.type ?? c.name) === selectedType),
+    [classes, selectedType]
+  );
+
   const sectionOpts = useMemo(
     () => allSections.filter((s) => String(s.class_id) === String(targetClassId)),
     [allSections, targetClassId]
@@ -67,8 +110,8 @@ export default function PromoteFlow({ student, students, classes, sections: prop
   );
 
   const targetClassName = useMemo(
-    () => classes.find((c) => String(c.id) === String(targetClassId))?.name || "",
-    [classes, targetClassId]
+    () => filteredClasses.find((c) => String(c.id) === String(targetClassId))?.name || "",
+    [filteredClasses, targetClassId]
   );
   const targetSectionName = useMemo(
     () => sectionOpts.find((s) => String(s.id) === String(targetSectionId))?.name || "",
@@ -168,41 +211,84 @@ export default function PromoteFlow({ student, students, classes, sections: prop
 
           {step === 0 && (
             <div className="space-y-4 flex-shrink-0">
+              {/* Type selector — only show when there are multiple types */}
+              {availableTypes.length > 1 && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1.5">Enrollment Type to Promote</label>
+                  <div className="flex gap-2">
+                    {availableTypes.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => {
+                          setSelectedType(t);
+                          setTargetClassId("");
+                          setTargetSectionId("");
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          selectedType === t
+                            ? t === "kirtan"
+                              ? "bg-purple-600 text-white"
+                              : "bg-blue-600 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {t === "kirtan" ? "Kirtan" : "Gurmukhi"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Current enrollments summary */}
               <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1.5">
-                <p className="font-medium text-gray-700">Current Enrollment{isBulk ? "s" : ""}</p>
+                <p className="font-medium text-gray-700">Current Enrollment{isBulk ? "s" : ""} — {selectedType === "kirtan" ? "Kirtan" : "Gurmukhi"}</p>
                 {isBulk ? (
                   <p className="text-gray-500">{selectedStudents.length} active student(s) selected.</p>
                 ) : (
-                  leadStudent.enrollments?.map((e, i) => {
-                    const isGurmukhi = e.className && !e.className.toLowerCase().includes("kirtan");
-                    return (
+                  <>
+                    {promotableEnrollments.map((e, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isGurmukhi ? "bg-blue-400" : "bg-purple-400"}`} />
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${selectedType === "kirtan" ? "bg-purple-400" : "bg-blue-400"}`} />
                         <span className="text-gray-600">{e.className} — {e.sectionName}</span>
-                        {isGurmukhi ? (
-                          <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded">Will be promoted</span>
-                        ) : (
-                          <span className="text-[10px] bg-green-100 text-green-700 font-medium px-1.5 py-0.5 rounded">Will remain</span>
-                        )}
+                        <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded">Will be promoted</span>
                       </div>
-                    );
-                  })
+                    ))}
+                    {unchangedEnrollments.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <p className="text-xs text-gray-400 mb-1">Other enrollments (will remain):</p>
+                        {unchangedEnrollments.map((e, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0" />
+                            <span className="text-gray-500">{e.className} — {e.sectionName}</span>
+                            <span className="text-[10px] bg-green-100 text-green-700 font-medium px-1.5 py-0.5 rounded">Will remain</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Target Class</label>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Target Class — {selectedType === "kirtan" ? "Kirtan" : "Gurmukhi"}
+                  </label>
                   <select
                     value={targetClassId}
                     onChange={(e) => { setTargetClassId(e.target.value); setTargetSectionId(""); }}
                     className="border rounded px-3 py-2 text-sm w-full"
                   >
                     <option value="">Select class</option>
-                    {classes.map((c) => (
+                    {filteredClasses.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
+                  {filteredClasses.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      No {selectedType} classes available.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Target Section</label>
@@ -247,7 +333,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
               <ImpactSummary
                 type="promote"
                 studentName={leadStudent?.name}
-                currentEnrollments={leadStudent?.enrollments || []}
+                currentEnrollments={promotableEnrollments}
                 targetClassName={targetClassName}
                 targetSectionName={targetSectionName}
                 effectiveDate={effectiveDate}
@@ -277,7 +363,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
               <ImpactSummary
                 type="promote"
                 studentName={leadStudent?.name}
-                currentEnrollments={leadStudent?.enrollments || []}
+                currentEnrollments={promotableEnrollments}
                 targetClassName={targetClassName}
                 targetSectionName={targetSectionName}
                 effectiveDate={effectiveDate}
@@ -295,7 +381,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
                   className="mt-1 w-4 h-4"
                 />
                 <label htmlFor="confirm" className="text-sm text-gray-700">
-                  I understand that this will close {isBulk ? `${selectedStudents.length} enrollments` : "the current enrollment"} and create {isBulk ? "new ones" : "a new one"}.
+                  I understand that this will close {promotableEnrollments.length} enrollment(s) and create new one(s).
                   All historical data will be preserved.
                 </label>
               </div>

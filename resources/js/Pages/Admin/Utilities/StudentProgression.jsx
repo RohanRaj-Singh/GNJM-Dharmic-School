@@ -94,8 +94,31 @@ export default function StudentProgression() {
     fetchStudents();
   }, [fetchStudents]);
 
-  const classLabel = (student) =>
-    student.enrollments?.map((e) => e.className).join(", ") || "—";
+  const typeBadge = (type) => {
+    const isKirtan = String(type ?? "").toLowerCase().includes("kirtan");
+    return isKirtan
+      ? <span className="text-[10px] bg-purple-100 text-purple-700 font-medium px-1.5 py-0.5 rounded-full">Kirtan</span>
+      : <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded-full">Gurmukhi</span>;
+  };
+
+  const enrollmentSummary = (enrollments) =>
+    (enrollments || []).map((e, i) => (
+      <div key={i} className="flex items-center gap-1.5">
+        {typeBadge(e.classType || e.className)}
+        <span className="text-gray-600">{e.className}</span>
+        <span className="text-gray-400">—</span>
+        <span className="text-gray-500">{e.sectionName}</span>
+      </div>
+    ));
+
+  const uniqueTypes = (enrollments) => {
+    const types = new Set();
+    (enrollments || []).forEach((e) => {
+      const raw = e.classType ?? e.className ?? "";
+      types.add(raw.toLowerCase().includes("kirtan") ? "kirtan" : "gurmukhi");
+    });
+    return Array.from(types);
+  };
 
   return (
     <AdminLayout title="Student Progression">
@@ -226,7 +249,11 @@ export default function StudentProgression() {
                     </td>
                     <td className="px-4 py-2 font-medium">{student.name}</td>
                     <td className="px-4 py-2 text-gray-500">{student.fatherName || "—"}</td>
-                    <td className="px-4 py-2 text-gray-600 text-xs">{classLabel(student)}</td>
+                    <td className="px-4 py-2">
+                      <div className="space-y-1">
+                        {enrollmentSummary(student.enrollments)}
+                      </div>
+                    </td>
                     <td className="px-4 py-2 text-center"><StatusBadge status={student.status} /></td>
                     <td className="px-4 py-2 text-center">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -243,13 +270,20 @@ export default function StudentProgression() {
                       )}
                     </td>
                     <td className="px-4 py-2 text-right">
-                      <div className="flex gap-1.5 justify-end">
-                        <button
-                          onClick={() => openFlow(student, "promote")}
-                          className="px-2 py-1 rounded text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
-                        >
-                          Promote
-                        </button>
+                      <div className="flex gap-1.5 justify-end flex-wrap">
+                        {uniqueTypes(student.enrollments).map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => openFlow({ ...student, _promoteType: type }, "promote")}
+                            className={`px-2 py-1 rounded text-[11px] font-medium transition ${
+                              type === "kirtan"
+                                ? "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                                : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                            }`}
+                          >
+                            Promote {type === "kirtan" ? "Kirtan" : "Gurmukhi"}
+                          </button>
+                        ))}
                         <button
                           onClick={() => openFlow(student, "passOut")}
                           className="px-2 py-1 rounded text-[11px] font-medium bg-green-50 text-green-700 hover:bg-green-100 transition"
@@ -274,6 +308,7 @@ export default function StudentProgression() {
           sections={sections}
           onClose={closeModal}
           preselectedIds={selectedIds.size >= 1 ? Array.from(selectedIds) : null}
+          preselectedType={selectedStudent._promoteType}
         />
       )}
       {activeModal === "passOut" && selectedStudent && (

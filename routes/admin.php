@@ -222,6 +222,7 @@ Route::get('/utilities/student-progression/data', function (Request $request) {
             'id' => $e->id,
             'classId' => $e->class_id,
             'className' => $e->schoolClass->name,
+            'classType' => $e->schoolClass->type,
             'sectionId' => $e->section_id,
             'sectionName' => $e->section->name,
             'studentType' => $e->student_type,
