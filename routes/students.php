@@ -107,6 +107,7 @@ Route::prefix('students')->group(function () {
 
         return [
             'class'       => $displayEnrollment->schoolClass->name,
+            'class_type'  => $displayEnrollment->schoolClass->type,
             'section'     => $displayEnrollment->section->name,
             'attendance'  => [
                 'present' => $allAttendance->where('status', 'present')->count(),

@@ -19,8 +19,8 @@ export default function StudentShow({ student, summary = [] }) {
 
         if (isAccountant || isAdmin) {
             // Both tabs allowed for accountant/admin
-            const gurmukhi = summary.findIndex((s) => !isKirtan(s.class));
-            const kirtan = summary.findIndex((s) => isKirtan(s.class));
+            const gurmukhi = summary.findIndex((s) => !isKirtan(s.class_type, s.class));
+            const kirtan = summary.findIndex((s) => isKirtan(s.class_type, s.class));
             if (gurmukhi !== -1) allowed.push({ key: "gurmukhi", label: "Gurmukhi", index: gurmukhi });
             if (kirtan !== -1) allowed.push({ key: "kirtan", label: "Kirtan", index: kirtan });
             // If only one type exists, show it
@@ -33,9 +33,9 @@ export default function StudentShow({ student, summary = [] }) {
             const allowedSectionNames = auth?.user?.sections?.map((s) => s.name) ?? [];
             summary.forEach((item, idx) => {
                 if (allowedSectionNames.includes(item.section)) {
-                    const key = isKirtan(item.class) ? "kirtan" : "gurmukhi";
+                    const key = isKirtan(item.class_type, item.class) ? "kirtan" : "gurmukhi";
                     if (!allowed.find((t) => t.key === key)) {
-                        allowed.push({ key, label: isKirtan(item.class) ? "Kirtan" : "Gurmukhi", index: idx });
+                        allowed.push({ key, label: isKirtan(item.class_type, item.class) ? "Kirtan" : "Gurmukhi", index: idx });
                     }
                 }
             });
@@ -91,7 +91,7 @@ export default function StudentShow({ student, summary = [] }) {
                     <TabContent
                         item={activeItem}
                         student={student}
-                        isKirtanTab={isKirtan(activeItem.class)}
+                        isKirtanTab={isKirtan(activeItem.class_type, activeItem.class)}
                         canViewFees={isAccountant || isAdmin}
                     />
                 ) : (
@@ -280,8 +280,10 @@ function StatRow({ label, value, color }) {
     );
 }
 
-function isKirtan(className) {
-    return String(className ?? "").toLowerCase().includes("kirtan");
+function isKirtan(classType, className) {
+  // Prefer the database type field; fall back to name heuristic.
+  if (classType) return String(classType).toLowerCase().includes("kirtan");
+  return String(className ?? "").toLowerCase().includes("kirtan");
 }
 
 function formatWhatsappNumber(number) {
