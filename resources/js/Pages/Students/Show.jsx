@@ -48,6 +48,10 @@ export default function StudentShow({ student, summary = [] }) {
     const [activeTab, setActiveTab] = useState(0);
     const activeItem = tabs.length > 0 ? summary[tabs[activeTab]?.index] : null;
 
+    // Fallback: render all summary items as individual cards when no tabs exist,
+    // preventing data from being hidden when the tab logic can't resolve types.
+    const renderFallback = tabs.length === 0 && summary.length > 0;
+
     return (
         <SimpleLayout title="Student Summary">
             <div className="space-y-5">
@@ -68,7 +72,7 @@ export default function StudentShow({ student, summary = [] }) {
                     <ContactRow label="Mother Phone" number={student.mother_phone} />
                 </div>
 
-                {/* Tabs */}
+                {/* Tabs — only show when multiple types are detected */}
                 {tabs.length > 1 && (
                     <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
                         {tabs.map((tab, idx) => (
@@ -87,15 +91,28 @@ export default function StudentShow({ student, summary = [] }) {
                     </div>
                 )}
 
-                {/* Active tab content */}
-                {activeItem ? (
+                {/* Active tab content (when tabs work) */}
+                {!renderFallback && activeItem ? (
                     <TabContent
                         item={activeItem}
                         student={student}
                         isKirtanTab={activeItem.class_type_key === "kirtan"}
                         canViewFees={isAccountant || isAdmin}
                     />
-                ) : (
+                ) : null}
+
+                {/* Fallback: render each summary item when no tabs were resolved */}
+                {renderFallback ? summary.map((item, idx) => (
+                    <TabContent
+                        key={idx}
+                        item={item}
+                        student={student}
+                        isKirtanTab={item.class_type_key === "kirtan"}
+                        canViewFees={isAccountant || isAdmin}
+                    />
+                )) : null}
+
+                {!renderFallback && !activeItem && !(tabs.length > 0) && (
                     <div className="text-center text-gray-400 text-sm py-8">
                         No accessible records
                     </div>
