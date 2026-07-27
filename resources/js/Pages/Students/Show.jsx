@@ -211,27 +211,22 @@ function TabContent({ item, student, isKirtanTab, canViewFees }) {
                             : "bg-gray-200";
 
                         return (
-                            <div key={`${dateStr}-${i}`} className="flex flex-col items-center gap-0.5 relative group">
+                            <div key={`${dateStr}-${i}`} className="flex flex-col items-center gap-0.5">
                                 <div
                                     className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center relative`}
                                     title={
                                         status
-                                            ? `${dateStr} - ${status}${isLessonLearned ? " (lesson learned)" : ""}${lessonNote ? `: ${lessonNote}` : ""}`
+                                            ? `${dateStr} - ${status}${isLessonLearned && isKirtanTab ? " (lesson learned)" : ""}`
                                             : `${dateStr} - No record`
                                     }
                                 >
-                                    {isLessonLearned && (
+                                    {isLessonLearned && isKirtanTab && (
                                         <svg className="w-4 h-4 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                                         </svg>
                                     )}
                                 </div>
                                 <span className="text-[10px] text-gray-400">{day.getDate()}</span>
-                                {lessonNote && (
-                                    <div className="hidden group-hover:block absolute bottom-full mb-1 z-10 bg-gray-800 text-white text-[10px] rounded px-2 py-1 whitespace-nowrap max-w-[200px] overflow-hidden text-ellipsis">
-                                        📝 {lessonNote}
-                                    </div>
-                                )}
                             </div>
                         );
                     })}
@@ -245,6 +240,41 @@ function TabContent({ item, student, isKirtanTab, canViewFees }) {
                     </p>
                 )}
             </div>
+
+            {/* Lesson Notes — Kirtan only, shown below the calendar as a list */}
+            {isKirtanTab && (
+                <div className="bg-white rounded-xl shadow p-5">
+                    <h3 className="text-md font-semibold text-gray-700 mb-3">Lesson Notes</h3>
+                    {(() => {
+                        const notes = recentAttendance
+                            .filter((r) => r.lesson_note)
+                            .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+                        return notes.length > 0 ? (
+                            <div className="space-y-2">
+                                {notes.map((r, i) => (
+                                    <div key={i} className="border rounded-lg p-3 bg-purple-50/30">
+                                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                                            <span className="font-medium">{r.date}</span>
+                                            {r.lesson_learned && (
+                                                <span className="text-green-600 font-medium flex items-center gap-1">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Lesson learned
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-gray-700">{r.lesson_note}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400">No lesson notes recorded.</p>
+                        );
+                    })()}
+                </div>
+            )}
 
             {/* Fees (accountant/admin only) */}
             {canViewFees && <FeeSection item={item} student={student} />}
