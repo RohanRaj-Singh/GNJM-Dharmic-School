@@ -3,36 +3,6 @@ import useRoles from "@/Hooks/useRoles";
 import FeeSection from "./FeeSection";
 import { usePage, Link } from "@inertiajs/react";
 import { useState, useMemo } from "react";
-import StatusBadge from "@/Components/StatusBadge";
-
-/* ── prototype mock data ── */
-const MOCK_HISTORY = {
-  5: [
-    { className: "Gurmukhi Class 2", sectionName: "Pehli", startedAt: "2023-04-01", transferredAt: "2024-03-31", outcome: "promoted" },
-  ],
-  8: [
-    { className: "Gurmukhi Class 1", sectionName: "Doosri", startedAt: "2023-04-01", transferredAt: "2024-03-31", outcome: "promoted" },
-  ],
-  15: [
-    { className: "Gurmukhi Class 2", sectionName: "Doosri", startedAt: "2023-04-01", transferredAt: "2024-03-31", outcome: "promoted" },
-    { className: "Gurmukhi Class 1", sectionName: "Pehli", startedAt: "2022-04-01", transferredAt: "2023-03-31", outcome: "promoted" },
-  ],
-};
-/* ── end mock ── */
-
-/*
-|--------------------------------------------------------------------------
-| Student Show (Summary)
-|--------------------------------------------------------------------------
-| Accountant / Admin:
-|   - Gurmukhi ONLY
-|   - Attendance + Fees
-|
-| Teacher:
-|   - Only assigned sections
-|   - Attendance ONLY
-|   - No fees
-*/
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -43,56 +13,39 @@ export default function StudentShow({ student, summary = [] }) {
     const { isTeacher, isAccountant, isAdmin } = useRoles();
     const { auth } = usePage().props;
 
-    // Current month/year defaults
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-based
+    // Build the tab list from available summary items
+    const tabs = useMemo(() => {
+        const allowed = [];
 
-    // Selected month/year for the attendance calendar
-    const [selectedYear, setSelectedYear] = useState(currentYear);
-    const [selectedMonth, setSelectedMonth] = useState(currentMonth); // 0-based
-
-    // Year range: current year ± 2
-    const yearOptions = useMemo(() => {
-        const years = [];
-        for (let y = currentYear - 2; y <= currentYear + 2; y++) {
-            years.push(y);
+        if (isAccountant || isAdmin) {
+            // Both tabs allowed for accountant/admin
+            const gurmukhi = summary.findIndex((s) => !isKirtan(s.class));
+            const kirtan = summary.findIndex((s) => isKirtan(s.class));
+            if (gurmukhi !== -1) allowed.push({ key: "gurmukhi", label: "Gurmukhi", index: gurmukhi });
+            if (kirtan !== -1) allowed.push({ key: "kirtan", label: "Kirtan", index: kirtan });
+            // If only one type exists, show it
+            if (allowed.length === 0 && summary.length > 0) {
+                allowed.push({ key: "default", label: "Summary", index: 0 });
+            }
         }
-        return years;
-    }, [currentYear]);
 
-    // Days in the selected month
-    const monthDays = useMemo(() => {
-        const totalDays = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-        return Array.from({ length: totalDays }, (_, i) =>
-            new Date(selectedYear, selectedMonth, i + 1)
-        );
-    }, [selectedYear, selectedMonth]);
+        if (isTeacher) {
+            const allowedSectionNames = auth?.user?.sections?.map((s) => s.name) ?? [];
+            summary.forEach((item, idx) => {
+                if (allowedSectionNames.includes(item.section)) {
+                    const key = isKirtan(item.class) ? "kirtan" : "gurmukhi";
+                    if (!allowed.find((t) => t.key === key)) {
+                        allowed.push({ key, label: isKirtan(item.class) ? "Kirtan" : "Gurmukhi", index: idx });
+                    }
+                }
+            });
+        }
 
-    const toDateKey = (value) => {
-        const date = new Date(value);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-    };
+        return allowed;
+    }, [summary, isTeacher, isAccountant, isAdmin, auth]);
 
-    let visibleSummary = [];
-
-    if (isAccountant || isAdmin) {
-        visibleSummary = summary.filter(
-            (item) => item.class?.toLowerCase() === "gurmukhi"
-        );
-    }
-
-    if (isTeacher) {
-        const allowedSectionNames =
-            auth?.user?.sections?.map((s) => s.name) ?? [];
-
-        visibleSummary = summary.filter((item) =>
-            allowedSectionNames.includes(item.section)
-        );
-    }
+    const [activeTab, setActiveTab] = useState(0);
+    const activeItem = tabs.length > 0 ? summary[tabs[activeTab]?.index] : null;
 
     return (
         <SimpleLayout title="Student Summary">
@@ -110,252 +63,209 @@ export default function StudentShow({ student, summary = [] }) {
                     <h3 className="text-md font-semibold text-gray-700">
                         Parent Contact
                     </h3>
-
-                    <ContactRow
-                        label="Father Phone"
-                        number={student.father_phone}
-                    />
-                    <ContactRow
-                        label="Mother Phone"
-                        number={student.mother_phone}
-                    />
+                    <ContactRow label="Father Phone" number={student.father_phone} />
+                    <ContactRow label="Mother Phone" number={student.mother_phone} />
                 </div>
 
-                {visibleSummary.map((item, index) => {
-                    const recentAttendance = Array.isArray(item.attendance?.recent)
-                        ? item.attendance.recent
-                        : Object.values(item.attendance?.recent ?? {});
+                {/* Tabs */}
+                {tabs.length > 1 && (
+                    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                        {tabs.map((tab, idx) => (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveTab(idx)}
+                                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition ${
+                                    activeTab === idx
+                                        ? "bg-white text-gray-800 shadow"
+                                        : "text-gray-500 hover:text-gray-700"
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
-                    const recentMap = Object.fromEntries(
-                        recentAttendance.map((record) => [
-                            toDateKey(record.date),
-                            record.status,
-                        ])
-                    );
-
-                    // Calculate stats for the SELECTED month (not the current month)
-                    const selectedMonthStr = String(selectedMonth + 1).padStart(2, "0");
-                    const selectedMonthPrefix = `${selectedYear}-${selectedMonthStr}`;
-                    const monthAttendance = recentAttendance.filter((r) =>
-                        r.date && r.date.startsWith(selectedMonthPrefix)
-                    );
-                    const present = monthAttendance.filter((r) => r.status === "present").length;
-                    const absent = monthAttendance.filter((r) => r.status === "absent").length;
-                    const leave = monthAttendance.filter((r) => r.status === "leave").length;
-
-                    return (
-                        <div key={`${item.class}-${item.section}-${index}`} className="space-y-4">
-                            <div className="bg-white rounded-xl shadow p-5">
-                                <div className="flex flex-wrap gap-2">
-                                    <Pill
-                                        color={
-                                            item.class === "Kirtan"
-                                                ? "purple"
-                                                : "blue"
-                                        }
-                                    >
-                                        {item.class}
-                                    </Pill>
-                                    <Pill color="gray">{item.section}</Pill>
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-xl shadow p-5 space-y-2">
-                                <h3 className="text-md font-semibold text-gray-700">
-                                    Attendance Summary
-                                </h3>
-
-                                <StatRow
-                                    label="Present"
-                                    value={present}
-                                    color="green"
-                                />
-                                <StatRow
-                                    label="Absent"
-                                    value={absent}
-                                    color="red"
-                                />
-                                <StatRow
-                                    label="Leave"
-                                    value={leave}
-                                    color="yellow"
-                                />
-                            </div>
-
-                            <div className="bg-white rounded-xl shadow p-5">
-                                {/* Month + Year selectors */}
-                                <div className="flex flex-wrap items-center gap-3 mb-3">
-                                    <h3 className="text-md font-semibold text-gray-700">
-                                        Attendance
-                                    </h3>
-                                    <select
-                                        value={selectedMonth}
-                                        onChange={(e) =>
-                                            setSelectedMonth(Number(e.target.value))
-                                        }
-                                        className="border rounded-lg px-3 py-1.5 text-sm bg-white"
-                                    >
-                                        {MONTHS.map((m, i) => (
-                                            <option key={i} value={i}>{m}</option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        value={selectedYear}
-                                        onChange={(e) =>
-                                            setSelectedYear(Number(e.target.value))
-                                        }
-                                        className="border rounded-lg px-3 py-1.5 text-sm bg-white"
-                                    >
-                                        {yearOptions.map((y) => (
-                                            <option key={y} value={y}>{y}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="grid grid-cols-7 gap-2 text-center text-xs">
-                                    {monthDays.map((day, i) => {
-                                        const dateStr = toDateKey(day);
-                                        const status = recentMap?.[dateStr];
-
-                                        const color =
-                                            status === "present"
-                                                ? "bg-green-500"
-                                                : status === "absent"
-                                                ? "bg-red-500"
-                                                : status === "leave"
-                                                ? "bg-yellow-400"
-                                                : "bg-gray-200";
-
-                                        return (
-                                            <div
-                                                key={`${dateStr}-${i}`}
-                                                className="flex flex-col items-center gap-1"
-                                            >
-                                                <span className="text-gray-500">
-                                                    {day.toLocaleDateString(
-                                                        "en-US",
-                                                        { weekday: "short" }
-                                                    )}
-                                                </span>
-
-                                                <div
-                                                    className={`w-8 h-8 rounded-lg ${color}`}
-                                                    title={
-                                                        status
-                                                            ? `${dateStr} - ${status}`
-                                                            : `${dateStr} - No record`
-                                                    }
-                                                />
-
-                                                <span className="text-[10px] text-gray-400">
-                                                    {day.getDate()}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {Object.keys(recentMap).length === 0 ? (
-                                    <p className="text-sm text-gray-500 mt-3 text-center">
-                                        No attendance marked
-                                    </p>
-                                ) : monthAttendance.length === 0 && (
-                                    <p className="text-sm text-gray-500 mt-3 text-center">
-                                        No records for {MONTHS[selectedMonth]} {selectedYear}
-                                    </p>
-                                )}
-                            </div>
-
-                            {(isAccountant || isAdmin) &&
-                                item.class?.toLowerCase() === "gurmukhi" && (
-                                    <FeeSection
-                                        item={item}
-                                        student={student}
-                                    />
-                                )}
-                        </div>
-                    );
-                })}
-
-                {visibleSummary.length === 0 && (
-                    <div className="text-center text-gray-400 text-sm">
+                {/* Active tab content */}
+                {activeItem ? (
+                    <TabContent
+                        item={activeItem}
+                        student={student}
+                        isKirtanTab={isKirtan(activeItem.class)}
+                        canViewFees={isAccountant || isAdmin}
+                    />
+                ) : (
+                    <div className="text-center text-gray-400 text-sm py-8">
                         No accessible records
                     </div>
                 )}
 
-                {/* ═══════════════════════════════════════
-                   Academic History (prototype)
-                   ═══════════════════════════════════════ */}
-                {(isAdmin || isAccountant) && (
-                    <AcademicHistory
-                        studentId={student.id}
-                        studentName={student.name}
-                    />
+                {/* Academic History */}
+                {(isAdmin || isAccountant) && summary.length > 0 && (
+                    <AcademicHistory studentId={student.id} studentName={student.name} />
                 )}
             </div>
         </SimpleLayout>
     );
 }
 
-/* ── Academic History Component (prototype) ── */
-function AcademicHistory({ studentId, studentName }) {
-    const history = MOCK_HISTORY[studentId] || [];
+/* ── Tab Content ── */
+function TabContent({ item, student, isKirtanTab, canViewFees }) {
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
-    if (history.length === 0) return null;
+    const yearOptions = useMemo(() => {
+        const y = new Date().getFullYear();
+        return Array.from({ length: 5 }, (_, i) => y - 2 + i);
+    }, []);
+
+    const monthDays = useMemo(() => {
+        const totalDays = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        return Array.from({ length: totalDays }, (_, i) =>
+            new Date(selectedYear, selectedMonth, i + 1)
+        );
+    }, [selectedYear, selectedMonth]);
+
+    const toDateKey = (value) => {
+        if (!value) return "";
+        const d = new Date(value);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+
+    const recentAttendance = Array.isArray(item.attendance?.recent)
+        ? item.attendance.recent
+        : Object.values(item.attendance?.recent ?? {});
+
+    const recentMap = Object.fromEntries(
+        recentAttendance.map((r) => [toDateKey(r.date), r])
+    );
+
+    const monthPrefix = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
+    const monthAttendance = recentAttendance.filter((r) => r.date?.startsWith(monthPrefix));
+    const present = monthAttendance.filter((r) => r.status === "present").length;
+    const absent = monthAttendance.filter((r) => r.status === "absent").length;
+    const leave = monthAttendance.filter((r) => r.status === "leave").length;
 
     return (
-        <div className="bg-white rounded-xl shadow p-5 space-y-3">
-            <h3 className="text-md font-semibold text-gray-700">Academic History</h3>
+        <div className="space-y-4">
+            {/* Class & Section badge */}
+            <div className="bg-white rounded-xl shadow p-5">
+                <div className="flex flex-wrap gap-2">
+                    <Pill color={isKirtanTab ? "purple" : "blue"}>{item.class}</Pill>
+                    <Pill color="gray">{item.section}</Pill>
+                </div>
+            </div>
 
-            <div className="space-y-2">
-                {history.map((enr, i) => (
-                    <div key={i} className="border rounded-lg p-3 flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0" />
-                            <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-800 truncate">
-                                    {enr.className}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                    {enr.sectionName} · {enr.startedAt} → {enr.transferredAt}
-                                </p>
+            {/* Attendance Summary */}
+            <div className="bg-white rounded-xl shadow p-5 space-y-2">
+                <h3 className="text-md font-semibold text-gray-700">Attendance Summary</h3>
+                <StatRow label="Present" value={present} color="green" />
+                <StatRow label="Absent" value={absent} color="red" />
+                <StatRow label="Leave" value={leave} color="yellow" />
+            </div>
+
+            {/* Attendance Calendar */}
+            <div className="bg-white rounded-xl shadow p-5">
+                <div className="flex flex-wrap items-center gap-3 mb-3">
+                    <h3 className="text-md font-semibold text-gray-700">Attendance</h3>
+                    <select
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                        className="border rounded-lg px-3 py-1.5 text-sm bg-white"
+                    >
+                        {MONTHS.map((m, i) => (
+                            <option key={i} value={i}>{m}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        className="border rounded-lg px-3 py-1.5 text-sm bg-white"
+                    >
+                        {yearOptions.map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                    {isKirtanTab && (
+                        <span className="text-[11px] text-purple-600 font-medium bg-purple-50 px-2 py-1 rounded-full">
+                            Kirtan · Sundays only
+                        </span>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                        <div key={d} className="text-[10px] text-gray-400 font-medium py-1">{d}</div>
+                    ))}
+                    {monthDays.map((day, i) => {
+                        const dateStr = toDateKey(day);
+                        const record = recentMap?.[dateStr];
+                        const status = record?.status;
+                        const isLessonLearned = record?.lesson_learned;
+                        const lessonNote = record?.lesson_note;
+
+                        const color =
+                            status === "present" ? "bg-green-500"
+                            : status === "absent" ? "bg-red-500"
+                            : status === "leave" ? "bg-yellow-400"
+                            : "bg-gray-200";
+
+                        return (
+                            <div key={`${dateStr}-${i}`} className="flex flex-col items-center gap-0.5 relative group">
+                                <div
+                                    className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center relative`}
+                                    title={
+                                        status
+                                            ? `${dateStr} - ${status}${isLessonLearned ? " (lesson learned)" : ""}${lessonNote ? `: ${lessonNote}` : ""}`
+                                            : `${dateStr} - No record`
+                                    }
+                                >
+                                    {isLessonLearned && (
+                                        <svg className="w-4 h-4 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    )}
+                                </div>
+                                <span className="text-[10px] text-gray-400">{day.getDate()}</span>
+                                {lessonNote && (
+                                    <div className="hidden group-hover:block absolute bottom-full mb-1 z-10 bg-gray-800 text-white text-[10px] rounded px-2 py-1 whitespace-nowrap max-w-[200px] overflow-hidden text-ellipsis">
+                                        📝 {lessonNote}
+                                    </div>
+                                )}
                             </div>
-                            {enr.outcome === "promoted" ? (
-                              <span className="text-xs text-blue-600 font-medium">↑ Promoted</span>
-                            ) : (
-                              <StatusBadge status={enr.outcome} />
-                            )}
-                        </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                            <button className="px-2 py-1 rounded text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition">Student Report</button>
-                            <button className="px-2 py-1 rounded text-[11px] font-medium bg-green-50 text-green-700 hover:bg-green-100 transition">Attendance</button>
-                            <button className="px-2 py-1 rounded text-[11px] font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition">Fees</button>
-                        </div>
-                    </div>
-                ))}
+                        );
+                    })}
+                </div>
+
+                {Object.keys(recentMap).length === 0 ? (
+                    <p className="text-sm text-gray-500 mt-3 text-center">No attendance marked</p>
+                ) : monthAttendance.length === 0 && (
+                    <p className="text-sm text-gray-500 mt-3 text-center">
+                        No records for {MONTHS[selectedMonth]} {selectedYear}
+                    </p>
+                )}
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500">
-                Historical records for <strong>{studentName}</strong>. Each enrollment preserves its own fees, attendance, and reports.
-            </div>
+            {/* Fees (accountant/admin only) */}
+            {canViewFees && <FeeSection item={item} student={student} />}
         </div>
     );
+}
+
+/* ── Subcomponents ── */
+function AcademicHistory({ studentId, studentName }) {
+    // This will be replaced when enrollment-history API is connected
+    return null;
 }
 
 function Pill({ children, color = "gray" }) {
     const map = {
         gray: "bg-gray-100 text-gray-700",
         blue: "bg-blue-100 text-blue-700",
-        green: "bg-green-100 text-green-700",
-        red: "bg-red-100 text-red-700",
-        yellow: "bg-yellow-100 text-yellow-700",
         purple: "bg-purple-100 text-purple-700",
     };
-
     return (
-        <span
-            className={`text-xs px-3 py-1 rounded-full font-medium ${map[color]}`}
-        >
+        <span className={`text-xs px-3 py-1 rounded-full font-medium ${map[color] || map.gray}`}>
             {children}
         </span>
     );
@@ -365,58 +275,35 @@ function StatRow({ label, value, color }) {
     return (
         <div className="flex justify-between text-sm">
             <span className="text-gray-500">{label}</span>
-            <span className={`font-semibold text-${color}-600`}>
-                {value}
-            </span>
+            <span className={`font-semibold text-${color}-600`}>{value}</span>
         </div>
     );
 }
 
+function isKirtan(className) {
+    return String(className ?? "").toLowerCase().includes("kirtan");
+}
+
 function formatWhatsappNumber(number) {
     if (!number) return null;
-
     let cleaned = number.replace(/[^\d]/g, "");
-
-    if (cleaned.startsWith("0")) {
-        cleaned = "92" + cleaned.slice(1);
-    }
-
-    if (cleaned.startsWith("92") && cleaned.length >= 12) {
-        return cleaned;
-    }
-
+    if (cleaned.startsWith("0")) cleaned = "92" + cleaned.slice(1);
+    if (cleaned.startsWith("92") && cleaned.length >= 12) return cleaned;
     return null;
 }
 
 function ContactRow({ label, number }) {
     const waNumber = formatWhatsappNumber(number);
-
     return (
         <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">{label}</span>
-
             {number ? (
                 <div className="flex gap-3">
-                    <a
-                        href={`tel:${number}`}
-                        className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs"
-                    >
-                        Call
-                    </a>
-
+                    <a href={`tel:${number}`} className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs">Call</a>
                     {waNumber ? (
-                        <a
-                            href={`https://wa.me/${waNumber}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1 rounded-lg bg-green-600 text-white text-xs"
-                        >
-                            WhatsApp
-                        </a>
+                        <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded-lg bg-green-600 text-white text-xs">WhatsApp</a>
                     ) : (
-                        <span className="px-3 py-1 rounded-lg bg-gray-200 text-gray-500 text-xs">
-                            WhatsApp
-                        </span>
+                        <span className="px-3 py-1 rounded-lg bg-gray-200 text-gray-500 text-xs">WhatsApp</span>
                     )}
                 </div>
             ) : (

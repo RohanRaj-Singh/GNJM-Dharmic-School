@@ -10,18 +10,13 @@ export default function FeeSection({ item, student }) {
         return null;
     }
 
-    // 🧠 Only GURMUKHI fees are handled here
-    // If this enrollment is Kirtan, skip
-    if (item.class_type === "kirtan") {
-        return null;
-    }
-
     const unpaidMonths = item.fees?.unpaid_months ?? [];
+    const className = item.class || "";
 
     return (
         <div className="bg-white rounded-xl shadow p-5">
             <h3 className="text-md font-semibold text-gray-700 mb-2">
-                Gurmukhi Fee Status
+                {className} Fee Status
             </h3>
 
             {item.fees?.all_paid ? (

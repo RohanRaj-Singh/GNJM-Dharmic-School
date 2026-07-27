@@ -113,8 +113,10 @@ Route::prefix('students')->group(function () {
                 'absent'  => $allAttendance->where('status', 'absent')->count(),
                 'leave'   => $allAttendance->where('status', 'leave')->count(),
                 'recent'  => $allAttendance->sortBy('date')->map(fn ($a) => [
-                    'date'   => $a->date,
-                    'status' => $a->status,
+                    'date'           => $a->date,
+                    'status'         => $a->status,
+                    'lesson_learned' => $a->lesson_learned ?? false,
+                    'lesson_note'    => $a->lesson_note ?? null,
                 ])->values(),
             ],
             'fees' => [
