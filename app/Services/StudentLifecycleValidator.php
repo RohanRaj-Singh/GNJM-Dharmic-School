@@ -13,6 +13,10 @@ use App\Models\StudentSection;
  */
 class StudentLifecycleValidator
 {
+    public function __construct(
+        private readonly StudentStatusMachine $statusMachine,
+    ) {}
+
     /**
      * Check if a student can be promoted to the next class.
      */
@@ -28,8 +32,8 @@ class StudentLifecycleValidator
             return ValidationResult::denied('Student has left the school. Cannot promote.');
         }
 
-        // Must be active
-        if ($student->status !== Student::STATUS_ACTIVE) {
+        // Status gate — only "active" can reach "promoted"
+        if (!$this->statusMachine->canTransition($student->status, Student::STATUS_PROMOTED)) {
             return ValidationResult::denied('Student must have status "active" to be promoted.');
         }
 
@@ -60,7 +64,8 @@ class StudentLifecycleValidator
             return ValidationResult::denied('Student has left the school. Cannot pass out.');
         }
 
-        if ($student->status !== Student::STATUS_ACTIVE) {
+        // Status gate — only "active" can reach "passed_out"
+        if (!$this->statusMachine->canTransition($student->status, Student::STATUS_PASSED_OUT)) {
             return ValidationResult::denied('Student must have status "active" to pass out.');
         }
 
@@ -91,7 +96,8 @@ class StudentLifecycleValidator
             return ValidationResult::denied('Student has already left the school.');
         }
 
-        if ($student->status !== Student::STATUS_INACTIVE) {
+        // Status gate — only "inactive" can reach "left"
+        if (!$this->statusMachine->canTransition($student->status, Student::STATUS_LEFT)) {
             return ValidationResult::denied(
                 'Student must be "inactive" before leaving the school. '
                 . 'Make the student inactive first, then mark as left.'
@@ -115,7 +121,8 @@ class StudentLifecycleValidator
             return ValidationResult::denied('Student has left the school. Cannot make inactive.');
         }
 
-        if ($student->status !== Student::STATUS_ACTIVE) {
+        // Status gate — only "active" can reach "inactive"
+        if (!$this->statusMachine->canTransition($student->status, Student::STATUS_INACTIVE)) {
             return ValidationResult::denied('Student must have status "active" to be made inactive.');
         }
 
@@ -145,7 +152,8 @@ class StudentLifecycleValidator
             return ValidationResult::denied('Student has left the school. Cannot reactivate.');
         }
 
-        if ($student->status !== Student::STATUS_INACTIVE) {
+        // Status gate — only "inactive" can reach "active"
+        if (!$this->statusMachine->canTransition($student->status, Student::STATUS_ACTIVE)) {
             return ValidationResult::denied('Student must have status "inactive" to be reactivated.');
         }
 

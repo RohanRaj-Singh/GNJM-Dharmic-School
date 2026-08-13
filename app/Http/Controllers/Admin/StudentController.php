@@ -9,13 +9,19 @@ use App\Models\Section;
 use App\Models\Student;
 use App\Models\StudentSection;
 use App\Services\MonthlyFeeResolver;
+use App\Services\StudentStatusMachine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class StudentController extends Controller
 {
+    public function __construct(
+        private readonly StudentStatusMachine $statusMachine,
+    ) {}
+
     /**
      * Admin student roster (Inertia page).
      *
@@ -184,20 +190,36 @@ class StudentController extends Controller
             foreach ($request->students as $row) {
 
                 // ---- 1. Upsert student (name, father, phone, status) ----
-                $student = empty($row['id'])
-                    ? Student::create([
+                $existingStudent = empty($row['id']) ? null : Student::findOrFail($row['id']);
+                $status = $row['status'] ?? Student::STATUS_ACTIVE;
+
+                // Status-machine guard: the roster form only ever sends
+                // active/inactive, but a terminal status (promoted/passed_out/
+                // left) must never be silently changed back through this bulk
+                // endpoint. Same-state submissions pass through as no-ops.
+                if ($existingStudent
+                    && $status !== $existingStudent->status
+                    && !$this->statusMachine->canTransition($existingStudent->status, $status)) {
+                    throw ValidationException::withMessages([
+                        'students' => "Cannot change \"{$existingStudent->name}\" from "
+                            . "\"{$existingStudent->status}\" to \"{$status}\".",
+                    ]);
+                }
+
+                $student = $existingStudent
+                    ? tap($existingStudent)->update([
                         'name' => $formatName($row['name']) ?? $row['name'],
                         'father_name' => $formatName($row['father_name'] ?? null),
                         'father_phone' => $row['father_phone'] ?? null,
                         'mother_phone' => $row['mother_phone'] ?? null,
-                        'status' => $row['status'] ?? 'active',
+                        'status' => $status,
                     ])
-                    : tap(Student::findOrFail($row['id']))->update([
+                    : Student::create([
                         'name' => $formatName($row['name']) ?? $row['name'],
                         'father_name' => $formatName($row['father_name'] ?? null),
                         'father_phone' => $row['father_phone'] ?? null,
                         'mother_phone' => $row['mother_phone'] ?? null,
-                        'status' => $row['status'] ?? 'active',
+                        'status' => $status,
                     ]);
 
                 // ---- 2. Compute desired enrollments ----
