@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\BackupEntry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class BackupService
 {
@@ -78,30 +79,50 @@ class BackupService
             throw new \RuntimeException('Backup file not found on disk.');
         }
 
+        /* -----------------------------------------------------------------
+         * Pre-flight safety (R10): verify BEFORE any destructive step.
+         * A restore drops every table, so a corrupted or foreign dump must be
+         * rejected while the database is still intact.
+         * ----------------------------------------------------------------- */
+        $this->verifyChecksum($entry, $fullPath);
+
         $compressed = file_get_contents($fullPath);
         if ($compressed === false) {
             throw new \RuntimeException('Failed to read backup file.');
         }
 
-        $sql = gzdecode($compressed);
+        // @ suppresses the gzip warning so a corrupt archive surfaces as a
+        // clean RuntimeException instead of an ErrorException.
+        $sql = @gzdecode($compressed);
         if ($sql === false) {
             throw new \RuntimeException('Failed to decompress backup file.');
         }
 
+        $this->validateDump($sql);
+
         $entry->update(['status' => 'restoring']);
 
         try {
-            DB::statement('SET FOREIGN_KEY_CHECKS = 0');
+            // NOTE: MySQL DDL auto-commits, so this transaction cannot undo the
+            // table drops on MySQL — it guards the SQLite path (whose DDL is
+            // transactional) and keeps the status bookkeeping atomic. The real
+            // MySQL safety comes from the pre-flight gates + post-restore
+            // validation below.
+            DB::transaction(function () use ($entry, $sql) {
+                DB::statement('SET FOREIGN_KEY_CHECKS = 0');
 
-            $tables = DB::select('SHOW TABLES');
-            $tableKey = 'Tables_in_' . DB::getDatabaseName();
-            foreach ($tables as $table) {
-                DB::statement("DROP TABLE IF EXISTS `{$table->$tableKey}`");
-            }
+                $tables = DB::select('SHOW TABLES');
+                $tableKey = 'Tables_in_' . DB::getDatabaseName();
+                foreach ($tables as $table) {
+                    DB::statement("DROP TABLE IF EXISTS `{$table->$tableKey}`");
+                }
 
-            DB::unprepared($sql);
+                DB::unprepared($sql);
 
-            DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+                DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+
+                $this->validateRestoredDatabase($entry);
+            });
 
             $entry->update(['status' => 'restored']);
 
@@ -109,12 +130,95 @@ class BackupService
 
             return true;
         } catch (\Throwable $e) {
-            $entry->update(['status' => 'created']);
+            $entry->update(['status' => 'failed']);
             Log::channel('backup')->error('Restore failed, database may be in incomplete state', [
                 'filename' => $entry->filename,
                 'error' => $e->getMessage(),
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Reject a backup whose on-disk file no longer matches the checksum stored
+     * at creation time. Protects against truncated/corrupted/edited archives
+     * being applied on top of a live database.
+     */
+    private function verifyChecksum(BackupEntry $entry, string $fullPath): void
+    {
+        if (empty($entry->checksum)) {
+            Log::channel('backup')->warning('Backup has no stored checksum; skipping verification', [
+                'filename' => $entry->filename,
+            ]);
+            return;
+        }
+
+        $actual = hash_file('sha256', $fullPath);
+        if ($actual === false || !hash_equals($entry->checksum, $actual)) {
+            Log::channel('backup')->error('Checksum mismatch — refusing to restore', [
+                'filename' => $entry->filename,
+                'stored'   => substr($entry->checksum, 0, 12) . '...',
+                'actual'   => substr((string) $actual, 0, 12) . '...',
+            ]);
+            throw new \RuntimeException('Checksum mismatch. The backup file may be corrupted or modified. Refusing to restore.');
+        }
+    }
+
+    /**
+     * Sanity-check the decompressed SQL before dropping any table. Both the
+     * native export and mysqldump emit DROP TABLE then CREATE TABLE; a dump
+     * without them is empty or not a MySQL dump at all.
+     */
+    private function validateDump(string $sql): void
+    {
+        if (trim($sql) === '') {
+            throw new \RuntimeException('Backup file is empty; refusing to restore.');
+        }
+
+        if (!str_contains($sql, 'DROP TABLE') || !str_contains($sql, 'CREATE TABLE')) {
+            Log::channel('backup')->error('Backup does not look like a valid SQL dump', [
+                'sql_length' => strlen($sql),
+            ]);
+            throw new \RuntimeException('Backup does not contain a valid table structure; refusing to restore.');
+        }
+    }
+
+    /**
+     * After applying the dump, confirm the database actually matches the
+     * backup's recorded state. Catches truncated dumps that "restored"
+     * successfully but silently.
+     */
+    private function validateRestoredDatabase(BackupEntry $entry): void
+    {
+        $problems = [];
+
+        $currentMigrationCount = $this->getMigrationCount();
+        if ($entry->migration_count !== $currentMigrationCount) {
+            $problems[] = "Migration count mismatch: backup {$entry->migration_count}, restored {$currentMigrationCount}.";
+        }
+
+        foreach (['users', 'students', 'classes', 'sections', 'fees'] as $table) {
+            if (!Schema::hasTable($table)) {
+                $problems[] = "Required table `{$table}` is missing after restore.";
+            }
+        }
+
+        // The live schema requires student_id on fees/attendance (Sprint 0.5);
+        // a dump from before that constraint would restore NULLs.
+        $nullStudentFees = DB::table('fees')->whereNull('student_id')->count();
+        if ($nullStudentFees > 0) {
+            $problems[] = "{$nullStudentFees} fee(s) restored with a NULL student_id.";
+        }
+
+        $nullStudentAttendance = DB::table('attendance')->whereNull('student_id')->count();
+        if ($nullStudentAttendance > 0) {
+            $problems[] = "{$nullStudentAttendance} attendance row(s) restored with a NULL student_id.";
+        }
+
+        if ($problems !== []) {
+            $message = 'Restore validation failed: ' . implode(' ', $problems);
+            Log::channel('backup')->error($message, ['filename' => $entry->filename]);
+            throw new \RuntimeException($message);
         }
     }
 
