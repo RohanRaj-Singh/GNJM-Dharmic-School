@@ -226,7 +226,6 @@ class FeesController extends Controller
                 return [
                     'id'         => $f->id,
                     'type'       => $f->type,
-                    'source'     => $f->source,
                     'month'      => $f->month,
                     'title'      => $f->title,
                     'amount'     => $f->amount,
@@ -295,7 +294,7 @@ class FeesController extends Controller
     ]);
 
     // Lock custom fee after payment
-    if ($fee->source === 'custom') {
+    if ($fee->type === 'custom') {
         $fee->update(['is_locked' => true]);
     }
 
@@ -396,7 +395,6 @@ public function customIndex()
                     ],
                     [
                         'amount' => $data['amount'],
-                        'source' => 'custom',
                     ]
                 );
             }

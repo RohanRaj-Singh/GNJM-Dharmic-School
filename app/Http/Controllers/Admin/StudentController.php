@@ -279,7 +279,6 @@ class StudentController extends Controller
                         ],
                         [
                             'student_section_id' => $enrollment->id,
-                            'source' => 'monthly',
                             'amount' => $fee,
                         ]
                     );

@@ -70,7 +70,6 @@ class GenerateMonthlyFees extends Command
                 'title' => 'Monthly Fee',
                 'amount' => $amount,
                 'month' => $month,
-                'source' => 'monthly',
             ]);
 
             $affectedStudentIds[(int) $enrollment->student_id] = true;

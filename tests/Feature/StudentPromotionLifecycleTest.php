@@ -97,7 +97,6 @@ class StudentPromotionLifecycleTest extends TestCase
         $fee1 = Fee::create([
             'student_section_id' => $enrollment->id,
             'type'   => 'monthly',
-            'source' => 'monthly',
             'title'  => 'Monthly Fee',
             'amount' => 600,
             'month'  => '2026-03',
@@ -105,7 +104,6 @@ class StudentPromotionLifecycleTest extends TestCase
         $fee2 = Fee::create([
             'student_section_id' => $enrollment->id,
             'type'   => 'monthly',
-            'source' => 'monthly',
             'title'  => 'Monthly Fee',
             'amount' => 600,
             'month'  => '2026-04',
@@ -208,7 +206,6 @@ class StudentPromotionLifecycleTest extends TestCase
         Fee::create([
             'student_section_id' => $enrollment->id,
             'type'   => 'monthly',
-            'source' => 'monthly',
             'title'  => 'Monthly Fee',
             'amount' => 600,
             'month'  => '2026-03',
@@ -423,7 +420,6 @@ class StudentPromotionLifecycleTest extends TestCase
         $unpaidFee = Fee::create([
             'student_section_id' => $enrollment->id,
             'type'   => 'monthly',
-            'source' => 'monthly',
             'title'  => 'Monthly Fee',
             'amount' => 600,
             'month'  => '2026-03',
@@ -433,7 +429,6 @@ class StudentPromotionLifecycleTest extends TestCase
         $paidFee = Fee::create([
             'student_section_id' => $enrollment->id,
             'type'   => 'monthly',
-            'source' => 'monthly',
             'title'  => 'Monthly Fee',
             'amount' => 600,
             'month'  => '2026-04',

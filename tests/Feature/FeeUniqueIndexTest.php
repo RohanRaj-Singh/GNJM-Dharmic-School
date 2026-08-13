@@ -90,7 +90,6 @@ class FeeUniqueIndexTest extends TestCase
             'type' => 'monthly',
             'month' => $month,
             'amount' => $amount,
-            'source' => 'monthly',
         ]);
     }
 
@@ -128,7 +127,6 @@ class FeeUniqueIndexTest extends TestCase
             'student_id' => $this->student->id,
             'student_section_id' => $this->enrollmentA->id,
             'type' => 'custom',
-            'source' => 'custom',
             'title' => 'Trip',
             'month' => '2026-07',
             'amount' => 50,
@@ -164,7 +162,6 @@ class FeeUniqueIndexTest extends TestCase
             ],
             [
                 'student_section_id' => $this->enrollmentB->id,
-                'source' => 'monthly',
                 'amount' => 100,
             ]
         );

@@ -119,7 +119,6 @@ class StudentFrontRoutesTest extends TestCase
         return Fee::create([
             'student_section_id' => $enrollment->id,
             'type'               => 'monthly',
-            'source'             => 'monthly',
             'title'              => null,
             'amount'             => $amount,
             'month'              => $month,

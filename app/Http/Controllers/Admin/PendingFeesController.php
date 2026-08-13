@@ -244,7 +244,6 @@ class PendingFeesController extends Controller
                     [
                         'student_section_id' => $studentSection->id,
                         'amount' => $amount,
-                        'source' => 'monthly',
                     ]
                 );
             }

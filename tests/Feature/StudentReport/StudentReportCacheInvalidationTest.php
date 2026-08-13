@@ -85,7 +85,6 @@ class StudentReportCacheInvalidationTest extends TestCase
         $fee = Fee::create([
             'student_section_id' => $enrollment->id,
             'type' => 'monthly',
-            'source' => 'monthly',
             'title' => 'Monthly Fee',
             'amount' => 600,
             'month' => '2026-03',
@@ -128,12 +127,12 @@ class StudentReportCacheInvalidationTest extends TestCase
 
         $feeA = Fee::create([
             'student_section_id' => $enrollmentA->id,
-            'type' => 'monthly', 'source' => 'monthly',
+            'type' => 'monthly',
             'title' => 'Monthly Fee', 'amount' => 600, 'month' => '2026-03',
         ]);
         $feeB = Fee::create([
             'student_section_id' => $enrollmentB->id,
-            'type' => 'monthly', 'source' => 'monthly',
+            'type' => 'monthly',
             'title' => 'Monthly Fee', 'amount' => 600, 'month' => '2026-03',
         ]);
 

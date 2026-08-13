@@ -12,7 +12,6 @@ class Fee extends Model
         'student_id',
         'student_section_id',
         'type',
-        'source',
         'batch_id',
         'title',
         'amount',
