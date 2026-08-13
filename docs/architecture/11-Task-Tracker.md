@@ -145,7 +145,8 @@ Feature/fix work done on `main` before/around the refactor sprints:
 | Item | Status |
 |---|---|
 | Merge `refactor/architecture` → `main` | ⏳ Not done (production-branch change; deliberately not merged without approval) |
-| Commit `docs/architecture/*` (01, 03, 05, 06, 07, 08, 10, README) + this tracker + `reword.md` | ⏳ Untracked; not committed |
+| `reword.md` | ⏳ Untracked; **unrelated to this repo** (Omantel/Remedy GCC claims-management content — a stray paste). Not committed on purpose; awaiting user decision to delete or move it out of the repo. |
+| Docs committed | ✅ Done — `docs/architecture/*` (01, 03, 05, 06, 07, 08, 10, README) + this tracker committed as `7dfe430` on `refactor/architecture`. |
 
 ---
 
