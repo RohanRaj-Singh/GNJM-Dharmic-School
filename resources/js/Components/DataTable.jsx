@@ -19,6 +19,13 @@ const SORT_INDICATOR = { asc: " ↑", desc: " ↓" };
  *  - `emptyMessage` → renders an empty-state row when there are no rows
  *  - `loading` → renders a loading row instead of the empty state
  *  - `renderExpandedRow` + `expandedId` → renders an expandable detail row
+ *  - `externalSort` = `{ key, dir, onSort }` → externally-controlled sort.
+ *    Columns opt in with `column.columnDef.meta.sortKey`; the header becomes
+ *    clickable (calls `onSort(sortKey)`) and renders a ⇅/↑/↓ indicator from
+ *    the external `{ key, dir }`. Unlike `sortable`, no tanstack sort model is
+ *    wired — the page owns the sorted data.
+ *  - Per-column `meta.headerClassName` / `meta.cellClassName` override the
+ *    shared header/cell classes for that column only.
  *
  * Class names are passed per page so no visual change occurs on migration.
  */
@@ -35,6 +42,7 @@ export default function DataTable({
   loadingMessage = "Loading…",
   renderExpandedRow,
   expandedId,
+  externalSort,
   containerClassName = "bg-white border rounded-lg overflow-x-auto",
   tableClassName = "min-w-full text-sm",
   theadClassName,
@@ -70,22 +78,52 @@ export default function DataTable({
   const rows = table.getRowModel().rows;
   const colSpan = Math.max(1, columns?.length ?? 0);
 
+  // External sort is opt-in: the page owns the sorted data and hands down
+  // { key, dir, onSort }. Columns opt in per-header via meta.sortKey.
+  const useExternalSort = externalSort !== undefined;
+
   return (
     <div className={containerClassName}>
       <table className={tableClassName}>
         <thead className={theadClassName}>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className={headerRowClassName}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className={`${headerCellClassName}${sortable ? " cursor-pointer" : ""}`}
-                  onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
-                >
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                  {sortable && (SORT_INDICATOR[header.column.getIsSorted()] ?? "")}
-                </th>
-              ))}
+              {headerGroup.headers.map((header) => {
+                const sortKey = useExternalSort
+                  ? header.column.columnDef.meta?.sortKey
+                  : undefined;
+                const externallySortable = sortKey !== undefined;
+                const isActiveSort =
+                  externallySortable && externalSort.key === sortKey;
+
+                return (
+                  <th
+                    key={header.id}
+                    className={`${
+                      header.column.columnDef.meta?.headerClassName ??
+                      headerCellClassName
+                    }${sortable ? " cursor-pointer" : ""}`}
+                    onClick={
+                      sortable
+                        ? header.column.getToggleSortingHandler()
+                        : externallySortable
+                          ? () => externalSort.onSort(sortKey)
+                          : undefined
+                    }
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    {sortable && (SORT_INDICATOR[header.column.getIsSorted()] ?? "")}
+                    {externallySortable &&
+                      (isActiveSort ? (
+                        <span className="ml-1 text-gray-600">
+                          {externalSort.dir === "asc" ? "↑" : "↓"}
+                        </span>
+                      ) : (
+                        <span className="ml-1 text-gray-300">⇅</span>
+                      ))}
+                  </th>
+                );
+              })}
             </tr>
           ))}
         </thead>
@@ -118,7 +156,13 @@ export default function DataTable({
                 <Fragment key={row.id}>
                   <tr className={rowClass}>
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className={cellClassName}>
+                      <td
+                        key={cell.id}
+                        className={
+                          cell.column.columnDef.meta?.cellClassName ??
+                          cellClassName
+                        }
+                      >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}

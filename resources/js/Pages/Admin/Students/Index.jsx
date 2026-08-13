@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 
+import StatusBadge from "@/Components/StatusBadge";
+import DataTable from "@/Components/DataTable";
 import DirectoryToolbar from "./Components/DirectoryToolbar";
 import SummaryBar from "./Components/SummaryBar";
-import DataTable from "./Components/DataTable";
 import StudentCard from "./Components/StudentCard";
 import StudentEditorModal from "./Components/StudentEditorModal";
 
@@ -238,6 +239,163 @@ export default function Index() {
     setDeleteDone(false);
   }, []);
 
+  // Desktop table column defs. Header/cell classes come from the old
+  // page-scoped DataTable verbatim; selection + external sort stay opt-in
+  // features of the shared component.
+  const columns = useMemo(() => {
+    const allSelected =
+      sortedStudents.length > 0 &&
+      sortedStudents.every((s) => selectedIds.has(s.id));
+
+    return [
+      {
+        id: "select",
+        header: () => (
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={onToggleAll}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        ),
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(row.original.id)}
+            onChange={() => onToggleOne(row.original.id)}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        ),
+        meta: { headerClassName: "px-3 py-3 w-10", cellClassName: "px-3 py-3" },
+      },
+      {
+        id: "index",
+        header: "#",
+        cell: ({ row }) => (
+          <span className="text-gray-400 text-xs">{row.index + 1}</span>
+        ),
+        meta: {
+          headerClassName: "px-4 py-3 text-left font-medium text-gray-600 w-12",
+          cellClassName: "px-4 py-3 text-gray-400 text-xs",
+        },
+      },
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ row }) => (
+          <div className="font-medium text-gray-800">{row.original.name}</div>
+        ),
+        meta: {
+          sortKey: "name",
+          headerClassName:
+            "px-4 py-3 text-left font-medium text-gray-600 cursor-pointer select-none hover:bg-gray-100 transition-colors",
+          cellClassName: "px-4 py-3",
+        },
+      },
+      {
+        accessorKey: "father_name",
+        header: "Father",
+        cell: ({ row }) => row.original.father_name || "—",
+        meta: {
+          sortKey: "father_name",
+          headerClassName:
+            "px-4 py-3 text-left font-medium text-gray-600 cursor-pointer select-none hover:bg-gray-100 transition-colors",
+          cellClassName: "px-4 py-3 text-gray-500",
+        },
+      },
+      {
+        id: "class_section",
+        header: "Class / Section",
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {(row.original.enrollments || []).length === 0 ? (
+              <span className="text-xs text-gray-400">—</span>
+            ) : (
+              (row.original.enrollments || []).map((e) => (
+                <span
+                  key={e.id}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700 border border-indigo-200"
+                >
+                  {e.class_name || "?"}
+                  {e.section_name && <span className="opacity-60">·</span>}
+                  {e.section_name || ""}
+                </span>
+              ))
+            )}
+          </div>
+        ),
+        meta: {
+          headerClassName: "px-4 py-3 text-left font-medium text-gray-600",
+          cellClassName: "px-4 py-3",
+        },
+      },
+      {
+        id: "type",
+        header: "Type",
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1 justify-center">
+            {(row.original.enrollments || []).length === 0 ? (
+              <span className="text-xs text-gray-300">—</span>
+            ) : (
+              (row.original.enrollments || []).map((e) => (
+                <span
+                  key={e.id}
+                  className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
+                    e.student_type === "free"
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-green-100 text-green-700"
+                  }`}
+                >
+                  {e.student_type === "free" ? "Free" : "Paid"}
+                </span>
+              ))
+            )}
+          </div>
+        ),
+        meta: {
+          headerClassName: "px-4 py-3 text-center font-medium text-gray-600",
+          cellClassName: "px-4 py-3 text-center",
+        },
+      },
+      {
+        id: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <StatusBadge status={effectiveStatus(row.original)} />
+        ),
+        meta: {
+          headerClassName: "px-4 py-3 text-center font-medium text-gray-600",
+          cellClassName: "px-4 py-3 text-center",
+        },
+      },
+      {
+        id: "outstanding",
+        header: "Outstanding",
+        cell: () => "—",
+        meta: {
+          headerClassName: "px-4 py-3 text-right font-medium text-gray-600",
+          cellClassName: "px-4 py-3 text-right text-xs text-gray-300",
+        },
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => (
+          <button
+            onClick={() => onEdit(row.original)}
+            className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+          >
+            Edit
+          </button>
+        ),
+        meta: {
+          headerClassName: "px-4 py-3 text-right font-medium text-gray-600",
+          cellClassName: "px-4 py-3 text-right",
+        },
+      },
+    ];
+  }, [sortedStudents, selectedIds, onToggleAll, onToggleOne, onEdit]);
+
   return (
     <AdminLayout title="Students">
       <div className="max-w-7xl mx-auto space-y-4">
@@ -296,14 +454,24 @@ export default function Index() {
           <>
             <div className="hidden md:block">
               <DataTable
-                students={sortedStudents}
-                sortConfig={sortConfig}
-                onSort={handleSort}
-                onEdit={handleEdit}
-                effectiveStatus={effectiveStatus}
-                selectedIds={selectedIds}
-                onToggleOne={toggleOne}
-                onToggleAll={toggleAll}
+                data={sortedStudents}
+                columns={columns}
+                externalSort={{
+                  key: sortConfig.key,
+                  dir: sortConfig.dir,
+                  onSort: handleSort,
+                }}
+                getRowId={(row) => String(row.original.id)}
+                emptyMessage="No students found"
+                containerClassName="bg-white border rounded-lg overflow-hidden"
+                tableClassName="w-full text-sm"
+                theadClassName="bg-gray-50 border-b"
+                tbodyClassName="divide-y divide-gray-100"
+                bodyRowClassName={(row) =>
+                  `hover:bg-blue-50 transition-colors ${
+                    selectedIds.has(row.original.id) ? "bg-blue-50/50" : ""
+                  }`
+                }
               />
             </div>
 
