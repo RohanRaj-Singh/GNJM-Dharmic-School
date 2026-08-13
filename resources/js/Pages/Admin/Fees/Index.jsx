@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-table";
 import toast from "react-hot-toast";
 import { generateMonthOptions } from "@/utils/helper";
+import { division } from "@/utils/divisionType";
 
 function getTodayDateInput() {
   const now = new Date();
@@ -958,8 +959,8 @@ export default function FeesIndex() {
                 return 0;
               };
 
-              const gurmukhiFees = fees.filter((fee) => (fee.class_type ?? "gurmukhi") !== "kirtan");
-              const kirtanFees = fees.filter((fee) => fee.class_type === "kirtan");
+              const gurmukhiFees = fees.filter((fee) => division(fee.class_type, fee.class_name) !== "kirtan");
+              const kirtanFees = fees.filter((fee) => division(fee.class_type, fee.class_name) === "kirtan");
 
               const gurmukhiUnpaid = gurmukhiFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
               const gurmukhiPaid = gurmukhiFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
