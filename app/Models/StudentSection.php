@@ -39,7 +39,9 @@ class StudentSection extends Model
      */
     public function scopeCurrent($query)
     {
-        return $query->whereNull('transferred_at');
+        return $query
+            ->where('status', self::STATUS_ACTIVE)
+            ->whereNull('transferred_at');
     }
 
     /**

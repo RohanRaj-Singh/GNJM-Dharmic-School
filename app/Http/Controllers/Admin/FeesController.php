@@ -239,7 +239,6 @@ class FeesController extends Controller
             })->values(),
         ];
     })->values();
-       // dd($fees->count(), $fees->take(5));
 
     return inertia('Admin/Fees/Index', [
         'fees' => $grouped,
