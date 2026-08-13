@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "resources/js/Pages/Admin/Reports/Index.jsx"
+        ],
+        "createdAt": "2026-08-13T19:04:30.881Z",
+        "reason": "gray-700 on white/blue-50 is high contrast; regex false-positive on quick-range preset buttons"
+      }
+    ]
+  }
+}

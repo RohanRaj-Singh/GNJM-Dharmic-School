@@ -1,10 +1,6 @@
 import AdminLayout from "@/Layouts/AdminLayout";
 import { useEffect, useMemo, useState, useCallback } from "react";
-import {
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
-} from "@tanstack/react-table";
+import DataTable from "@/Components/DataTable";
 import FeeFilterSelect from "@/Components/FeeFilterSelect";
 import { formatPKR, formatMonth } from "@/utils/helper";
 
@@ -336,15 +332,35 @@ export default function ReportsIndex() {
             columns.map((key) => ({
                 accessorKey: key,
                 header: COLUMN_OPTIONS.find((c) => c.key === key)?.label ?? key,
+                cell: ({ row, getValue }) => {
+                    if (key === "student_name") {
+                        return (
+                            <div>
+                                <div className="font-medium">{getValue()}</div>
+                                {row.original.father_name && (
+                                    <div className="text-xs text-gray-500">Father: {row.original.father_name}</div>
+                                )}
+                            </div>
+                        );
+                    }
+                    if (key === "amount") {
+                        return formatPKR(getValue());
+                    }
+                    if (key === "month") {
+                        return formatMonth(getValue());
+                    }
+                    if (key === "is_paid") {
+                        return getValue() ? (
+                            <span className="text-green-700 font-medium">Paid</span>
+                        ) : (
+                            <span className="text-red-600 font-medium">Unpaid</span>
+                        );
+                    }
+                    return String(getValue() ?? "");
+                },
             })),
         [columns],
     );
-
-    const table = useReactTable({
-        data: rows,
-        columns: tableColumns,
-        getCoreRowModel: getCoreRowModel(),
-    });
 
     const paidCount = rows.filter((r) => r.is_paid).length;
     const unpaidCount = rows.filter((r) => !r.is_paid).length;
@@ -583,56 +599,15 @@ export default function ReportsIndex() {
             )}
 
             {/* DATA TABLE */}
-            <div className="bg-white border rounded overflow-x-auto">
-                <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 border-b">
-                        {table.getHeaderGroups().map((hg) => (
-                            <tr key={hg.id}>
-                                {hg.headers.map((h) => (
-                                    <th key={h.id} className="px-3 py-2 text-left">
-                                        {flexRender(h.column.columnDef.header, h.getContext())}
-                                    </th>
-                                ))}
-                            </tr>
-                        ))}
-                    </thead>
-                    <tbody>
-                        {table.getRowModel().rows.map((row) => (
-                            <tr key={row.id} className="border-b">
-                                {row.getVisibleCells().map((cell) => (
-                                    <td key={cell.id} className="px-3 py-2">
-                                        {cell.column.id === "student_name" ? (
-                                            <div>
-                                                <div className="font-medium">{cell.getValue()}</div>
-                                                {row.original.father_name && (
-                                                    <div className="text-xs text-gray-500">Father: {row.original.father_name}</div>
-                                                )}
-                                            </div>
-                                        ) : cell.column.id === "amount" ? (
-                                            formatPKR(cell.getValue())
-                                        ) : cell.column.id === "month" ? (
-                                            formatMonth(cell.getValue())
-                                        ) : cell.column.id === "is_paid" ? (
-                                            cell.getValue() ? (
-                                                <span className="text-green-700 font-medium">Paid</span>
-                                            ) : (
-                                                <span className="text-red-600 font-medium">Unpaid</span>
-                                            )
-                                        ) : (
-                                            String(cell.getValue() ?? "")
-                                        )}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                        {!rows.length && (
-                            <tr>
-                                <td colSpan={columns.length} className="p-6 text-center text-gray-500">No data</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <DataTable
+                data={rows}
+                columns={tableColumns}
+                emptyMessage="No data"
+                emptyClassName="p-6 text-center text-gray-500"
+                containerClassName="bg-white border rounded overflow-x-auto"
+                tableClassName="min-w-full text-sm"
+                theadClassName="bg-gray-50 border-b"
+            />
         </AdminLayout>
     );
 }
