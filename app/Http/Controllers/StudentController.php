@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Models\StudentSection;
 use App\Services\MonthlyFeeResolver;
 use App\Services\StudentReport\StudentReportCache;
+use App\Support\DivisionTypeResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -85,16 +86,11 @@ class StudentController extends Controller
         // after a section change, but sections are NOT duplicated.
         $grouped = collect();
         foreach ($student->enrollments as $enrollment) {
-            // Resolve the type from the school class, falling back to the class
-            // name so that a Kirtan class with a missing type field is still
-            // recognised correctly.
-            $class  = $enrollment->schoolClass;
-            $type   = $class?->type;
-            if (!$type || trim($type) === '') {
-                $name = $class?->name ?? '';
-                $type = str_contains(strtolower($name), 'kirtan') ? 'kirtan' : 'gurmukhi';
-            }
-            $type = strtolower(trim($type));
+            // Resolve the canonical division (DivisionTypeResolver) from the
+            // school class; it falls back to the class name so a Kirtan class
+            // with a missing type field is still recognised correctly.
+            $class = $enrollment->schoolClass;
+            $type  = DivisionTypeResolver::division($class?->type, $class?->name);
 
             if (!isset($grouped[$type])) $grouped[$type] = collect();
             $grouped[$type]->push($enrollment);

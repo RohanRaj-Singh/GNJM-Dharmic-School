@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Section;
 use App\Services\StudentReport\StudentReportCache;
+use App\Support\DivisionTypeResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -19,15 +20,6 @@ class AdminAttendanceController extends Controller
     public function __construct(
         private readonly StudentReportCache $reportCache,
     ) {}
-    private function isKirtanClass(?string $type, ?string $name = null): bool
-    {
-        $normalized = strtolower(trim((string) ($type ?? '')));
-        if (in_array($normalized, ['kirtan', 'kirtan class'], true)) {
-            return true;
-        }
-
-        return str_contains(strtolower((string) ($name ?? '')), 'kirtan');
-    }
 
     public function index()
     {
@@ -55,7 +47,7 @@ class AdminAttendanceController extends Controller
             'studentSections.student',
         ])->findOrFail($request->section_id);
 
-        $isKirtan = $this->isKirtanClass(
+        $isKirtan = DivisionTypeResolver::isKirtan(
             $section->schoolClass->type ?? null,
             $section->schoolClass->name ?? null
         );

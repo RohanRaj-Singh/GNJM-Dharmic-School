@@ -8,6 +8,7 @@ use App\Models\Fee;
 use Carbon\Carbon;
 use App\Services\MonthlyFeeResolver;
 use App\Services\StudentReport\StudentReportCache;
+use App\Support\DivisionTypeResolver;
 
 class GenerateMonthlyFees extends Command
 {
@@ -41,7 +42,10 @@ class GenerateMonthlyFees extends Command
             }
 
             // Skip Kirtan
-            if ($enrollment->schoolClass->type === 'kirtan') {
+            if (DivisionTypeResolver::isKirtan(
+                $enrollment->schoolClass->type ?? null,
+                $enrollment->schoolClass->name ?? null
+            )) {
                 continue;
             }
 

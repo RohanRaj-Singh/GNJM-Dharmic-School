@@ -13,6 +13,7 @@ use App\Models\Payment;
 use App\Http\Controllers\Controller;
 use App\Models\StudentSection;
 use App\Models\Section;
+use App\Support\DivisionTypeResolver;
 class FeesController extends Controller
 {
     public function __construct(
@@ -192,9 +193,9 @@ class FeesController extends Controller
         $classNames = $items->pluck('class_name')->filter()->unique()->values()->toArray();
         $sectionNames = $items->pluck('section_name')->filter()->unique()->values()->toArray();
         $classTypes = $items
-            ->map(fn ($f) => $this->normalizeDivisionType(
-                (string) ($f->class_type ?? ''),
-                (string) ($f->class_name ?? '')
+            ->map(fn ($f) => DivisionTypeResolver::division(
+                $f->class_type ?? null,
+                $f->class_name ?? null
             ))
             ->filter()
             ->unique()
@@ -211,9 +212,9 @@ class FeesController extends Controller
             'class_name'   => $combinedClass,
             'class_type'   => $hasKirtan
                 ? 'kirtan'
-                : $this->normalizeDivisionType(
-                    (string) ($first->class_type ?? ''),
-                    (string) ($first->class_name ?? '')
+                : DivisionTypeResolver::division(
+                    $first->class_type ?? null,
+                    $first->class_name ?? null
                 ),
             'section_name' => implode(', ', $sectionNames),
             'paid_count'   => $paid->count(),
@@ -230,9 +231,9 @@ class FeesController extends Controller
                     'title'      => $f->title,
                     'amount'     => $f->amount,
                     'paid_at'    => $f->paid_at,
-                    'class_type' => $this->normalizeDivisionType(
-                        (string) ($f->class_type ?? ''),
-                        (string) ($f->class_name ?? '')
+                    'class_type' => DivisionTypeResolver::division(
+                        $f->class_type ?? null,
+                        $f->class_name ?? null
                     ),
                     'is_paid'    => (bool) $f->is_paid,
                 ];
@@ -265,38 +266,6 @@ class FeesController extends Controller
         ]);
 
         return back()->with('success', 'Monthly fees generated successfully.');
-    }
-
-    private function normalizeDivisionType(string $rawType, string $className): string
-    {
-        $normalizedRaw = strtolower(trim($rawType));
-        $normalizedClassName = strtolower(trim($className));
-
-        if (
-            in_array($normalizedRaw, ['kirtan', 'kirtan class'], true) ||
-            str_contains($normalizedRaw, 'kirtan') ||
-            str_contains($normalizedClassName, 'kirtan')
-        ) {
-            return 'kirtan';
-        }
-
-        if (
-            in_array($normalizedRaw, ['gurmukhi', 'gurmukhi class'], true) ||
-            str_contains($normalizedRaw, 'gurmukhi') ||
-            str_contains($normalizedClassName, 'gurmukhi')
-        ) {
-            return 'gurmukhi';
-        }
-
-        if ($normalizedRaw !== '') {
-            return preg_replace('/\s+/', '_', $normalizedRaw);
-        }
-
-        if ($normalizedClassName !== '') {
-            return preg_replace('/\s+/', '_', $normalizedClassName);
-        }
-
-        return 'gurmukhi';
     }
 
     public function collect(Fee $fee)

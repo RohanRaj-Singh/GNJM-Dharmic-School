@@ -347,6 +347,42 @@ class AttendanceAbsenteesTest extends TestCase
             ->where('students.0.all_absent_dates', ['2026-08-09']));
     }
 
+    /**
+     * Sprint 1.3 canonicalisation: a legacy class with a NULL/blank `type`
+     * but a Kirtan class *name* must still honour the Kirtan Sunday-only
+     * day-rule (DivisionTypeResolver name fallback). Previously the
+     * type-only check treated it as "not kirtan" and accepted every day.
+     */
+    public function test_null_type_kirtan_named_class_only_counts_sunday_attendance(): void
+    {
+        $untagged = SchoolClass::create([
+            'name'                => 'Kirtan Legacy',
+            'type'                => '',
+            'default_monthly_fee' => 0,
+        ]);
+        $sectionC = Section::create([
+            'class_id'    => $untagged->id,
+            'name'        => 'Section C',
+            'monthly_fee' => 0,
+        ]);
+
+        $student = $this->student('Legacy Kid');
+        $enrollment = $this->enroll($student, $untagged, $sectionC);
+        // 2026-08-09 is Sunday (valid for Kirtan), 2026-08-10 is Monday (ignored).
+        $this->attendance($enrollment, '2026-08-09', 'absent');
+        $this->attendance($enrollment, '2026-08-10', 'absent');
+
+        $response = $this->asAccountant()->get(route('attendance.absentees'));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Attendance/Absentees')
+            ->where('students.0.category', 'absent_1')
+            ->where('students.0.total_days', 1)
+            ->where('students.0.date', '2026-08-09')
+            ->where('students.0.all_absent_dates', ['2026-08-09']));
+    }
+
     /* ───────────────────────────────────────────────────────────
        Filters
        ─────────────────────────────────────────────────────────── */

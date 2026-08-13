@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\DivisionTypeResolver;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
 
@@ -18,26 +19,14 @@ use Illuminate\Support\Carbon;
  *   - the (quirky) streak_days computation — preserved exactly
  *   - today-absentees classification and sorting by total_days ASC
  *
+ * The division (kirtan/gurmukhi) question is delegated to the canonical
+ * {@see DivisionTypeResolver} (Sprint 1.3) — the duplicate `isClassType`
+ * predicate that lived here was removed.
+ *
  * Behaviour is pinned by tests/Feature/AttendanceAbsenteesTest.php.
  */
 class AbsenteeService
 {
-    /**
-     * Match a class type against a needle (e.g. 'gurmukhi' / 'kirtan').
-     * Exact match first, substring fallback — same rule as the original
-     * closure (which the roadmap flags as R7 false-positive risk; preserved
-     * verbatim rather than "fixed").
-     */
-    public function isClassType(?string $type, string $needle): bool
-    {
-        $normalized = strtolower(trim((string) $type));
-        if ($normalized === '') {
-            return false;
-        }
-
-        return $normalized === $needle || str_contains($normalized, $needle);
-    }
-
     /**
      * Normalise a raw attendance status value. Historical data contains
      * single-letter codes; the mark flow stores full words.
@@ -92,7 +81,10 @@ class AbsenteeService
                 }
             }
 
-            $isKirtanClass = $this->isClassType($enrollment->schoolClass->type ?? null, 'kirtan');
+            $isKirtanClass = DivisionTypeResolver::isKirtan(
+                $enrollment->schoolClass->type ?? null,
+                $enrollment->schoolClass->name ?? null
+            );
 
             $attendance = $enrollment->attendance
                 // Filter by date range + valid day

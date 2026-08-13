@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\DivisionTypeResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -107,8 +108,7 @@ class DashboardController extends Controller
 
         $classIdsByDivision = ['gurmukhi' => [], 'kirtan' => []];
         foreach ($classes as $class) {
-            $rawType = strtolower(trim((string) ($class->type ?? '')));
-            $normalizedType = $this->normalizeDivisionType($rawType, (string) $class->name);
+            $normalizedType = DivisionTypeResolver::division($class->type ?? null, $class->name ?? null);
 
             $classIdsByDivision[$normalizedType][] = (int) $class->id;
         }
@@ -480,7 +480,7 @@ class DashboardController extends Controller
                 'section_id' => (int) ($row->section_id ?? 0),
                 'class_name' => (string) $row->class_name,
                 'section_name' => (string) ($row->section_name ?? ''),
-                'division_type' => $this->normalizeDivisionType((string) ($row->class_type ?? ''), (string) $row->class_name),
+                'division_type' => DivisionTypeResolver::division($row->class_type ?? null, $row->class_name ?? null),
                 'absent_days' => (int) ($row->absent_days ?? 0),
             ];
         })->all();
@@ -541,19 +541,10 @@ class DashboardController extends Controller
                 'section_id' => (int) ($row->section_id ?? 0),
                 'class_name' => (string) $row->class_name,
                 'section_name' => (string) ($row->section_name ?? ''),
-                'division_type' => $this->normalizeDivisionType((string) ($row->class_type ?? ''), (string) $row->class_name),
+                'division_type' => DivisionTypeResolver::division($row->class_type ?? null, $row->class_name ?? null),
                 'pending_amount' => (int) ($row->pending_amount ?? 0),
                 'pending_fee_count' => (int) ($row->pending_fee_count ?? 0),
             ];
         })->all();
-    }
-
-    private function normalizeDivisionType(string $rawType, string $className): string
-    {
-        return match (strtolower(trim($rawType))) {
-            'kirtan', 'kirtan class' => 'kirtan',
-            'gurmukhi', 'gurmukhi class' => 'gurmukhi',
-            default => str_contains(strtolower($className), 'kirtan') ? 'kirtan' : 'gurmukhi',
-        };
     }
 }

@@ -3,6 +3,7 @@ import { Link, usePage } from "@inertiajs/react";
 import { useState, useMemo, useEffect } from "react";
 import toast from "react-hot-toast";
 import useRoles from "@/Hooks/useRoles";
+import { division } from "@/utils/divisionType";
 
 export default function Sections({ sections = [] }) {
     const { isAccountant } = useRoles();
@@ -22,38 +23,27 @@ export default function Sections({ sections = [] }) {
     // Accountant filter (UI only)
     const [classFilter, setClassFilter] = useState("gurmukhi");
     const getClassObj = (section) => section?.school_class ?? section?.schoolClass ?? null;
-    const classTypeToken = (cls) => {
-        const typeText = String(cls?.type ?? "").trim().toLowerCase();
-        const nameText = String(cls?.name ?? "").trim().toLowerCase();
-        const hay = `${typeText} ${nameText}`.trim();
-        if (!hay) return "";
-        if (hay.includes("kirtan")) return "kirtan";
-        if (hay.includes("gurmukhi")) return "gurmukhi";
-        return "";
-    };
 
     const visibleSections = useMemo(() => {
         if (!isAccountant) return sections;
 
-        return sections.filter((s) => classTypeToken(getClassObj(s)) === classFilter);
+        return sections.filter((s) => {
+            const cls = getClassObj(s);
+            return division(cls?.type, cls?.name) === classFilter;
+        });
     }, [sections, classFilter, isAccountant]);
     const isSunday = new Date().getDay() === 0;
     const canMarkToday = (section) => {
-        const token = classTypeToken(getClassObj(section));
-        if (token === "gurmukhi") {
-            return !isSunday;
-        }
-        if (token === "kirtan") {
-            return isSunday;
-        }
-        return true;
+        const cls = getClassObj(section);
+        return division(cls?.type, cls?.name) === "kirtan" ? isSunday : !isSunday;
     };
     const dayRuleMessage = (section) => {
-        const token = classTypeToken(getClassObj(section));
-        if (token === "gurmukhi" && isSunday) {
+        const cls = getClassObj(section);
+        const d = division(cls?.type, cls?.name);
+        if (d === "gurmukhi" && isSunday) {
             return "Gurmukhi attendance is closed on Sunday";
         }
-        if (token === "kirtan" && !isSunday) {
+        if (d === "kirtan" && !isSunday) {
             return "Kirtan attendance opens only on Sunday";
         }
         return "";

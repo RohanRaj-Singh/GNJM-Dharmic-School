@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import AttendanceMarkPage from "./AttendanceMarkPage";
 import AttendanceSummaryPage from "./AttendanceSummaryPage";
+import { isKirtan as resolveIsKirtan } from "@/utils/divisionType";
 
 export default function Mark({
   section,
@@ -20,16 +21,10 @@ export default function Mark({
     return false;
   };
 
-  const classTypeToken = (cls) => {
-    const typeText = String(cls?.type ?? "").trim().toLowerCase();
-    const nameText = String(cls?.name ?? "").trim().toLowerCase();
-    const hay = `${typeText} ${nameText}`.trim();
-    if (hay.includes("kirtan")) return "kirtan";
-    if (hay.includes("gurmukhi")) return "gurmukhi";
-    return "";
-  };
-
-  const isKirtan = classTypeToken(section.school_class) === "kirtan";
+  const isKirtan = resolveIsKirtan(
+    section.school_class?.type,
+    section.school_class?.name
+  );
   const now = new Date();
   const dayLabel = now.toLocaleDateString(undefined, { weekday: "long" });
   const dateLabel = now.toLocaleDateString(undefined, {

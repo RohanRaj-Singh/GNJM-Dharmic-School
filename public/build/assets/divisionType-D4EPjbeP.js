@@ -1,0 +1,1 @@
+function u(i,n=null){const r=String(i??"").trim().toLowerCase(),t=String(n??"").trim().toLowerCase();return r.includes("kirtan")?"kirtan":r.includes("gurmukhi")?"gurmukhi":t!==""&&t.includes("kirtan")?"kirtan":"gurmukhi"}function e(i,n=null){return u(i,n)==="kirtan"}export{u as d,e as i};

@@ -3,17 +3,9 @@ import SearchInput from "@/Components/SearchInput";
 import { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import useRoles from "@/Hooks/useRoles";
+import { division } from "@/utils/divisionType";
 
 const getClassObj = (enrollment) => enrollment?.school_class ?? enrollment?.schoolClass ?? null;
-const classTypeToken = (cls) => {
-    const typeText = String(cls?.type ?? "").trim().toLowerCase();
-    const nameText = String(cls?.name ?? "").trim().toLowerCase();
-    const hay = `${typeText} ${nameText}`.trim();
-    if (!hay) return "";
-    if (hay.includes("kirtan")) return "kirtan";
-    if (hay.includes("gurmukhi")) return "gurmukhi";
-    return "";
-};
 
 export default function StudentsIndex({ students = [] }) {
     const [search, setSearch] = useState("");
@@ -28,7 +20,10 @@ export default function StudentsIndex({ students = [] }) {
     const visibleStudents = searchedStudents.filter((student) => {
         if (!isAccountant) return true;
         const enrollments = student.enrollments ?? [];
-        return enrollments.some((e) => classTypeToken(getClassObj(e)) === classFilter);
+        return enrollments.some((e) => {
+            const cls = getClassObj(e);
+            return division(cls?.type, cls?.name) === classFilter;
+        });
     });
 
     return (
@@ -114,7 +109,7 @@ function StudentCard({ student, classFilter }) {
     if (classFilter) {
         visibleEnrollments = visibleEnrollments.filter((e) => {
             const cls = e.school_class ?? e.schoolClass ?? null;
-            return classTypeToken(cls) === classFilter;
+            return division(cls?.type, cls?.name) === classFilter;
         });
     }
 
@@ -146,7 +141,7 @@ function StudentCard({ student, classFilter }) {
                 {visibleEnrollments.map((e) => {
                     const cls = e.school_class ?? e.schoolClass ?? null;
                     const sec = e.section ?? null;
-                    const isKirtan = classTypeToken(cls) === "kirtan";
+                    const isKirtan = division(cls?.type, cls?.name) === "kirtan";
 
                     return (
                         <span

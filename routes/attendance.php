@@ -6,18 +6,10 @@ use App\Models\Section;
 use App\Models\StudentSection;
 use App\Http\Controllers\AttendanceController;
 use App\Models\Attendance;
+use App\Support\DivisionTypeResolver;
 
 // Note: prefix 'attendance' is already added in web.php
 // Don't add prefix here to avoid duplicate /attendance/attendance
-
-$isClassType = function (?string $type, string $needle): bool {
-    $normalized = strtolower(trim((string) $type));
-    if ($normalized === '') {
-        return false;
-    }
-
-    return $normalized === $needle || str_contains($normalized, $needle);
-};
 
 Route::get('/', fn () =>
     Inertia::render('Attendance/Dashboard')
@@ -44,7 +36,7 @@ Route::get('/', fn () =>
     /* ===============================
        MARK ATTENDANCE
     ================================ */
-    Route::get('/sections/{section}', function (Section $section) use ($isClassType) {
+    Route::get('/sections/{section}', function (Section $section) {
 
         $user = auth()->user();
 
@@ -65,15 +57,18 @@ Route::get('/', fn () =>
 
         /* ---------- Day rules ---------- */
         $today = now()->dayOfWeek; // 0 = Sunday
-        $classType = $section->schoolClass->type;
+        $isKirtan = DivisionTypeResolver::isKirtan(
+            $section->schoolClass->type ?? null,
+            $section->schoolClass->name ?? null
+        );
 
-        if ($today === 0 && $isClassType($classType, 'gurmukhi')) {
+        if ($today === 0 && !$isKirtan) {
             return redirect()
                 ->route('attendance.sections')
                 ->with('error', '📅 Gurmukhi attendance cannot be marked on Sunday.');
         }
 
-        if ($today !== 0 && $isClassType($classType, 'kirtan')) {
+        if ($today !== 0 && $isKirtan) {
             return redirect()
                 ->route('attendance.sections')
                 ->with('error', '📅 Kirtan attendance can only be marked on Sunday.');
