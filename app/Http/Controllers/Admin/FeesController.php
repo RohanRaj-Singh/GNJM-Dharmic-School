@@ -46,6 +46,25 @@ class FeesController extends Controller
         // Gurmukhi fees stay Gurmukhi, even if the student has both.
         ->join('student_sections as orig_enrollment', 'fees.student_section_id', '=', 'orig_enrollment.id')
         ->join('classes as orig_class', 'orig_enrollment.class_id', '=', 'orig_class.id')
+        // One current active enrollment per (student_id, class_id), MIN(id) a
+        // deterministic pick among ties. Replaces the four correlated COALESCE
+        // subqueries (each scanned student_sections once per fee row) with a
+        // single derived-table join (Sprint 5.2).
+        ->leftJoinSub(
+            DB::table('student_sections')
+                ->select('student_id', 'class_id', DB::raw('MIN(id) as id'))
+                ->where('status', 'active')
+                ->whereNull('transferred_at')
+                ->groupBy('student_id', 'class_id'),
+            'current_active',
+            function ($join) {
+                $join->on('current_active.student_id', '=', 'fees.student_id')
+                    ->on('current_active.class_id', '=', 'orig_enrollment.class_id');
+            }
+        )
+        ->leftJoin('student_sections as current_enrollment', 'current_active.id', '=', 'current_enrollment.id')
+        ->leftJoin('sections as current_section', 'current_enrollment.section_id', '=', 'current_section.id')
+        ->leftJoin('sections as orig_section', 'orig_enrollment.section_id', '=', 'orig_section.id')
         ->leftJoin('payments', function ($join) {
             $join->on('payments.fee_id', '=', 'fees.id')
                  ->whereNull('payments.deleted_at');
@@ -59,48 +78,15 @@ class FeesController extends Controller
             // class_type from the ORIGINAL enrollment — correctly resolves
             // Kirtan vs Gurmukhi per fee, even for students with both.
             'orig_class.type as class_type',
-            // Current section/class: use the student's active enrollment in
-            // the SAME class (handles within-class section changes). If none
-            // exists (student was promoted to a different class), fall back
-            // to the original enrollment's data via COALESCE.
-            DB::raw('COALESCE(
-                (SELECT s.name FROM student_sections ss
-                 JOIN sections s ON s.id = ss.section_id
-                 WHERE ss.student_id = fees.student_id
-                   AND ss.status = "active"
-                   AND ss.transferred_at IS NULL
-                   AND ss.class_id = orig_enrollment.class_id
-                 LIMIT 1),
-                (SELECT s2.name FROM sections s2 WHERE s2.id = orig_enrollment.section_id)
-            ) as section_name'),
-            DB::raw('COALESCE(
-                (SELECT c.name FROM student_sections ss
-                 JOIN classes c ON c.id = ss.class_id
-                 WHERE ss.student_id = fees.student_id
-                   AND ss.status = "active"
-                   AND ss.transferred_at IS NULL
-                   AND ss.class_id = orig_enrollment.class_id
-                 LIMIT 1),
-                orig_class.name
-            ) as class_name'),
-            DB::raw('COALESCE(
-                (SELECT ss.class_id FROM student_sections ss
-                 WHERE ss.student_id = fees.student_id
-                   AND ss.status = "active"
-                   AND ss.transferred_at IS NULL
-                   AND ss.class_id = orig_enrollment.class_id
-                 LIMIT 1),
-                orig_enrollment.class_id
-            ) as class_id'),
-            DB::raw('COALESCE(
-                (SELECT ss.section_id FROM student_sections ss
-                 WHERE ss.student_id = fees.student_id
-                   AND ss.status = "active"
-                   AND ss.transferred_at IS NULL
-                   AND ss.class_id = orig_enrollment.class_id
-                 LIMIT 1),
-                orig_enrollment.section_id
-            ) as section_id'),
+            // Current section: the student's active enrollment in the SAME
+            // class (handles within-class section changes), falling back to
+            // the original enrollment's section once the student has moved on.
+            DB::raw('COALESCE(current_section.name, orig_section.name) as section_name'),
+            DB::raw('COALESCE(current_enrollment.section_id, orig_enrollment.section_id) as section_id'),
+            // Class never changes for a fee — current_enrollment is constrained
+            // to the fee's own class — so the original class name/id stand.
+            'orig_class.name as class_name',
+            'orig_enrollment.class_id as class_id',
             'payments.paid_at',
             DB::raw('payments.id IS NOT NULL as is_paid'),
         ])

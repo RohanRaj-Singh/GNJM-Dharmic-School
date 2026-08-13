@@ -110,8 +110,8 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 
 | Task | Status | Evidence / Notes |
 |---|---|---|
-| **5.1** `MonthlyFeeService` / `GenerateMonthlyFeeAction` (single fee-generation path) | ❌ Not done | No `app/Actions/` (empty), no `MonthlyFeeService`. `MonthlyFeeResolver` exists (pre-existing) but generation is not consolidated behind a single action. |
-| **5.2** Replace 4 COALESCE subqueries in `FeesController::index()` | ❌ Not done | The 4 COALESCE subqueries are still in `FeesController.php:62–99`. |
+| **5.1** `MonthlyFeeService` / `GenerateMonthlyFeeAction` (single fee-generation path) | ✅ Done | Commit `854c572`. `MonthlyFeeService` owns canonical `(student_id, type, month)` upsert + `generateForMonth()`; `GenerateMonthlyFeeAction` shared by CLI command (`fees:generate-monthly`) and admin button; `FeesController::generateMonthlyFees` no longer shells to Artisan; `Admin\StudentController::bulkUpdate` + front `StudentController::store` route through the service. `MonthlyFeesGenerationTest` (4 tests) pins Kirtan skip, free clearing, no-duplicate, button route. |
+| **5.2** Replace 4 COALESCE subqueries in `FeesController::index()` | ✅ Done | `FeesController::index()` now resolves the current section via a single derived-table `leftJoinSub` (one active enrollment per `(student_id, class_id)`, `MIN(id)` tie-break) + explicit `current_section`/`orig_section` joins. The `class_name`/`class_id` COALESCEs were provably redundant (matched on the fee's own class) and collapsed to `orig_class.name`/`orig_enrollment.class_id`. `FeesIndexQueryTest` (3 tests) pins current-section resolution, post-promotion fallback, and Kirtan/Gurmukhi per-fee separation. |
 | **5.3** Student Report consolidation (`StudentReportService::loadHistory()`, dedup endpoints) | ✅ Done | `app/Services/StudentReport/StudentReportService.php` + resolver package; report center switched to `student_id` + history timeline (commits `c7fd399`, `168120d`). Registry R1/R2 ✅. |
 
 ---
@@ -159,7 +159,7 @@ Feature/fix work done on `main` before/around the refactor sprints:
 | Sprint 2 — Data integrity & model hardening | ✅ done (source drop, is_locked de-collect fix, status machine + validator + bulk guard, session singleton) |
 | Sprint 3 — Security & audit | ✅ done (3.1 policies, 3.2 audit trail, 3.3 restore safety) |
 | Sprint 4 — Frontend consolidation | ✅ done (4.1 DataTable, 4.2 FilterBar, 4.3 client-side paging) |
-| Sprint 5 — Service layer maturity | 🟡 5.3 done, 5.1/5.2 not done |
+| Sprint 5 — Service layer maturity | ✅ done (5.1 fee-generation consolidation, 5.2 COALESCE query rewrite, 5.3 student report consolidation) |
 | Sprint 6 — Integration testing | 🟡 partial (Sprint 1/2 coverage strong) |
 
-**Highest-value next steps** (by roadmap risk ordering): Sprint 5.1/5.2 (fee generation consolidation + COALESCE subqueries) → Sprint 6.1/6.3 (remaining service tests + smoke tests). No architecture change should proceed directly on `main`.
+**Highest-value next steps** (by roadmap risk ordering): Sprint 6.1/6.3 (remaining service tests + smoke tests). No architecture change should proceed directly on `main`.
