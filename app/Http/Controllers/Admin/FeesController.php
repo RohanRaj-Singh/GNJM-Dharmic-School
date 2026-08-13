@@ -316,6 +316,10 @@ public function deCollect(Fee $fee)
 
     $payment->delete(); // soft delete
 
+    // Releasing a payment unlocks the fee again so it can be edited or
+    // re-collected (mirrors the lock applied in collect()).
+    $fee->update(['is_locked' => false]);
+
     $this->reportCache->forget($this->studentIdFor($fee));
 
     return back()->with('success', 'Fee un-collected successfully.');
