@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\StudentSection;
+use App\Services\AbsenteeService;
 use App\Services\StudentReport\StudentReportCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -14,6 +16,7 @@ class AttendanceController extends Controller
 {
     public function __construct(
         private readonly StudentReportCache $reportCache,
+        private readonly AbsenteeService $absenteeService,
     ) {}
 
     /**
@@ -77,5 +80,95 @@ class AttendanceController extends Controller
          * Inertia requests must return a redirect or Inertia response
          */
         return redirect()->route('attendance.sections');
+    }
+
+    /**
+     * Absent & leave register page (was a ~218-line route closure in
+     * routes/attendance.php; the pure computation now lives in AbsenteeService).
+     */
+    public function absentees(Request $request)
+    {
+        $user = auth()->user();
+
+        $allowedSectionIds = $user->isTeacher()
+            ? $user->sections->pluck('id')->all()
+            : Section::pluck('id')->all();
+
+        // Get class and section filters
+        $classFilter = $request->query('class_id');
+        $sectionFilter = $request->query('section_id');
+        $studentSearch = $request->query('search', '');
+
+        // Get date range from request, default to yesterday and before
+        $today = Carbon::today();
+        $yesterday = $today->copy()->subDay();
+        $endDate = $yesterday;
+        $startDate = $endDate->copy()->subDays(30);
+
+        $requestStart = $request->query('start_date');
+        $requestEnd = $request->query('end_date');
+        $hasCustomFilter = false;
+
+        if ($requestStart) {
+            $startDate = Carbon::parse($requestStart);
+            $hasCustomFilter = true;
+        }
+        if ($requestEnd) {
+            $endDate = Carbon::parse($requestEnd);
+            $hasCustomFilter = true;
+        }
+
+        // Check if today is included in the filter
+        $includeToday = $request->query('include_today', false);
+
+        // Get available classes and sections for filters
+        $classes = SchoolClass::select('id', 'name', 'type')->orderBy('name')->get();
+        $sections = Section::with('schoolClass')
+            ->whereIn('id', $allowedSectionIds)
+            ->orderBy('name')
+            ->get();
+
+        $enrollments = StudentSection::with([
+            'student',
+            'section',
+            'schoolClass',
+            'attendance' => fn ($q) => $q->orderByDesc('date'),
+        ])
+            ->where('status', 'active')
+            ->whereNull('transferred_at')
+            ->whereIn('section_id', $allowedSectionIds)
+            ->get();
+
+        $rows = $this->absenteeService->buildRows(
+            enrollments: $enrollments,
+            today: $today,
+            startDate: $startDate,
+            endDate: $endDate,
+            includeToday: (bool) $includeToday,
+            classFilter: $classFilter ? (int) $classFilter : null,
+            sectionFilter: $sectionFilter ? (int) $sectionFilter : null,
+            search: $studentSearch !== '' ? $studentSearch : null,
+        );
+
+        return Inertia::render('Attendance/Absentees', [
+            'students'       => $rows['students'],
+            'today_absentees' => $rows['today_absentees'],
+            'classes'        => $classes,
+            'sections'       => $sections->map(fn ($s) => [
+                'id'         => $s->id,
+                'name'       => $s->name,
+                'class_id'   => $s->schoolClass->id ?? null,
+                'class_name' => $s->schoolClass->name ?? '',
+            ]),
+            'filters' => [
+                'start_date'        => $startDate->toDateString(),
+                'end_date'          => $endDate->toDateString(),
+                'include_today'     => $includeToday,
+                'has_custom_filter' => $hasCustomFilter,
+                'class_id'          => $classFilter,
+                'section_id'        => $sectionFilter,
+                'search'            => $studentSearch,
+            ],
+        ]);
     }
 }
