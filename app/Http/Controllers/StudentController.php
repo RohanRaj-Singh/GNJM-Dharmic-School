@@ -23,6 +23,8 @@ class StudentController extends Controller
 
     public function index()
     {
+        $this->authorize('viewAny', Student::class);
+
         $user = auth()->user();
 
         $students = $user->isTeacher()
@@ -51,6 +53,8 @@ class StudentController extends Controller
 
     public function create()
     {
+        $this->authorize('create', Student::class);
+
         return Inertia::render('Students/Create', [
             'classes' => SchoolClass::with('sections')->get(),
         ]);
@@ -58,6 +62,8 @@ class StudentController extends Controller
 
     public function show(Student $student)
     {
+        $this->authorize('view', $student);
+
         $user = auth()->user();
 
         if ($user->isTeacher()) {
@@ -146,6 +152,8 @@ class StudentController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Student::class);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'father_name' => 'nullable|string|max:255',

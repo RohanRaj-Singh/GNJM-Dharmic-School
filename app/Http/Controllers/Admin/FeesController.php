@@ -31,6 +31,8 @@ class FeesController extends Controller
     }
     public function index(Request $request)
 {
+    $this->authorize('viewAny', Fee::class);
+
     $month = $request->string('month')->toString();
     $monthFrom = $request->string('month_from')->toString();
     $monthTo = $request->string('month_to')->toString();
@@ -259,6 +261,8 @@ class FeesController extends Controller
 
     public function generateMonthlyFees()
     {
+        $this->authorize('generateMonthly', Fee::class);
+
         Artisan::call('fees:generate-monthly', [
             '--no-interaction' => true,
         ]);
@@ -268,6 +272,8 @@ class FeesController extends Controller
 
     public function collect(Fee $fee)
 {
+    $this->authorize('collect', $fee);
+
     // Prevent double payment
     $alreadyPaid = $fee->payments()
         ->whereNull('deleted_at')
@@ -303,6 +309,8 @@ class FeesController extends Controller
 }
 public function deCollect(Fee $fee)
 {
+    $this->authorize('deCollect', $fee);
+
     $payment = $fee->payments()
         ->whereNull('deleted_at')
         ->first();
@@ -326,6 +334,8 @@ public function deCollect(Fee $fee)
 
 public function customIndex()
 {
+    $this->authorize('viewAny', Fee::class);
+
     $rows = Fee::query()
         ->where('fees.type', 'custom')
         ->join('student_sections', 'fees.student_section_id', '=', 'student_sections.id')
@@ -374,6 +384,8 @@ public function customIndex()
      ========================================================= */
     public function storeCustomFee(Request $request)
     {
+        $this->authorize('createCustom', Fee::class);
+
         $data = $request->validate([
             'section_id' => 'required|exists:sections,id',
             'title'      => 'required|string|max:255',
@@ -416,6 +428,8 @@ public function customIndex()
      ========================================================= */
     public function updateCustomFee(Request $request)
     {
+        $this->authorize('updateCustom', Fee::class);
+
         $data = $request->validate([
             'section_id' => 'required|exists:sections,id',
             'old_title'  => 'required|string',
@@ -469,6 +483,8 @@ public function customIndex()
      ========================================================= */
     public function destroyCustomFeeForStudent(Fee $fee)
     {
+        $this->authorize('deleteCustom', $fee);
+
         if ($fee->payments()->exists()) {
             return back()->withErrors([
                 'delete' =>
@@ -489,6 +505,8 @@ public function customIndex()
      ========================================================= */
     public function destroyCustomFeeForSection(Request $request)
     {
+        $this->authorize('deleteCustom', Fee::class);
+
         $data = $request->validate([
             'section_id' => 'required|exists:sections,id',
             'title'      => 'required|string',

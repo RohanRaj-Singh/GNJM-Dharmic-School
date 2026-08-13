@@ -16,6 +16,8 @@ class FeePaymentController extends Controller
 
     public function store(Request $request)
 {
+    $this->authorize('collect', Fee::class);
+
     $request->validate([
         'fee_ids' => ['required', 'array', 'min:1'],
         'fee_ids.*' => ['exists:fees,id'],

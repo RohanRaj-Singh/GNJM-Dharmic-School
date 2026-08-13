@@ -35,6 +35,8 @@ class AdminAttendanceController extends Controller
      --------------------------------------------- */
     public function grid(Request $request)
     {
+        $this->authorize('viewAny', Attendance::class);
+
         $request->validate([
             'section_id' => 'required|exists:sections,id',
             'year'       => 'required|integer',
@@ -106,6 +108,8 @@ class AdminAttendanceController extends Controller
      --------------------------------------------- */
 public function save(Request $request)
 {
+    $this->authorize('mark', Attendance::class);
+
     // DEBUG: Log incoming request
     Log::info('[AdminAttendanceController::save] Request data:', [
         'section_id' => $request->section_id,

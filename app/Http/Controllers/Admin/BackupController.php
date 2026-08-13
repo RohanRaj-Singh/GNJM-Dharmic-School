@@ -16,16 +16,22 @@ class BackupController extends Controller
 
     public function overview(): \Illuminate\Http\JsonResponse
     {
+        $this->authorize('viewAny', BackupEntry::class);
+
         return response()->json($this->backupService->getOverview());
     }
 
     public function history(): \Illuminate\Http\JsonResponse
     {
+        $this->authorize('viewAny', BackupEntry::class);
+
         return response()->json($this->backupService->getHistory());
     }
 
     public function create(): \Illuminate\Http\JsonResponse
     {
+        $this->authorize('create', BackupEntry::class);
+
         try {
             $entry = $this->backupService->create(auth()->id());
 
@@ -67,6 +73,7 @@ class BackupController extends Controller
     public function download(int $id): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
     {
         $entry = BackupEntry::findOrFail($id);
+        $this->authorize('download', $entry);
 
         if (!$entry->fileExists()) {
             return response()->json(['message' => 'Backup file not found on disk.'], 404);
@@ -80,6 +87,7 @@ class BackupController extends Controller
     public function restore(int $id): \Illuminate\Http\JsonResponse
     {
         $entry = BackupEntry::findOrFail($id);
+        $this->authorize('restore', $entry);
 
         try {
             $this->backupService->restore($entry);
@@ -103,6 +111,7 @@ class BackupController extends Controller
     public function destroy(int $id): \Illuminate\Http\JsonResponse
     {
         $entry = BackupEntry::findOrFail($id);
+        $this->authorize('delete', $entry);
 
         try {
             $this->backupService->delete($entry);
@@ -121,6 +130,7 @@ class BackupController extends Controller
     public function compatibility(int $id): \Illuminate\Http\JsonResponse
     {
         $entry = BackupEntry::findOrFail($id);
+        $this->authorize('view', $entry);
         return response()->json($this->backupService->checkCompatibility($entry));
     }
 

@@ -24,6 +24,8 @@ class AttendanceController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('mark', Attendance::class);
+
         $validated = $request->validate([
             'section_id' => ['required', 'exists:sections,id'],
             'attendance' => ['required', 'array'],
@@ -88,6 +90,8 @@ class AttendanceController extends Controller
      */
     public function absentees(Request $request)
     {
+        $this->authorize('viewAny', Attendance::class);
+
         $user = auth()->user();
 
         $allowedSectionIds = $user->isTeacher()

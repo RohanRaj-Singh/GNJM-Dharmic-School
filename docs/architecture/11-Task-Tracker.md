@@ -90,7 +90,7 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 
 | Task | Status | Evidence / Notes |
 |---|---|---|
-| **3.1** Policies for Fee, Student, Attendance, Backup + `Gate::authorize()` | ❌ Not done | No `app/Policies/` directory exists. |
+| **3.1** Policies for Fee, Student, Attendance, Backup + `Gate::authorize()` | ✅ Done | `app/Policies/` — `StudentPolicy`, `FeePolicy`, `AttendancePolicy`, `BackupEntryPolicy`. Super-admin `Gate::before` in `AppServiceProvider`. `Gate::authorize()` wired into `FeesController` (index/generate/collect/deCollect + all 5 custom-fee methods), `Admin\StudentController` (bulkUpdate/enrollmentHistory/destroy/bulkDelete), front `StudentController` (index/create/store/show), `AttendanceController` (store/absentees), `AdminAttendanceController` (grid/save), `FeePaymentController::store`, `StudentLifecycleController` (all 5), `BackupController` (all 7). Enforces **current** role behavior (admin super-user; accountant: student view/create + fee collect/view + attendance; teacher: student view/create + attendance; backup admin-only). Covered by `tests/Feature/AuthorizationPolicyMatrixTest.php` (7 tests / 56 assertions). |
 | **3.2** Audit trail (`created_by`/`updated_by`/`collected_by` on payments, `AuditLog`) | ❌ Not done | No audit columns/migration/model. |
 | **3.3** Restore safety (transaction / checksum / post-restore validation) | ❌ Not done | `BackupService::restore()` registry status: "⚠️ No transaction". |
 
@@ -121,7 +121,7 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 | Task | Status | Evidence / Notes |
 |---|---|---|
 | **6.1** Service tests (MonthlyFeeResolver, StudentLifecycleValidator, AbsenteeService, DivisionTypeResolver, StudentStatusMachine, BackupService) | 🟡 Partial | ✅ `tests/Unit/DivisionTypeResolverTest.php` and `tests/Unit/StudentStatusMachineTest.php` exist. ❌ MonthlyFeeResolver / StudentLifecycleValidator / AbsenteeService / BackupService unit tests missing. |
-| **6.2** Feature tests (student CRUD, fee collection, attendance marking, progression lifecycle) | 🟡 Partial | Feature tests incl. `AttendanceLifecycleTest`, `StudentPromotionLifecycleTest`, `StudentBulkStatusSyncTest`, `StudentBulkStatusMachineTest`, `AcademicSessionTest`, `FeeDeCollectTest`, `FeeUniqueIndexTest`, `StudentSectionCurrentScopeTest`, `StudentFrontRoutesTest`, `AttendanceAbsenteesTest` (+ Breeze `ProfileTest`). Full suite: **157 passed / 11 failed** (11 = pre-existing Breeze/Auth/Profile, composition unchanged). |
+| **6.2** Feature tests (student CRUD, fee collection, attendance marking, progression lifecycle) | 🟡 Partial | Feature tests incl. `AttendanceLifecycleTest`, `StudentPromotionLifecycleTest`, `StudentBulkStatusSyncTest`, `StudentBulkStatusMachineTest`, `AcademicSessionTest`, `FeeDeCollectTest`, `FeeUniqueIndexTest`, `StudentSectionCurrentScopeTest`, `AuthorizationPolicyMatrixTest`, `StudentFrontRoutesTest`, `AttendanceAbsenteesTest` (+ Breeze `ProfileTest`). Full suite: **164 passed / 11 failed** (11 = pre-existing Breeze/Auth/Profile, composition unchanged). |
 | **6.3** Smoke tests (pages render, filters, exports) | ❌ Not done | No browser/E2E suite. Frontend verified only via `npm run build` + reasoning over production data (no JS test runner in `package.json`). |
 
 ---
@@ -157,7 +157,7 @@ Feature/fix work done on `main` before/around the refactor sprints:
 | Sprint 0 — Quick Wins | ✅ done |
 | Sprint 1 — Extract route closure logic | ✅ done (1.1 service class aside) |
 | Sprint 2 — Data integrity & model hardening | ✅ done (source drop, is_locked de-collect fix, status machine + validator + bulk guard, session singleton) |
-| Sprint 3 — Security & audit | ❌ not started |
+| Sprint 3 — Security & audit | 🟡 3.1 done; 3.2 (audit trail) and 3.3 (restore safety) pending |
 | Sprint 4 — Frontend consolidation | ❌ not started |
 | Sprint 5 — Service layer maturity | 🟡 5.3 done, 5.1/5.2 not done |
 | Sprint 6 — Integration testing | 🟡 partial (Sprint 1/2 coverage strong) |

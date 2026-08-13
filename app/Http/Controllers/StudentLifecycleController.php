@@ -27,6 +27,8 @@ class StudentLifecycleController extends Controller
      */
     public function promote(Request $request, Student $student)
     {
+        $this->authorize('update', $student);
+
         $data = $request->validate([
             'section_id'     => 'required|exists:sections,id',
             'effective_date' => 'nullable|date',
@@ -88,6 +90,8 @@ class StudentLifecycleController extends Controller
      */
     public function passOut(Request $request, Student $student)
     {
+        $this->authorize('update', $student);
+
         $result = $this->validator->canPassOut($student);
         if (!$result->allowed) {
             return back()->withErrors(['lifecycle' => implode(' ', $result->warnings)]);
@@ -125,6 +129,8 @@ class StudentLifecycleController extends Controller
      */
     public function leaveSchool(Request $request, Student $student)
     {
+        $this->authorize('update', $student);
+
         $result = $this->validator->canLeaveSchool($student);
         if (!$result->allowed) {
             return back()->withErrors(['lifecycle' => implode(' ', $result->warnings)]);
@@ -162,6 +168,8 @@ class StudentLifecycleController extends Controller
      */
     public function makeInactive(Request $request, Student $student)
     {
+        $this->authorize('update', $student);
+
         $result = $this->validator->canMakeInactive($student);
         if (!$result->allowed) {
             return back()->withErrors(['lifecycle' => implode(' ', $result->warnings)]);
@@ -193,6 +201,8 @@ class StudentLifecycleController extends Controller
      */
     public function reactivate(Request $request, Student $student)
     {
+        $this->authorize('update', $student);
+
         $result = $this->validator->canReactivate($student);
         if (!$result->allowed) {
             return back()->withErrors(['lifecycle' => implode(' ', $result->warnings)]);

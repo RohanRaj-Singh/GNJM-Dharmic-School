@@ -166,6 +166,8 @@ class StudentController extends Controller
      */
     public function bulkUpdate(Request $request)
     {
+        $this->authorize('update', Student::class);
+
         DB::transaction(function () use ($request) {
 
             // Preload all sections into a memory map (class_id by section_id).
@@ -324,6 +326,8 @@ class StudentController extends Controller
      */
     public function enrollmentHistory(Student $student)
     {
+        $this->authorize('view', $student);
+
         $enrollments = StudentSection::where('student_id', $student->id)
             ->with(['schoolClass', 'section', 'attendance', 'fees.payments'])
             ->orderBy('started_at')
@@ -355,6 +359,8 @@ class StudentController extends Controller
      */
     public function destroy(Student $student)
     {
+        $this->authorize('delete', $student);
+
         DB::transaction(function () use ($student) {
             $student->delete();
         });
@@ -366,6 +372,8 @@ class StudentController extends Controller
      */
     public function bulkDelete(Request $request)
     {
+        $this->authorize('delete', Student::class);
+
         $request->validate([
             'student_ids' => 'required|array|min:1',
             'student_ids.*' => 'integer|exists:students,id',
