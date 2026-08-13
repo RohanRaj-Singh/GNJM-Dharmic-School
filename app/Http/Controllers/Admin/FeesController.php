@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\AuditLog;
 use App\Models\Fee;
 use App\Services\StudentReport\StudentReportCache;
 use Carbon\Carbon;
@@ -263,8 +264,12 @@ class FeesController extends Controller
     {
         $this->authorize('generateMonthly', Fee::class);
 
-        Artisan::call('fees:generate-monthly', [
+        $exitCode = Artisan::call('fees:generate-monthly', [
             '--no-interaction' => true,
+        ]);
+
+        AuditLog::record(AuditLog::ACTION_FEE_MONTHLY_GENERATED, null, [
+            'exit_code' => $exitCode,
         ]);
 
         return back()->with('success', 'Monthly fees generated successfully.');
@@ -296,6 +301,13 @@ class FeesController extends Controller
         'fee_id'      => $fee->id,
         'amount_paid' => $fee->amount,
         'paid_at'     => $collectionDate,
+        'collected_by' => auth()->id(),
+        'created_by'   => auth()->id(),
+    ]);
+
+    AuditLog::record(AuditLog::ACTION_FEE_COLLECTED, $fee, [
+        'amount' => $fee->amount,
+        'paid_at' => $collectionDate->toDateString(),
     ]);
 
     // Lock custom fee after payment
@@ -322,6 +334,10 @@ public function deCollect(Fee $fee)
     }
 
     $payment->delete(); // soft delete
+
+    AuditLog::record(AuditLog::ACTION_FEE_DECOLLECTED, $fee, [
+        'amount' => $fee->amount,
+    ]);
 
     // Releasing a payment unlocks the fee again so it can be edited or
     // re-collected (mirrors the lock applied in collect()).
@@ -415,6 +431,13 @@ public function customIndex()
             }
         });
 
+        AuditLog::record(AuditLog::ACTION_FEE_CUSTOM_CREATED, null, [
+            'section_id' => (int) $data['section_id'],
+            'title'      => $data['title'],
+            'amount'     => (int) $data['amount'],
+            'students'   => $enrollments->count(),
+        ]);
+
         foreach ($enrollments as $enrollment) {
             $this->reportCache->forget((int) $enrollment->student_id);
         }
@@ -466,6 +489,14 @@ public function customIndex()
                 'amount' => $data['amount'],
             ]);
 
+        AuditLog::record(AuditLog::ACTION_FEE_CUSTOM_UPDATED, null, [
+            'section_id' => (int) $data['section_id'],
+            'old_title'  => $data['old_title'],
+            'old_amount' => (int) $data['old_amount'],
+            'title'      => $data['title'],
+            'amount'     => (int) $data['amount'],
+        ]);
+
         $studentIds = DB::table('student_sections')
             ->where('section_id', $data['section_id'])
             ->pluck('student_id')
@@ -494,6 +525,12 @@ public function customIndex()
 
         $studentId = $this->studentIdFor($fee);
         $fee->delete();
+
+        AuditLog::record(AuditLog::ACTION_FEE_CUSTOM_DELETED, $fee, [
+            'title'  => $fee->title,
+            'amount' => $fee->amount,
+        ]);
+
         $this->reportCache->forget($studentId);
 
         return back()->with('success', 'Custom fee removed for student.');
@@ -536,6 +573,12 @@ public function customIndex()
                 $q->where('section_id', $data['section_id'])
             )
             ->delete();
+
+        AuditLog::record(AuditLog::ACTION_FEE_CUSTOM_DELETED, null, [
+            'section_id' => (int) $data['section_id'],
+            'title'      => $data['title'],
+            'amount'     => (int) $data['amount'],
+        ]);
 
         $studentIds = DB::table('student_sections')
             ->where('section_id', $data['section_id'])

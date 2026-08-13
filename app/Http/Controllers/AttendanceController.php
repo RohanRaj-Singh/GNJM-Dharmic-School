@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\AuditLog;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\StudentSection;
@@ -76,6 +77,12 @@ class AttendanceController extends Controller
         foreach (array_keys($affectedStudentIds) as $sid) {
             $this->reportCache->forget($sid);
         }
+
+        AuditLog::record(AuditLog::ACTION_ATTENDANCE_MARKED, null, [
+            'section_id' => (int) $validated['section_id'],
+            'records'    => count($validated['attendance']),
+            'date'       => $today->toDateString(),
+        ]);
 
         /**
          * IMPORTANT:

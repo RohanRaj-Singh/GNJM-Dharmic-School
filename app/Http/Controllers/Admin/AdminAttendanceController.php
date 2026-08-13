@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
+use App\Models\AuditLog;
 use App\Models\Section;
 use App\Services\StudentReport\StudentReportCache;
 use App\Support\DivisionTypeResolver;
@@ -212,6 +213,13 @@ public function save(Request $request)
             $this->reportCache->forget((int) $sid);
         }
     }
+
+    AuditLog::record(AuditLog::ACTION_ATTENDANCE_MARKED, null, [
+        'section_id' => (int) $request->section_id,
+        'year'       => (int) $request->year,
+        'month'      => (int) $request->month,
+        'records'    => is_array($request->records) ? count($request->records) : 0,
+    ]);
 
     return response()->json(['success' => true]);
 }

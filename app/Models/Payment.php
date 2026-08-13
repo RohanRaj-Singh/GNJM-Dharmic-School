@@ -14,6 +14,9 @@ class Payment extends Model
         'fee_id',
         'amount_paid',
         'paid_at',
+        'collected_by',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -24,5 +27,23 @@ class Payment extends Model
     public function fee(): BelongsTo
     {
         return $this->belongsTo(Fee::class);
+    }
+
+    /**
+     * Who pressed Collect for this payment.
+     */
+    public function collectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'collected_by');
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Fee;
 use App\Services\StudentReport\StudentReportCache;
 use Carbon\Carbon;
@@ -16,8 +17,6 @@ class FeePaymentController extends Controller
 
     public function store(Request $request)
 {
-    $this->authorize('collect', Fee::class);
-
     $request->validate([
         'fee_ids' => ['required', 'array', 'min:1'],
         'fee_ids.*' => ['exists:fees,id'],
@@ -39,14 +38,26 @@ class FeePaymentController extends Controller
 
         $fee = Fee::findOrFail($feeId);
 
+        // The store loop collects arbitrary fee ids, so authorize the actual
+        // instance here (a class-string authorize would strip the instance and
+        // call FeePolicy::collect with only the user).
+        $this->authorize('collect', $fee);
+
         // Skip if already paid
         if ($fee->payments()->whereNull('deleted_at')->exists()) {
             continue;
         }
 
         $fee->payments()->create([
-            'amount_paid' => $fee->amount,
-            'paid_at' => $collectionDate,
+            'amount_paid'  => $fee->amount,
+            'paid_at'      => $collectionDate,
+            'collected_by' => auth()->id(),
+            'created_by'   => auth()->id(),
+        ]);
+
+        AuditLog::record(AuditLog::ACTION_FEE_COLLECTED, $fee, [
+            'amount' => $fee->amount,
+            'paid_at' => $collectionDate->toDateString(),
         ]);
     }
 

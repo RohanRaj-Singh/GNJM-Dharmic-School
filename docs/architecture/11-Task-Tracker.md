@@ -91,7 +91,7 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 | Task | Status | Evidence / Notes |
 |---|---|---|
 | **3.1** Policies for Fee, Student, Attendance, Backup + `Gate::authorize()` | ✅ Done | `app/Policies/` — `StudentPolicy`, `FeePolicy`, `AttendancePolicy`, `BackupEntryPolicy`. Super-admin `Gate::before` in `AppServiceProvider`. `Gate::authorize()` wired into `FeesController` (index/generate/collect/deCollect + all 5 custom-fee methods), `Admin\StudentController` (bulkUpdate/enrollmentHistory/destroy/bulkDelete), front `StudentController` (index/create/store/show), `AttendanceController` (store/absentees), `AdminAttendanceController` (grid/save), `FeePaymentController::store`, `StudentLifecycleController` (all 5), `BackupController` (all 7). Enforces **current** role behavior (admin super-user; accountant: student view/create + fee collect/view + attendance; teacher: student view/create + attendance; backup admin-only). Covered by `tests/Feature/AuthorizationPolicyMatrixTest.php` (7 tests / 56 assertions). |
-| **3.2** Audit trail (`created_by`/`updated_by`/`collected_by` on payments, `AuditLog`) | ❌ Not done | No audit columns/migration/model. |
+| **3.2** Audit trail (`created_by`/`updated_by`/`collected_by` on payments, `AuditLog`) | ✅ Done | Migrations `2026_08_13_000003` (nullable `collected_by`/`created_by`/`updated_by` FK→users on `payments`) + `2026_08_13_000004` (`audit_logs`: `user_id` nullable FK, `action` indexed, polymorphic `auditable_*`, JSON `payload`, append-only `created_at`). `App\Models\AuditLog` with static `record()` + action constants; `Payment` gains the 3 actor FKs + `collectedBy`/`createdBy`/`updatedBy` relations. Wired: payment writes stamp `collected_by`/`created_by` in `FeesController::collect` + `FeePaymentController::store`; `AuditLog::record()` on fee collect/de-collect/custom-create/update/delete (student+section)/monthly-generate and both attendance saves (`AttendanceController::store`, `AdminAttendanceController::save`). Fixed latent 3.1 bug surfaced here: `FeePaymentController::store` authorized with `Fee::class` (Gate strips class-string arg → `FeePolicy::collect(User, Fee)` broke for non-admin) — now authorizes the resolved `$fee` instance per loop. Covered by `tests/Feature/AuditTrailTest.php` (7 tests / 20 assertions). Commit pending. |
 | **3.3** Restore safety (transaction / checksum / post-restore validation) | ❌ Not done | `BackupService::restore()` registry status: "⚠️ No transaction". |
 
 ---
@@ -121,7 +121,7 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 | Task | Status | Evidence / Notes |
 |---|---|---|
 | **6.1** Service tests (MonthlyFeeResolver, StudentLifecycleValidator, AbsenteeService, DivisionTypeResolver, StudentStatusMachine, BackupService) | 🟡 Partial | ✅ `tests/Unit/DivisionTypeResolverTest.php` and `tests/Unit/StudentStatusMachineTest.php` exist. ❌ MonthlyFeeResolver / StudentLifecycleValidator / AbsenteeService / BackupService unit tests missing. |
-| **6.2** Feature tests (student CRUD, fee collection, attendance marking, progression lifecycle) | 🟡 Partial | Feature tests incl. `AttendanceLifecycleTest`, `StudentPromotionLifecycleTest`, `StudentBulkStatusSyncTest`, `StudentBulkStatusMachineTest`, `AcademicSessionTest`, `FeeDeCollectTest`, `FeeUniqueIndexTest`, `StudentSectionCurrentScopeTest`, `AuthorizationPolicyMatrixTest`, `StudentFrontRoutesTest`, `AttendanceAbsenteesTest` (+ Breeze `ProfileTest`). Full suite: **164 passed / 11 failed** (11 = pre-existing Breeze/Auth/Profile, composition unchanged). |
+| **6.2** Feature tests (student CRUD, fee collection, attendance marking, progression lifecycle) | 🟡 Partial | Feature tests incl. `AttendanceLifecycleTest`, `StudentPromotionLifecycleTest`, `StudentBulkStatusSyncTest`, `StudentBulkStatusMachineTest`, `AcademicSessionTest`, `FeeDeCollectTest`, `FeeUniqueIndexTest`, `StudentSectionCurrentScopeTest`, `AuthorizationPolicyMatrixTest`, `StudentFrontRoutesTest`, `AttendanceAbsenteesTest`, `AuditTrailTest` (+ Breeze `ProfileTest`). Full suite: **171 passed / 11 failed** (11 = pre-existing Breeze/Auth/Profile, composition unchanged). |
 | **6.3** Smoke tests (pages render, filters, exports) | ❌ Not done | No browser/E2E suite. Frontend verified only via `npm run build` + reasoning over production data (no JS test runner in `package.json`). |
 
 ---
@@ -157,9 +157,9 @@ Feature/fix work done on `main` before/around the refactor sprints:
 | Sprint 0 — Quick Wins | ✅ done |
 | Sprint 1 — Extract route closure logic | ✅ done (1.1 service class aside) |
 | Sprint 2 — Data integrity & model hardening | ✅ done (source drop, is_locked de-collect fix, status machine + validator + bulk guard, session singleton) |
-| Sprint 3 — Security & audit | 🟡 3.1 done; 3.2 (audit trail) and 3.3 (restore safety) pending |
+| Sprint 3 — Security & audit | 🟡 3.1 + 3.2 done; 3.3 (restore safety) pending |
 | Sprint 4 — Frontend consolidation | ❌ not started |
 | Sprint 5 — Service layer maturity | 🟡 5.3 done, 5.1/5.2 not done |
 | Sprint 6 — Integration testing | 🟡 partial (Sprint 1/2 coverage strong) |
 
-**Highest-value next steps** (by roadmap risk ordering): Sprint 3 (authz/audit) → Sprint 4 (frontend consolidation) → Sprint 5.1/5.2 (fee generation consolidation + COALESCE subqueries). No architecture change should proceed directly on `main`.
+**Highest-value next steps** (by roadmap risk ordering): Sprint 3.3 (restore safety — the last open security/audit item) → Sprint 4 (frontend consolidation) → Sprint 5.1/5.2 (fee generation consolidation + COALESCE subqueries). No architecture change should proceed directly on `main`.
