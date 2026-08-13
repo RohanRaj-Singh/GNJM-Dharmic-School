@@ -306,7 +306,9 @@ class BackupService
 
         $backupDate = $entry->created_at;
         if ($backupDate) {
-            $daysOld = (int) now()->diffInDays($backupDate);
+            // diffInDays() is signed (negative for past dates), so a real old
+            // backup would never satisfy > 30 — take the absolute value.
+            $daysOld = (int) abs(now()->diffInDays($backupDate));
             if ($daysOld > 30) {
                 $warnings[] = [
                     'type' => 'age',
