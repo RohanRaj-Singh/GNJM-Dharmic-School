@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Fee;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\StudentSection;
-use App\Services\MonthlyFeeResolver;
+use App\Services\MonthlyFeeService;
 use App\Services\StudentStatusMachine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -187,7 +186,7 @@ class StudentController extends Controller
             };
 
             $today = now(config('app.timezone'))->format('Y-m');
-            $resolver = app(MonthlyFeeResolver::class);
+            $monthlyFeeService = app(MonthlyFeeService::class);
 
             foreach ($request->students as $row) {
 
@@ -289,23 +288,10 @@ class StudentController extends Controller
                         continue;
                     }
 
-                    // ---- 5. Resolve and upsert monthly fee ----
-                    $fee = $resolver->resolveForMonth($enrollment, $today);
-                    if ($fee <= 0) continue;
-
-                    // Key by (student_id, type, month) so changing section/class
-                    // doesn't create a duplicate fee for the same month.
-                    Fee::firstOrCreate(
-                        [
-                            'student_id' => $student->id,
-                            'type' => 'monthly',
-                            'month' => $today,
-                        ],
-                        [
-                            'student_section_id' => $enrollment->id,
-                            'amount' => $fee,
-                        ]
-                    );
+                    // ---- 5. Upsert monthly fee ----
+                    // Keyed by (student_id, type, month) so changing section/class
+                    // doesn't create a duplicate fee for the same month (F3).
+                    $monthlyFeeService->upsertForMonth($enrollment, $today);
                 }
 
                 // ---- 6. Keep students.status in sync with enrollment reality (R3) ----

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\GenerateMonthlyFeeAction;
 use App\Models\AuditLog;
 use App\Models\Fee;
 use App\Services\StudentReport\StudentReportCache;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use App\Models\Payment;
@@ -19,6 +19,7 @@ class FeesController extends Controller
 {
     public function __construct(
         private readonly StudentReportCache $reportCache,
+        private readonly GenerateMonthlyFeeAction $generateMonthlyFeeAction,
     ) {}
 
     /**
@@ -264,12 +265,14 @@ class FeesController extends Controller
     {
         $this->authorize('generateMonthly', Fee::class);
 
-        $exitCode = Artisan::call('fees:generate-monthly', [
-            '--no-interaction' => true,
-        ]);
+        $affectedStudentIds = ($this->generateMonthlyFeeAction)();
+
+        foreach ($affectedStudentIds as $sid) {
+            $this->reportCache->forget((int) $sid);
+        }
 
         AuditLog::record(AuditLog::ACTION_FEE_MONTHLY_GENERATED, null, [
-            'exit_code' => $exitCode,
+            'students_affected' => count($affectedStudentIds),
         ]);
 
         return back()->with('success', 'Monthly fees generated successfully.');

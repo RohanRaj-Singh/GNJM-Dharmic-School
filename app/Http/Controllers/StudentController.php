@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Fee;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\StudentSection;
-use App\Services\MonthlyFeeResolver;
+use App\Services\MonthlyFeeService;
 use App\Services\StudentReport\StudentReportCache;
 use App\Support\DivisionTypeResolver;
 use Illuminate\Http\Request;
@@ -16,7 +15,7 @@ use Inertia\Inertia;
 class StudentController extends Controller
 {
     public function __construct(
-        private readonly MonthlyFeeResolver $monthlyFeeResolver,
+        private readonly MonthlyFeeService $monthlyFeeService,
         private readonly StudentReportCache $reportCache,
     ) {
     }
@@ -181,27 +180,11 @@ class StudentController extends Controller
         ]);
 
         if ($validated['student_type'] === 'paid') {
-            $month = now(config('app.timezone'))->format('Y-m');
-            $resolvedFee = $this->monthlyFeeResolver->resolveForMonth($enrollment, $month);
-
-            if ($resolvedFee > 0) {
-                // Canonical identity: fees belong to the student, not the enrollment (F3).
-                // Keying by student_id (not student_section_id) means a mid-month section
-                // change reuses the existing monthly fee instead of creating a duplicate
-                // that the unique index (student_id, type, month) would reject.
-                Fee::firstOrCreate(
-                    [
-                        'student_id' => $student->id,
-                        'type' => 'monthly',
-                        'month' => $month,
-                    ],
-                    [
-                        'student_section_id' => $enrollment->id,
-                        'title' => null,
-                        'amount' => $resolvedFee,
-                    ]
-                );
-            }
+            // Canonical identity: fees belong to the student, not the enrollment (F3).
+            // Keying by student_id (not student_section_id) means a mid-month section
+            // change reuses the existing monthly fee instead of creating a duplicate
+            // that the unique index (student_id, type, month) would reject.
+            $this->monthlyFeeService->upsertForMonth($enrollment, now(config('app.timezone'))->format('Y-m'));
         }
 
         $this->reportCache->forget($student->id);
