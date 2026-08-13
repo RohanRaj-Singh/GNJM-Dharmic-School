@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Fee;
+use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\StudentSection;
@@ -11,14 +12,150 @@ use App\Services\MonthlyFeeResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class StudentController extends Controller
 {
     /**
-     * Bulk upsert students and their enrollments from the admin roster editor.
+     * Admin student roster (Inertia page).
      *
-     * Extracted verbatim from the former routes/admin.php closure (P2: routes
-     * define paths, not logic). Behavior is unchanged; protected by
+     * Extracted verbatim from the former routes/admin.php closure (P2).
+     */
+    public function index(Request $request)
+    {
+        $statusFilter = $request->get('status', 'active');
+
+        $query = Student::with([
+            'enrollments' => fn($q) => $q->whereNull('transferred_at'),
+            'enrollments.schoolClass',
+            'enrollments.section',
+        ])->orderBy('name');
+
+        if ($statusFilter === 'active') {
+            $query->whereHas('enrollments', fn($q) =>
+                $q->where('status', 'active')->whereNull('transferred_at')
+            );
+        }
+
+        $students = $query->get()
+            ->map(fn($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'father_name' => $s->father_name,
+                'father_phone' => $s->father_phone,
+                'mother_phone' => $s->mother_phone,
+                'status' => $s->status,
+                'enrollments' => $s->enrollments->map(fn($e) => [
+                    'id' => $e->id,
+                    'class_id' => (string) $e->class_id,
+                    'section_id' => (string) $e->section_id,
+                    'class_name' => $e->schoolClass->name,
+                    'section_name' => $e->section->name,
+                    'student_type' => $e->student_type,
+                    'status' => $e->status,
+                ]),
+            ]);
+
+        return Inertia::render('Admin/Students/Index', [
+            'students' => $students,
+            'classes' => SchoolClass::select('id', 'name')->orderBy('name')->get(),
+            'filters' => $request->only(['status']),
+        ]);
+    }
+
+    /**
+     * Student options list for the teacher roster picker.
+     */
+    public function list(Request $request)
+    {
+        $user = auth()->user();
+
+        $students = $user->isTeacher()
+            ? Student::whereHas('enrollments', function ($q) use ($user) {
+                $q->whereIn(
+                    'section_id',
+                    $user->sections->pluck('id')
+                )->where('status', 'active')->whereNull('transferred_at');
+            })
+            ->with(['enrollments' => function ($q) {
+                $q->where('status', 'active')->whereNull('transferred_at');
+            }, 'enrollments.schoolClass', 'enrollments.section'])
+            ->get()
+            : Student::with(['enrollments' => function ($q) {
+                $q->where('status', 'active')->whereNull('transferred_at');
+            }, 'enrollments.schoolClass', 'enrollments.section'])->get();
+
+        return $students;
+    }
+
+    /**
+     * JSON roster with status filter.
+     */
+    public function data(Request $request)
+    {
+        $statusFilter = $request->get('status', 'active');
+
+        $query = Student::with([
+            'enrollments' => fn ($q) => $q->whereNull('transferred_at'),
+            'enrollments.schoolClass',
+            'enrollments.section',
+        ])->orderBy('name');
+
+        if ($statusFilter === 'active') {
+            $query->whereHas('enrollments', fn ($q) => $q->where('status', 'active')->whereNull('transferred_at'));
+        }
+
+        return $query->get()->map(fn($s) => [
+            'id' => $s->id,
+            'name' => $s->name,
+            'father_name' => $s->father_name,
+            'father_phone' => $s->father_phone,
+            'mother_phone' => $s->mother_phone,
+            'status' => $s->status,
+            'enrollments' => $s->enrollments->map(fn($e) => [
+                'id' => $e->id,
+                'class_id' => (string) $e->class_id,
+                'section_id' => (string) $e->section_id,
+                'class_name' => $e->schoolClass->name,
+                'section_name' => $e->section->name,
+                'student_type' => $e->student_type,
+                'status' => $e->status ?? 'active',
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Filtered student options for report filters.
+     */
+    public function options(Request $request)
+    {
+        $classIds = (array) ($request->class_ids ?? []);
+        $sectionIds = (array) ($request->section_ids ?? []);
+        $classIds = array_filter($classIds);
+        $sectionIds = array_filter($sectionIds);
+
+        if (empty($classIds)) {
+            return [];
+        }
+
+        $query = DB::table('students')
+            ->join('student_sections', 'students.id', '=', 'student_sections.student_id')
+            ->whereIn('student_sections.class_id', $classIds)
+            ->where('student_sections.status', 'active')
+            ->whereNull('student_sections.transferred_at')
+            ->select('students.id', 'students.name', 'students.father_name');
+
+        if (!empty($sectionIds)) {
+            $query->whereIn('student_sections.section_id', $sectionIds);
+        }
+
+        return $query->distinct()->orderBy('students.name')->get();
+    }
+
+    /**
+     * Bulk upsert students and their enrollments from the roster editor.
+     *
+     * Extracted verbatim from the former routes/admin.php closure. Protected by
      * tests/Feature/StudentBulkStatusSyncTest.
      */
     public function bulkUpdate(Request $request)
@@ -159,5 +296,67 @@ class StudentController extends Controller
         });
 
         return back()->with('success', 'Students updated');
+    }
+
+    /**
+     * JSON enrollment history for the student detail view.
+     */
+    public function enrollmentHistory(Student $student)
+    {
+        $enrollments = StudentSection::where('student_id', $student->id)
+            ->with(['schoolClass', 'section', 'attendance', 'fees.payments'])
+            ->orderBy('started_at')
+            ->get()
+            ->map(fn ($e) => [
+                'id' => $e->id,
+                'className' => $e->schoolClass->name,
+                'sectionName' => $e->section->name,
+                'startedAt' => $e->started_at?->toDateString(),
+                'transferredAt' => $e->transferred_at?->toDateString(),
+                'outcome' => $e->outcome,
+                'status' => $e->status,
+                'attendance' => [
+                    'present' => $e->attendance->where('status', 'present')->count(),
+                    'absent' => $e->attendance->where('status', 'absent')->count(),
+                    'leave' => $e->attendance->where('status', 'leave')->count(),
+                ],
+                'fees' => [
+                    'charged' => (int) $e->fees->sum('amount'),
+                    'paid' => (int) $e->fees->filter(fn ($f) => $f->payments->whereNull('deleted_at')->isNotEmpty())->sum('amount'),
+                ],
+            ]);
+
+        return response()->json($enrollments);
+    }
+
+    /**
+     * Delete a single student (hard delete).
+     */
+    public function destroy(Student $student)
+    {
+        DB::transaction(function () use ($student) {
+            $student->delete();
+        });
+        return back(303);
+    }
+
+    /**
+     * Delete multiple students in one transaction.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'student_ids' => 'required|array|min:1',
+            'student_ids.*' => 'integer|exists:students,id',
+        ]);
+
+        DB::transaction(function () use ($request) {
+            Student::whereIn('id', $request->student_ids)->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'deleted' => count($request->student_ids),
+        ]);
     }
 }

@@ -283,176 +283,22 @@ Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardControlle
 
 Route::prefix('students')->name('students.')->group(function () {
 
-    Route::get('/', function (Request $request) {
-        $statusFilter = $request->get('status', 'active');
-
-        $query = Student::with([
-            'enrollments' => fn($q) => $q->whereNull('transferred_at'),
-            'enrollments.schoolClass',
-            'enrollments.section',
-        ])->orderBy('name');
-
-        if ($statusFilter === 'active') {
-            $query->whereHas('enrollments', fn($q) =>
-                $q->where('status', 'active')->whereNull('transferred_at')
-            );
-        }
-
-        $students = $query->get()
-            ->map(fn($s) => [
-                'id' => $s->id,
-                'name' => $s->name,
-                'father_name' => $s->father_name,
-                'father_phone' => $s->father_phone,
-                'mother_phone' => $s->mother_phone,
-                'status' => $s->status,
-                'enrollments' => $s->enrollments->map(fn($e) => [
-                    'id' => $e->id,
-                    'class_id' => (string) $e->class_id,
-                    'section_id' => (string) $e->section_id,
-                    'class_name' => $e->schoolClass->name,
-                    'section_name' => $e->section->name,
-                    'student_type' => $e->student_type,
-                    'status' => $e->status,
-                ]),
-            ]);
-
-        return Inertia::render('Admin/Students/Index', [
-            'students' => $students,
-            'classes' => SchoolClass::select('id', 'name')->orderBy('name')->get(),
-            'filters' => $request->only(['status']),
-        ]);
-    })->name('index');
-    Route::get('/list', function (Request $request) {
-        $user = auth()->user();
-
-        $students = $user->isTeacher()
-            ? Student::whereHas('enrollments', function ($q) use ($user) {
-                $q->whereIn(
-                    'section_id',
-                    $user->sections->pluck('id')
-                )->where('status', 'active')->whereNull('transferred_at');
-            })
-            ->with(['enrollments' => function ($q) {
-                $q->where('status', 'active')->whereNull('transferred_at');
-            }, 'enrollments.schoolClass', 'enrollments.section'])
-            ->get()
-            : Student::with(['enrollments' => function ($q) {
-                $q->where('status', 'active')->whereNull('transferred_at');
-            }, 'enrollments.schoolClass', 'enrollments.section'])->get();
-
-        return $students;
-    })->name('list');
-
-    Route::get('/data', function (Request $request) {
-        $statusFilter = $request->get('status', 'active');
-
-        $query = Student::with([
-            'enrollments' => fn ($q) => $q->whereNull('transferred_at'),
-            'enrollments.schoolClass',
-            'enrollments.section',
-        ])->orderBy('name');
-
-        if ($statusFilter === 'active') {
-            $query->whereHas('enrollments', fn ($q) => $q->where('status', 'active')->whereNull('transferred_at'));
-        }
-
-        return $query->get()->map(fn($s) => [
-            'id' => $s->id,
-            'name' => $s->name,
-            'father_name' => $s->father_name,
-            'father_phone' => $s->father_phone,
-            'mother_phone' => $s->mother_phone,
-            'status' => $s->status,
-            'enrollments' => $s->enrollments->map(fn($e) => [
-                'id' => $e->id,
-                'class_id' => (string) $e->class_id,
-                'section_id' => (string) $e->section_id,
-                'class_name' => $e->schoolClass->name,
-                'section_name' => $e->section->name,
-                'student_type' => $e->student_type,
-                'status' => $e->status ?? 'active',
-            ])->values(),
-        ]);
-    })->name('data');
+    Route::get('/', [StudentController::class, 'index'])->name('index');
+    Route::get('/list', [StudentController::class, 'list'])->name('list');
+    Route::get('/data', [StudentController::class, 'data'])->name('data');
 
     // Filtered student options for report filters
-    Route::get('/options', function (Request $request) {
-        $classIds = (array) ($request->class_ids ?? []);
-        $sectionIds = (array) ($request->section_ids ?? []);
-        $classIds = array_filter($classIds);
-        $sectionIds = array_filter($sectionIds);
-
-        if (empty($classIds)) {
-            return [];
-        }
-
-        $query = DB::table('students')
-            ->join('student_sections', 'students.id', '=', 'student_sections.student_id')
-            ->whereIn('student_sections.class_id', $classIds)
-            ->where('student_sections.status', 'active')
-            ->whereNull('student_sections.transferred_at')
-            ->select('students.id', 'students.name', 'students.father_name');
-
-        if (!empty($sectionIds)) {
-            $query->whereIn('student_sections.section_id', $sectionIds);
-        }
-
-        return $query->distinct()->orderBy('students.name')->get();
-    })->name('options');
+    Route::get('/options', [StudentController::class, 'options'])->name('options');
 
     Route::post('/bulk-update', [StudentController::class, 'bulkUpdate'])
         ->name('bulk');
 
-    Route::get('/{student}/enrollment-history', function (Student $student) {
-        $enrollments = StudentSection::where('student_id', $student->id)
-            ->with(['schoolClass', 'section', 'attendance', 'fees.payments'])
-            ->orderBy('started_at')
-            ->get()
-            ->map(fn ($e) => [
-                'id' => $e->id,
-                'className' => $e->schoolClass->name,
-                'sectionName' => $e->section->name,
-                'startedAt' => $e->started_at?->toDateString(),
-                'transferredAt' => $e->transferred_at?->toDateString(),
-                'outcome' => $e->outcome,
-                'status' => $e->status,
-                'attendance' => [
-                    'present' => $e->attendance->where('status', 'present')->count(),
-                    'absent' => $e->attendance->where('status', 'absent')->count(),
-                    'leave' => $e->attendance->where('status', 'leave')->count(),
-                ],
-                'fees' => [
-                    'charged' => (int) $e->fees->sum('amount'),
-                    'paid' => (int) $e->fees->filter(fn ($f) => $f->payments->whereNull('deleted_at')->isNotEmpty())->sum('amount'),
-                ],
-            ]);
+    Route::get('/{student}/enrollment-history', [StudentController::class, 'enrollmentHistory'])
+        ->name('enrollment-history');
 
-        return response()->json($enrollments);
-    })->name('enrollment-history');
+    Route::delete('/{student}', [StudentController::class, 'destroy'])->name('delete');
 
-    Route::delete('/{student}', function (Student $student) {
-        DB::transaction(function () use ($student) {
-            $student->delete();
-        });
-        return back(303);
-    })->name('delete');
-
-    Route::post('/bulk-delete', function (Request $request) {
-        $request->validate([
-            'student_ids' => 'required|array|min:1',
-            'student_ids.*' => 'integer|exists:students,id',
-        ]);
-
-        DB::transaction(function () use ($request) {
-            Student::whereIn('id', $request->student_ids)->delete();
-        });
-
-        return response()->json([
-            'success' => true,
-            'deleted' => count($request->student_ids),
-        ]);
-    })->name('bulk-delete');
+    Route::post('/bulk-delete', [StudentController::class, 'bulkDelete'])->name('bulk-delete');
 });
 
 /* =========================================================
