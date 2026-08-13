@@ -1,4 +1,5 @@
 import SearchInput from "@/Components/SearchInput";
+import { FilterSelect } from "@/Components/FilterBar";
 
 export default function DirectoryToolbar({
   search,
@@ -26,45 +27,42 @@ export default function DirectoryToolbar({
           className="px-3 py-2 border rounded text-sm w-56 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
         />
 
-        <select
+        <FilterSelect
           value={classFilter}
-          onChange={(e) => {
-            onClassFilterChange(e.target.value);
+          onChange={(v) => {
+            onClassFilterChange(v);
             onSectionFilterChange("all");
           }}
+          options={classes.map((c) => ({
+            value: String(c.id),
+            label: c.name,
+          }))}
+          placeholder="All Classes"
           className="px-3 py-2 border rounded text-sm"
-        >
-          <option value="all">All Classes</option>
-          {classes.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        />
 
-        <select
+        <FilterSelect
           value={sectionFilter}
-          onChange={(e) => onSectionFilterChange(e.target.value)}
+          onChange={onSectionFilterChange}
+          options={sectionOptions.map((s) => ({
+            value: String(s.id),
+            label: s.name,
+          }))}
+          placeholder="All Sections"
           disabled={classFilter === "all"}
           className="px-3 py-2 border rounded text-sm disabled:bg-gray-100"
-        >
-          <option value="all">All Sections</option>
-          {sectionOptions.map((s) => (
-            <option key={s.id} value={String(s.id)}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        />
 
-        <select
+        <FilterSelect
           value={feeFilter}
-          onChange={(e) => onFeeFilterChange(e.target.value)}
+          onChange={onFeeFilterChange}
+          options={[
+            { value: "paid", label: "Paid" },
+            { value: "free", label: "Free" },
+          ]}
+          placeholder="All Types"
           className="px-3 py-2 border rounded text-sm"
-        >
-          <option value="all">All Types</option>
-          <option value="paid">Paid</option>
-          <option value="free">Free</option>
-        </select>
+        />
 
         <select
           value={statusFilter}

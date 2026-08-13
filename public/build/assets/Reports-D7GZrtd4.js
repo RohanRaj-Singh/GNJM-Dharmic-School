@@ -1,1 +1,0 @@
-import{j as e}from"./app-bfofOEZw.js";import{S as r}from"./SimpleLayout-euh10dzH.js";import"./TabSessionTimeout-Ba-NYqMs.js";function i(){return e.jsx(r,{title:"Reports",children:e.jsx("div",{className:"bg-white rounded-xl shadow p-6",children:"Reports will be here"})})}export{i as default};

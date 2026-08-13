@@ -1,3 +1,5 @@
+import { FilterField, FilterSelect } from "@/Components/FilterBar";
+
 export default function AbsenteesFiltersPanel({
   filterOpen,
   onToggleOpen,
@@ -47,57 +49,51 @@ export default function AbsenteesFiltersPanel({
       {filterOpen && (
         <div className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">From Date</label>
+            <FilterField label="From Date">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => onStartDateChange(e.target.value)}
                 className="border rounded px-3 py-2 text-sm w-full"
               />
-            </div>
+            </FilterField>
 
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">To Date</label>
+            <FilterField label="To Date">
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => onEndDateChange(e.target.value)}
                 className="border rounded px-3 py-2 text-sm w-full"
               />
-            </div>
+            </FilterField>
 
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Class</label>
-              <select
+            <FilterField label="Class">
+              <FilterSelect
                 value={classId}
-                onChange={(e) => onClassChange(e.target.value)}
+                onChange={onClassChange}
+                options={classes.map((cls) => ({
+                  value: cls.id,
+                  label: cls.name,
+                }))}
+                placeholder="All Classes"
+                allValue=""
                 className="border rounded px-3 py-2 text-sm w-full"
-              >
-                <option value="">All Classes</option>
-                {classes.map((cls) => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              />
+            </FilterField>
 
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Section</label>
-              <select
+            <FilterField label="Section">
+              <FilterSelect
                 value={sectionId}
-                onChange={(e) => onSectionChange(e.target.value)}
+                onChange={onSectionChange}
+                options={filteredSections.map((section) => ({
+                  value: section.id,
+                  label: section.name,
+                }))}
+                placeholder="All Sections"
+                allValue=""
                 className="border rounded px-3 py-2 text-sm w-full"
-              >
-                <option value="">All Sections</option>
-                {filteredSections.map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {section.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              />
+            </FilterField>
           </div>
 
           <div className="flex flex-wrap gap-3 items-end">

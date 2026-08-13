@@ -1,4 +1,5 @@
 import SearchInput from "@/Components/SearchInput";
+import { FilterSelect } from "@/Components/FilterBar";
 
 export default function LateFeesFiltersPanel({
   classFilter,
@@ -13,31 +14,24 @@ export default function LateFeesFiltersPanel({
   return (
     <div className="bg-white rounded-xl border shadow-sm p-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <select
+        <FilterSelect
           value={classFilter}
-          onChange={(e) => onClassFilterChange(e.target.value)}
+          onChange={onClassFilterChange}
+          options={classOptions.map((cls) => ({ value: cls, label: cls }))}
+          placeholder="All Classes"
           className="border rounded-lg px-3 py-2 text-sm"
-        >
-          <option value="all">All Classes</option>
-          {classOptions.map((cls) => (
-            <option key={cls} value={cls}>
-              {cls}
-            </option>
-          ))}
-        </select>
+        />
 
-        <select
+        <FilterSelect
           value={sectionFilter}
-          onChange={(e) => onSectionFilterChange(e.target.value)}
+          onChange={onSectionFilterChange}
+          options={sectionOptions.map((section) => ({
+            value: section,
+            label: section,
+          }))}
+          placeholder="All Sections"
           className="border rounded-lg px-3 py-2 text-sm"
-        >
-          <option value="all">All Sections</option>
-          {sectionOptions.map((section) => (
-            <option key={section} value={section}>
-              {section}
-            </option>
-          ))}
-        </select>
+        />
 
         <SearchInput
           value={search}
