@@ -461,7 +461,7 @@ export default function Index() {
                   dir: sortConfig.dir,
                   onSort: handleSort,
                 }}
-                getRowId={(row) => String(row.original.id)}
+                getRowId={(row) => String(row.id)}
                 emptyMessage="No students found"
                 containerClassName="bg-white border rounded-lg overflow-hidden"
                 tableClassName="w-full text-sm"
