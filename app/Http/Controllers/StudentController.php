@@ -51,13 +51,18 @@ class StudentController extends Controller
             $resolvedFee = $this->monthlyFeeResolver->resolveForMonth($enrollment, $month);
 
             if ($resolvedFee > 0) {
+                // Canonical identity: fees belong to the student, not the enrollment (F3).
+                // Keying by student_id (not student_section_id) means a mid-month section
+                // change reuses the existing monthly fee instead of creating a duplicate
+                // that the unique index (student_id, type, month) would reject.
                 Fee::firstOrCreate(
                     [
-                        'student_section_id' => $enrollment->id,
+                        'student_id' => $student->id,
                         'type' => 'monthly',
                         'month' => $month,
                     ],
                     [
+                        'student_section_id' => $enrollment->id,
                         'source' => 'monthly',
                         'title' => null,
                         'amount' => $resolvedFee,
