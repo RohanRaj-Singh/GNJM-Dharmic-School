@@ -1,15 +1,15 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
 import { Link } from "@inertiajs/react";
 import { useMemo, useState } from "react";
+import { division } from "@/utils/divisionType";
 
 export default function AttendanceSections({ sections = [] }) {
   const [classFilter, setClassFilter] = useState("gurmukhi");
 
   const visibleSections = useMemo(() => {
     return (sections ?? []).filter((section) => {
-      const type = String(section?.school_class?.type ?? "").trim().toLowerCase();
-      if (!type) return true;
-      return type === classFilter || type.includes(classFilter);
+      const cls = section?.school_class ?? section?.schoolClass ?? null;
+      return division(cls?.type, cls?.name) === classFilter;
     });
   }, [sections, classFilter]);
 

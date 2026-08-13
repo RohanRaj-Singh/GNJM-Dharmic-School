@@ -1,15 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import Modal from "@/Components/Modal";
 import ImpactSummary from "./ImpactSummary";
-
-// Normalise a raw class-type value to a consistent key.
-const normaliseType = (raw) => {
-  const s = String(raw ?? "").toLowerCase().trim();
-  if (s === "" || s === "gurmukhi" || s === "gurmukhi class") return "gurmukhi";
-  if (s === "kirtan" || s === "kirtan class") return "kirtan";
-  // Fallback: anything containing "kirtan"
-  return s.includes("kirtan") ? "kirtan" : "gurmukhi";
-};
+import { division } from "@/utils/divisionType";
 
 export default function PromoteFlow({ student, students, classes, sections: propSections, onClose, preselectedIds = null, preselectedType }) {
   const allIds = preselectedIds || [student.id];
@@ -25,7 +17,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
     const types = new Set();
     selectedStudents.forEach((s) => {
       (s.enrollments || []).forEach((e) => {
-        if (e.classType) types.add(normaliseType(e.classType));
+        if (e.classType || e.className) types.add(division(e.classType, e.className));
       });
     });
     return Array.from(types);
@@ -47,7 +39,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
   const promotableEnrollments = useMemo(() => {
     if (!leadStudent?.enrollments?.length) return [];
     return leadStudent.enrollments.filter(
-      (e) => normaliseType(e.classType) === selectedType
+      (e) => division(e.classType, e.className) === selectedType
     );
   }, [leadStudent, selectedType]);
 
@@ -55,7 +47,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
   const unchangedEnrollments = useMemo(() => {
     if (!leadStudent?.enrollments?.length) return [];
     return leadStudent.enrollments.filter(
-      (e) => normaliseType(e.classType) !== selectedType
+      (e) => division(e.classType, e.className) !== selectedType
     );
   }, [leadStudent, selectedType]);
 
@@ -93,7 +85,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
 
   // Filter classes to only the selected type.
   const filteredClasses = useMemo(
-    () => classes.filter((c) => normaliseType(c.type ?? c.name) === selectedType),
+    () => classes.filter((c) => division(c.type, c.name) === selectedType),
     [classes, selectedType]
   );
 

@@ -1,6 +1,7 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
 import { useState } from "react";
 import { router, Link } from "@inertiajs/react";
+import { isKirtan } from "@/utils/divisionType";
 
 export default function ReceiveFee({ student, fees = [] }) {
   const getTodayDateInput = () => {
@@ -25,15 +26,9 @@ export default function ReceiveFee({ student, fees = [] }) {
   const [processing, setProcessing] = useState(false);
   const [collectionDate, setCollectionDate] = useState(getTodayDateInput);
 
-  // Group fees by class type (kirtan vs gurmukhi)
-  // Handle various case formats and null values
-  const isKirtan = (classType) => {
-    const type = String(classType ?? '').toLowerCase().trim();
-    return type === 'kirtan' || type.includes('kirtan');
-  };
-
-  const gurmukhiFees = fees.filter(f => !isKirtan(f.class_type));
-  const kirtanFees = fees.filter(f => isKirtan(f.class_type));
+  // Group fees by division (kirtan vs gurmukhi) via the canonical rule.
+  const gurmukhiFees = fees.filter(f => !isKirtan(f.class_type, f.class_name));
+  const kirtanFees = fees.filter(f => isKirtan(f.class_type, f.class_name));
 
   // Collapsible section state - Gurmukhi open by default
   const [gurmukhiOpen, setGurmukhiOpen] = useState(true);

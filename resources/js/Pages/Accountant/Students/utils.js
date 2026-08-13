@@ -1,15 +1,11 @@
+import { division, isKirtan } from "@/utils/divisionType";
+
 export function normalizeText(value) {
   return String(value ?? "").trim();
 }
 
-export function classMatchesFilter(type, classFilter) {
-  const normalizedType = normalizeText(type).toLowerCase();
-
-  if (!normalizedType) {
-    return true;
-  }
-
-  return normalizedType === classFilter || normalizedType.includes(classFilter);
+export function classMatchesFilter(schoolClass, classFilter) {
+  return division(schoolClass?.type, schoolClass?.name) === classFilter;
 }
 
 export function buildStudentRows(students = [], { search, classFilter }) {
@@ -28,7 +24,7 @@ export function buildStudentRows(students = [], { search, classFilter }) {
     const enrollments = student?.enrollments ?? [];
 
     return enrollments.some((enrollment) =>
-      classMatchesFilter(enrollment?.school_class?.type, classFilter)
+      classMatchesFilter(enrollment?.school_class, classFilter)
     );
   });
 }
@@ -37,12 +33,14 @@ export function getEnrollmentBadges(enrollments = []) {
   return enrollments.map((enrollment) => {
     const schoolClassName = enrollment?.school_class?.name ?? "Class";
     const sectionName = enrollment?.section?.name ?? "Section";
-    const type = normalizeText(enrollment?.school_class?.type).toLowerCase();
 
     return {
       id: enrollment?.id ?? `${schoolClassName}-${sectionName}`,
       label: `${schoolClassName} - ${sectionName}`,
-      isKirtan: type.includes("kirtan"),
+      isKirtan: isKirtan(
+        enrollment?.school_class?.type,
+        enrollment?.school_class?.name
+      ),
     };
   });
 }

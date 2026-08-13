@@ -2,6 +2,7 @@ import AdminLayout from "@/Layouts/AdminLayout";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { usePage } from "@inertiajs/react";
 import toast from "react-hot-toast";
+import { division } from "@/utils/divisionType";
 import PromoteFlow from "./StudentProgression/PromoteFlow";
 import PassOutFlow from "./StudentProgression/PassOutFlow";
 import StatusBadge from "@/Components/StatusBadge";
@@ -94,8 +95,8 @@ export default function StudentProgression() {
     fetchStudents();
   }, [fetchStudents]);
 
-  const typeBadge = (type) => {
-    const isKirtan = String(type ?? "").toLowerCase().includes("kirtan");
+  const typeBadge = (enrollment) => {
+    const isKirtan = division(enrollment?.classType, enrollment?.className) === "kirtan";
     return isKirtan
       ? <span className="text-[10px] bg-purple-100 text-purple-700 font-medium px-1.5 py-0.5 rounded-full">Kirtan</span>
       : <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded-full">Gurmukhi</span>;
@@ -104,7 +105,7 @@ export default function StudentProgression() {
   const enrollmentSummary = (enrollments) =>
     (enrollments || []).map((e, i) => (
       <div key={i} className="flex items-center gap-1.5">
-        {typeBadge(e.classType || e.className)}
+        {typeBadge(e)}
         <span className="text-gray-600">{e.className}</span>
         <span className="text-gray-400">—</span>
         <span className="text-gray-500">{e.sectionName}</span>
@@ -114,8 +115,7 @@ export default function StudentProgression() {
   const uniqueTypes = (enrollments) => {
     const types = new Set();
     (enrollments || []).forEach((e) => {
-      const raw = e.classType ?? e.className ?? "";
-      types.add(raw.toLowerCase().includes("kirtan") ? "kirtan" : "gurmukhi");
+      types.add(division(e.classType, e.className));
     });
     return Array.from(types);
   };
