@@ -28,6 +28,18 @@ class Student extends Model
         return $this->hasMany(StudentSection::class, 'student_id');
     }
 
+    /**
+     * Whether this student has at least one current, active enrollment.
+     * An "active" student with no active enrollment is an orphan (R3).
+     */
+    public function hasActiveEnrollment(): bool
+    {
+        return $this->enrollments()
+            ->where('status', StudentSection::STATUS_ACTIVE)
+            ->whereNull('transferred_at')
+            ->exists();
+    }
+
     public function fees(): HasMany
     {
         return $this->hasMany(Fee::class, 'student_id');
