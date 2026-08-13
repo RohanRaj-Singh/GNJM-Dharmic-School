@@ -1,11 +1,7 @@
 import AdminLayout from "@/Layouts/AdminLayout";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { router } from "@inertiajs/react";
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import DataTable from "@/Components/DataTable";
 import MultiSelect from "@/Components/MultiSelect";
 import toast from "react-hot-toast";
 import { Trash2, Key, CheckCircle } from "lucide-react";
@@ -292,8 +288,6 @@ export default function Index() {
     },
   ], [sectionOptions, updateCell, handleDelete, openPasswordModal, deletingIds]);
 
-  const table = useReactTable({ data: users, columns, getCoreRowModel: getCoreRowModel() });
-
   if (loading) {
     return (
       <AdminLayout title="Users">
@@ -393,36 +387,17 @@ export default function Index() {
           </button>
         </div>
 
-        <div className="overflow-x-auto bg-white rounded-lg border">
-          <table className="min-w-full text-sm">
-            <thead>
-              {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id}>
-                  {hg.headers.map((h) => (
-                    <th key={h.id} className="px-3 py-3 border-b text-left text-xs font-medium text-gray-500 uppercase">
-                      {flexRender(h.column.columnDef.header, h.getContext())}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y">
-              {users.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">No users found</td></tr>
-              ) : (
-                table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/50">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-3 py-2 align-top min-w-[140px]">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={users}
+          columns={columns}
+          emptyMessage="No users found"
+          containerClassName="overflow-x-auto bg-white rounded-lg border"
+          tableClassName="min-w-full text-sm"
+          tbodyClassName="divide-y"
+          headerCellClassName="px-3 py-3 border-b text-left text-xs font-medium text-gray-500 uppercase"
+          bodyRowClassName="hover:bg-gray-50/50"
+          cellClassName="px-3 py-2 align-top min-w-[140px]"
+        />
       </div>
 
       {passwordModal.open && (

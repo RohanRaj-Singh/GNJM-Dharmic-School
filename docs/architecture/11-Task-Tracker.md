@@ -100,7 +100,7 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 
 | Task | Status | Evidence / Notes |
 |---|---|---|
-| **4.1** Shared generic `DataTable` component replacing ad-hoc tables | ❌ Not done | Only a **page-scoped** `Admin/Students/Components/DataTable.jsx` exists. `Admin/Fees/Index.jsx` still uses `@tanstack/react-table` directly. No shared `resources/js/Components/DataTable.jsx`. |
+| **4.1** Shared generic `DataTable` component replacing ad-hoc tables | 🟡 Partial | `resources/js/Components/DataTable.jsx` created — tanstack-backed, every feature opt-in so output is preserved: `sortable` (↑/↓ header indicators), `globalFilter`/`onGlobalFilterChange`/`globalFilterFn` inline search, `emptyMessage`, `loading`, `renderExpandedRow`+`expandedId` (expandable rows), per-page class overrides. Migrated: `Admin/Users/Index.jsx` (static+empty state), `Admin/Classes/Index.jsx` + `Admin/Sections/Index.jsx` (sortable+search), `Admin/Fees/CustomFee.jsx` — all build-verified identical. Remaining: `Admin/Fees/Index.jsx` (expandable detail rows), `Admin/Reports/Index.jsx` (cell formatting currently inline in tbody → column defs), `Admin/Students/Index.jsx` (selection + externally-controlled sort), `Accountant/Students/StudentsList.jsx`. |
 | **4.2** Shared generic `FilterBar` component | ❌ Not done | No `Components/FilterBar.jsx`; filter panels are page-scoped (`StudentsFilterBar`, `LateFeesFiltersPanel`, etc.). |
 | **4.3** Pagination on all list endpoints + UI | ❌ Not done | Not verified in any list page. |
 
@@ -158,7 +158,7 @@ Feature/fix work done on `main` before/around the refactor sprints:
 | Sprint 1 — Extract route closure logic | ✅ done (1.1 service class aside) |
 | Sprint 2 — Data integrity & model hardening | ✅ done (source drop, is_locked de-collect fix, status machine + validator + bulk guard, session singleton) |
 | Sprint 3 — Security & audit | ✅ done (3.1 policies, 3.2 audit trail, 3.3 restore safety) |
-| Sprint 4 — Frontend consolidation | ❌ not started |
+| Sprint 4 — Frontend consolidation | 🟡 in progress (4.1 partial) |
 | Sprint 5 — Service layer maturity | 🟡 5.3 done, 5.1/5.2 not done |
 | Sprint 6 — Integration testing | 🟡 partial (Sprint 1/2 coverage strong) |
 

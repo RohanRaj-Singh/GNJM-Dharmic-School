@@ -3,17 +3,10 @@ import { router } from "@inertiajs/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import DataTable from "@/Components/DataTable";
 
 export default function Index() {
   const [data, setData] = useState([]);
-  const [sorting, setSorting] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [feeModal, setFeeModal] = useState({
     open: false,
@@ -212,19 +205,6 @@ export default function Index() {
     []
   );
 
-  const table = useReactTable({
-    data,
-    columns,
-    getRowId: (row) => (row.id ? `class-${row.id}` : row.__tempId),
-    state: { sorting, globalFilter },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    globalFilterFn: "includesString",
-  });
-
   function addNewRow() {
     const newRow = {
       id: null,
@@ -281,38 +261,20 @@ export default function Index() {
         </div>
       </div>
 
-      <div className="bg-white border rounded overflow-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
-                {hg.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="px-3 py-2 text-left font-medium cursor-pointer"
-                    onClick={header.column.getToggleSortingHandler()}
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                    {{ asc: " ↑", desc: " ↓" }[header.column.getIsSorted()] ?? ""}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-
-          <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="border-b hover:bg-gray-50">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-3 py-2">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        data={data}
+        columns={columns}
+        sortable
+        getRowId={(row) => (row.id ? `class-${row.id}` : row.__tempId)}
+        globalFilter={globalFilter}
+        onGlobalFilterChange={setGlobalFilter}
+        globalFilterFn="includesString"
+        containerClassName="bg-white border rounded overflow-auto"
+        tableClassName="min-w-full text-sm"
+        theadClassName="bg-gray-50 border-b"
+        headerCellClassName="px-3 py-2 text-left font-medium"
+        bodyRowClassName="border-b hover:bg-gray-50"
+      />
 
       {feeModal.open && (
         <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">

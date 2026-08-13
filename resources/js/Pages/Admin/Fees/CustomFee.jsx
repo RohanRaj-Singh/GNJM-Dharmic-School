@@ -3,18 +3,12 @@ import { router, usePage } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-import {
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import DataTable from "@/Components/DataTable";
 
 export default function CustomFees() {
   const { rows, sections } = usePage().props;
 
   const [data, setData] = useState(rows ?? []);
-  const [sorting, setSorting] = useState({});
 
   /* ---------------- Modal ---------------- */
   const [showModal, setShowModal] = useState(false);
@@ -175,15 +169,6 @@ export default function CustomFees() {
     [data]
   );
 
-  const table = useReactTable({
-    data,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
   /* ---------------- Render ---------------- */
   return (
     <AdminLayout title="Custom Fees">
@@ -198,39 +183,12 @@ export default function CustomFees() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border rounded-lg overflow-x-auto">
-        <table className="min-w-[900px] text-sm">
-          <thead className="bg-gray-50 border-b">
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
-                {hg.headers.map((h) => (
-                  <th key={h.id} className="px-3 py-2 text-left">
-                    {flexRender(
-                      h.column.columnDef.header,
-                      h.getContext()
-                    )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-
-          <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="border-b">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-3 py-2">
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        data={data}
+        columns={columns}
+        tableClassName="min-w-[900px] text-sm"
+        theadClassName="bg-gray-50 border-b"
+      />
 
       {/* Modal */}
       {showModal && (
