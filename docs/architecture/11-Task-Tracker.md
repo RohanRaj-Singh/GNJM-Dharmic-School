@@ -122,7 +122,7 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 |---|---|---|
 | **6.1** Service tests (MonthlyFeeResolver, StudentLifecycleValidator, AbsenteeService, DivisionTypeResolver, StudentStatusMachine, BackupService) | ✅ Done | ✅ `MonthlyFeeResolverTest` (12), `StudentLifecycleValidatorTest` (15), `AbsenteeServiceTest` (11, in-memory models, no DB) and `BackupServiceTest` (12, restore R10 pre-flight gates) added alongside the existing `DivisionTypeResolverTest` / `StudentStatusMachineTest`. Latent bug fixed while pinning `checkCompatibility`: the backup-age warning never fired (signed `diffInDays`; `abs()` now applied). Commit `ee479e5`. Full suite: **233 passed / 11 failed** (11 = pre-existing Breeze/Auth/Profile, unchanged). |
 | **6.2** Feature tests (student CRUD, fee collection, attendance marking, progression lifecycle) | 🟡 Partial | Feature tests incl. `AttendanceLifecycleTest`, `StudentPromotionLifecycleTest`, `StudentBulkStatusSyncTest`, `StudentBulkStatusMachineTest`, `AcademicSessionTest`, `FeeDeCollectTest`, `FeeUniqueIndexTest`, `StudentSectionCurrentScopeTest`, `AuthorizationPolicyMatrixTest`, `StudentFrontRoutesTest`, `AttendanceAbsenteesTest`, `AuditTrailTest`, `RestoreSafetyTest` (+ Breeze `ProfileTest`). Full suite: **176 passed / 11 failed** (11 = pre-existing Breeze/Auth/Profile, composition unchanged). |
-| **6.3** Smoke tests (pages render, filters, exports) | ❌ Not done | No browser/E2E suite. Frontend verified only via `npm run build` + reasoning over production data (no JS test runner in `package.json`). |
+| **6.3** Smoke tests (pages render, filters, exports) | ✅ Done | HTTP smoke tests (no browser/E2E; `npm run build` + Inertia render/JSON assertions instead). `AdminPageSmokeTest` (15 admin pages via data provider), `AdminDataEndpointSmokeTest` (attendance grid, class/section/utility lookups, backup overview/history, dashboard summary, users data, fees-index filters), `RoleAreaSmokeTest` (accountant + teacher areas, attendance section scoping + 403, Kirtan day-rule), `ReportExportSmokeTest` (report build fees/attendance-calendar, CSV + PDF exports, student-report-center GET/POST PDF). Latent bug fixed while pinning `dashboard summary`: `applyFeeYearFilter` still read the dropped `fees.source` column (migration `2026_08_13_000002`), so `/admin/dashboard/summary` 500'd on the migrated schema — now reads authoritative `fees.type`. Full suite: **275 passed / 11 failed** (11 = pre-existing Breeze/Auth/Profile, unchanged). |
 
 ---
 
@@ -160,6 +160,6 @@ Feature/fix work done on `main` before/around the refactor sprints:
 | Sprint 3 — Security & audit | ✅ done (3.1 policies, 3.2 audit trail, 3.3 restore safety) |
 | Sprint 4 — Frontend consolidation | ✅ done (4.1 DataTable, 4.2 FilterBar, 4.3 client-side paging) |
 | Sprint 5 — Service layer maturity | ✅ done (5.1 fee-generation consolidation, 5.2 COALESCE query rewrite, 5.3 student report consolidation) |
-| Sprint 6 — Integration testing | 🟡 partial (Sprint 1/2 coverage strong) |
+| Sprint 6 — Integration testing | ✅ done (6.1 service tests, 6.2 feature tests, 6.3 smoke tests) |
 
-**Highest-value next steps** (by roadmap risk ordering): Sprint 6.3 (smoke tests: every page renders, filters work, exports work). No architecture change should proceed directly on `main`.
+**Highest-value next steps** (by roadmap risk ordering): merge `refactor/architecture` → `main` (all roadmap sprints 0–6 done) once approved. No architecture change should proceed directly on `main`.

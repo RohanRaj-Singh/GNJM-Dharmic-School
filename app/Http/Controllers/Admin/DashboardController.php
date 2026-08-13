@@ -363,56 +363,28 @@ class DashboardController extends Controller
 
     private function applyFeeYearFilter($query, array $years): void
     {
-        if (count($years) === 1) {
-            // Single year
-            $year = $years[0];
-            $query->where(function ($q) use ($year) {
-                // Monthly fees - check month column (source = 'monthly' or NULL for legacy data)
-                $q->where(function ($qq) use ($year) {
-                    $qq->where('fees.source', 'monthly')
+        $query->where(function ($q) use ($years) {
+            $first = true;
+            foreach ($years as $year) {
+                $yearScope = function ($qq) use ($year) {
+                    // Monthly fees - check month column (type = 'monthly' covers legacy rows)
+                    $qq->where('fees.type', 'monthly')
                         ->where('fees.month', 'like', $year . '-%');
-                })->orWhere(function ($qq) use ($year) {
-                    // Handle legacy data where source might be null
-                    $qq->whereNull('fees.source')
-                        ->where('fees.month', 'like', $year . '-%');
-                })->orWhere(function ($qq) use ($year) {
                     // Custom fees - check created_at year
-                    $qq->where('fees.source', 'custom')
-                        ->whereYear('fees.created_at', $year);
-                });
-            });
-        } else {
-            // Multiple years
-            $query->where(function ($q) use ($years) {
-                $first = true;
-                foreach ($years as $year) {
-                    if ($first) {
-                        $q->where(function ($qq) use ($year) {
-                            $qq->where('fees.source', 'monthly')
-                                ->where('fees.month', 'like', $year . '-%');
-                        })->orWhere(function ($qq) use ($year) {
-                            $qq->whereNull('fees.source')
-                                ->where('fees.month', 'like', $year . '-%');
-                        })->orWhere(function ($qq) use ($year) {
-                            $qq->where('fees.source', 'custom')
-                                ->whereYear('fees.created_at', $year);
-                        });
-                        $first = false;
-                    } else {
-                        $q->orWhere(function ($qq) use ($year) {
-                            $qq->where('fees.source', 'monthly')
-                                ->where('fees.month', 'like', $year . '-%');
-                        })->orWhere(function ($qq) use ($year) {
-                            $qq->whereNull('fees.source')
-                                ->where('fees.month', 'like', $year . '-%');
-                        })->orWhere(function ($qq) use ($year) {
-                            $qq->where('fees.source', 'custom')
-                                ->whereYear('fees.created_at', $year);
-                        });
-                    }
+                    $qq->orWhere(function ($qq2) use ($year) {
+                        $qq2->where('fees.type', 'custom')
+                            ->whereYear('fees.created_at', $year);
+                    });
+                };
+
+                if ($first) {
+                    $q->where($yearScope);
+                    $first = false;
+                } else {
+                    $q->orWhere($yearScope);
                 }
-            });
-        }
+            }
+        });
     }
 
     private function buildInsights(array $years): array
