@@ -1,12 +1,7 @@
 import AdminLayout from "@/Layouts/AdminLayout";
 import { router, usePage } from "@inertiajs/react";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import {
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import DataTable from "@/Components/DataTable";
 import toast from "react-hot-toast";
 import { generateMonthOptions } from "@/utils/helper";
 import { division } from "@/utils/divisionType";
@@ -250,7 +245,6 @@ export default function FeesIndex() {
   const { fees, filters } = usePage().props;
 
   const data = fees ?? [];
-  const [sorting, setSorting] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [searchInput, setSearchInput] = useState(filters?.search ?? "");
@@ -583,14 +577,54 @@ export default function FeesIndex() {
     [expandedId]
   );
 
-  const table = useReactTable({
-    data,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+  function renderExpandedRow(row) {
+    const item = row.original;
+    const fees = item.fees ?? [];
+
+    const sortByMonthDesc = (a, b) => {
+      if (a.type === "monthly" && b.type === "monthly") {
+        return (b.month ?? "").localeCompare(a.month ?? "");
+      }
+      if (a.type === "monthly") return -1;
+      if (b.type === "monthly") return 1;
+      return 0;
+    };
+
+    const gurmukhiFees = fees.filter((fee) => division(fee.class_type, fee.class_name) !== "kirtan");
+    const kirtanFees = fees.filter((fee) => division(fee.class_type, fee.class_name) === "kirtan");
+
+    const gurmukhiUnpaid = gurmukhiFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
+    const gurmukhiPaid = gurmukhiFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
+    const kirtanUnpaid = kirtanFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
+    const kirtanPaid = kirtanFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
+
+    return (
+      <div className="overflow-x-auto min-w-full px-2 py-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {gurmukhiUnpaid.length + gurmukhiPaid.length > 0 ? (
+            <FeeGroupColumn
+              title="Gurmukhi"
+              titleClassName="text-blue-700"
+              unpaidFees={gurmukhiUnpaid}
+              paidFees={gurmukhiPaid}
+              onCollect={openCollectModal}
+              onDeCollect={deCollectFee}
+            />
+          ) : null}
+          {kirtanUnpaid.length + kirtanPaid.length > 0 ? (
+            <FeeGroupColumn
+              title="Kirtan"
+              titleClassName="text-purple-700"
+              unpaidFees={kirtanUnpaid}
+              paidFees={kirtanPaid}
+              onCollect={openCollectModal}
+              onDeCollect={deCollectFee}
+            />
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AdminLayout title="Fees">
@@ -931,88 +965,15 @@ export default function FeesIndex() {
         </div>
       </div>
 
-      <div className="bg-white border rounded-lg overflow-x-auto">
-        <table className="min-w-[1000px] text-sm">
-          <thead className="bg-gray-50 border-b">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th key={header.id} className="px-3 py-2 text-left">
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row) => {
-              const item = row.original;
-              const isOpen = expandedId === row.id;
-              const fees = item.fees ?? [];
-
-              const sortByMonthDesc = (a, b) => {
-                if (a.type === "monthly" && b.type === "monthly") {
-                  return (b.month ?? "").localeCompare(a.month ?? "");
-                }
-                if (a.type === "monthly") return -1;
-                if (b.type === "monthly") return 1;
-                return 0;
-              };
-
-              const gurmukhiFees = fees.filter((fee) => division(fee.class_type, fee.class_name) !== "kirtan");
-              const kirtanFees = fees.filter((fee) => division(fee.class_type, fee.class_name) === "kirtan");
-
-              const gurmukhiUnpaid = gurmukhiFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
-              const gurmukhiPaid = gurmukhiFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
-              const kirtanUnpaid = kirtanFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
-              const kirtanPaid = kirtanFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
-
-              return (
-                <Fragment key={row.id}>
-                  <tr className="border-b">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-3 py-2">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {isOpen && (
-                    <tr className="border-b bg-gray-50">
-                      <td colSpan={8} className="p-0">
-                        <div className="overflow-x-auto min-w-full px-2 py-3">
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                            {gurmukhiUnpaid.length + gurmukhiPaid.length > 0 ? (
-                              <FeeGroupColumn
-                                title="Gurmukhi"
-                                titleClassName="text-blue-700"
-                                unpaidFees={gurmukhiUnpaid}
-                                paidFees={gurmukhiPaid}
-                                onCollect={openCollectModal}
-                                onDeCollect={deCollectFee}
-                              />
-                            ) : null}
-                            {kirtanUnpaid.length + kirtanPaid.length > 0 ? (
-                              <FeeGroupColumn
-                                title="Kirtan"
-                                titleClassName="text-purple-700"
-                                unpaidFees={kirtanUnpaid}
-                                paidFees={kirtanPaid}
-                                onCollect={openCollectModal}
-                                onDeCollect={deCollectFee}
-                              />
-                            ) : null}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        data={data}
+        columns={columns}
+        renderExpandedRow={renderExpandedRow}
+        expandedId={expandedId}
+        containerClassName="bg-white border rounded-lg overflow-x-auto"
+        tableClassName="min-w-[1000px] text-sm"
+        theadClassName="bg-gray-50 border-b"
+      />
 
       <CollectFeeModal
         fee={collectingFee}
