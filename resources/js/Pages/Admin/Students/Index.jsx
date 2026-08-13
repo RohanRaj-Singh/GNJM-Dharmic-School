@@ -254,7 +254,7 @@ export default function Index() {
           <input
             type="checkbox"
             checked={allSelected}
-            onChange={onToggleAll}
+            onChange={toggleAll}
             className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
         ),
@@ -262,7 +262,7 @@ export default function Index() {
           <input
             type="checkbox"
             checked={selectedIds.has(row.original.id)}
-            onChange={() => onToggleOne(row.original.id)}
+            onChange={() => toggleOne(row.original.id)}
             className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
         ),
@@ -382,7 +382,7 @@ export default function Index() {
         header: "Actions",
         cell: ({ row }) => (
           <button
-            onClick={() => onEdit(row.original)}
+            onClick={() => handleEdit(row.original)}
             className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
           >
             Edit
@@ -394,7 +394,7 @@ export default function Index() {
         },
       },
     ];
-  }, [sortedStudents, selectedIds, onToggleAll, onToggleOne, onEdit]);
+  }, [sortedStudents, selectedIds, toggleAll, toggleOne, handleEdit]);
 
   return (
     <AdminLayout title="Students">
