@@ -120,7 +120,7 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 
 | Task | Status | Evidence / Notes |
 |---|---|---|
-| **6.1** Service tests (MonthlyFeeResolver, StudentLifecycleValidator, AbsenteeService, DivisionTypeResolver, StudentStatusMachine, BackupService) | 🟡 Partial | ✅ `tests/Unit/DivisionTypeResolverTest.php` and `tests/Unit/StudentStatusMachineTest.php` exist. ❌ MonthlyFeeResolver / StudentLifecycleValidator / AbsenteeService / BackupService unit tests missing. |
+| **6.1** Service tests (MonthlyFeeResolver, StudentLifecycleValidator, AbsenteeService, DivisionTypeResolver, StudentStatusMachine, BackupService) | ✅ Done | ✅ `MonthlyFeeResolverTest` (12), `StudentLifecycleValidatorTest` (15), `AbsenteeServiceTest` (11, in-memory models, no DB) and `BackupServiceTest` (12, restore R10 pre-flight gates) added alongside the existing `DivisionTypeResolverTest` / `StudentStatusMachineTest`. Latent bug fixed while pinning `checkCompatibility`: the backup-age warning never fired (signed `diffInDays`; `abs()` now applied). Commit `ee479e5`. Full suite: **233 passed / 11 failed** (11 = pre-existing Breeze/Auth/Profile, unchanged). |
 | **6.2** Feature tests (student CRUD, fee collection, attendance marking, progression lifecycle) | 🟡 Partial | Feature tests incl. `AttendanceLifecycleTest`, `StudentPromotionLifecycleTest`, `StudentBulkStatusSyncTest`, `StudentBulkStatusMachineTest`, `AcademicSessionTest`, `FeeDeCollectTest`, `FeeUniqueIndexTest`, `StudentSectionCurrentScopeTest`, `AuthorizationPolicyMatrixTest`, `StudentFrontRoutesTest`, `AttendanceAbsenteesTest`, `AuditTrailTest`, `RestoreSafetyTest` (+ Breeze `ProfileTest`). Full suite: **176 passed / 11 failed** (11 = pre-existing Breeze/Auth/Profile, composition unchanged). |
 | **6.3** Smoke tests (pages render, filters, exports) | ❌ Not done | No browser/E2E suite. Frontend verified only via `npm run build` + reasoning over production data (no JS test runner in `package.json`). |
 
@@ -162,4 +162,4 @@ Feature/fix work done on `main` before/around the refactor sprints:
 | Sprint 5 — Service layer maturity | ✅ done (5.1 fee-generation consolidation, 5.2 COALESCE query rewrite, 5.3 student report consolidation) |
 | Sprint 6 — Integration testing | 🟡 partial (Sprint 1/2 coverage strong) |
 
-**Highest-value next steps** (by roadmap risk ordering): Sprint 6.1/6.3 (remaining service tests + smoke tests). No architecture change should proceed directly on `main`.
+**Highest-value next steps** (by roadmap risk ordering): Sprint 6.3 (smoke tests: every page renders, filters work, exports work). No architecture change should proceed directly on `main`.
