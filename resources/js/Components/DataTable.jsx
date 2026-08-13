@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -26,6 +26,15 @@ const SORT_INDICATOR = { asc: " ↑", desc: " ↓" };
  *    wired — the page owns the sorted data.
  *  - Per-column `meta.headerClassName` / `meta.cellClassName` override the
  *    shared header/cell classes for that column only.
+ *  - `pagination` → opt-in client-side paging (Sprint 4.3). Pass an object to
+ *    configure, e.g. `{ pageSize: 10 }` (default 10). The full filtered/sorted
+ *    row set is sliced per page and a slim Prev/Next + "Showing X–Y of Z"
+ *    footer renders only when there is more than one page. `row.index` remains
+ *    the position within the full set, so `#` columns keep numbering across
+ *    pages and inline `updateCell(row.index, …)` editors stay correct.
+ *    `pagerClassName` (default "") is appended to the footer for pages whose
+ *    container scrolls — e.g. `"sticky bottom-0 bg-white"` pins it above the
+ *    fold inside a `max-h-*` container.
  *
  * Class names are passed per page so no visual change occurs on migration.
  */
@@ -43,6 +52,8 @@ export default function DataTable({
   renderExpandedRow,
   expandedId,
   externalSort,
+  pagination,
+  pagerClassName = "",
   containerClassName = "bg-white border rounded-lg overflow-x-auto",
   tableClassName = "min-w-full text-sm",
   theadClassName,
@@ -77,6 +88,27 @@ export default function DataTable({
 
   const rows = table.getRowModel().rows;
   const colSpan = Math.max(1, columns?.length ?? 0);
+
+  // Client-side paging is opt-in (Sprint 4.3). We page over the full
+  // filtered/sorted row model, keeping row.index as the full-set position so
+  // `#` numbering and inline `updateCell(row.index, …)` editors stay correct
+  // across pages. Off by default, so existing pages are byte-for-byte unchanged.
+  const paged = pagination !== undefined;
+  const pageSize = paged ? (pagination?.pageSize ?? 10) : 0;
+  const [pageIndex, setPageIndex] = useState(0);
+  const total = rows.length;
+  const pageCount = paged ? Math.max(1, Math.ceil(total / pageSize)) : 1;
+  const safePage = paged ? Math.min(pageIndex, pageCount - 1) : 0;
+  const start = paged ? safePage * pageSize : 0;
+  const pageRows = paged ? rows.slice(start, start + pageSize) : rows;
+
+  // If the dataset shrinks (search/filter/edit) past the current page, fall
+  // back to the last valid page instead of rendering an empty page.
+  useEffect(() => {
+    if (paged && pageIndex > pageCount - 1) {
+      setPageIndex(Math.max(0, pageCount - 1));
+    }
+  }, [paged, pageIndex, pageCount]);
 
   // External sort is opt-in: the page owns the sorted data and hands down
   // { key, dir, onSort }. Columns opt in per-header via meta.sortKey.
@@ -141,7 +173,7 @@ export default function DataTable({
               </td>
             </tr>
           ) : (
-            rows.map((row) => {
+            pageRows.map((row) => {
               const isExpanded =
                 renderExpandedRow &&
                 expandedId !== undefined &&
@@ -180,6 +212,34 @@ export default function DataTable({
           )}
         </tbody>
       </table>
+
+      {paged && pageCount > 1 && (
+        <div
+          className={`flex items-center justify-between px-3 py-2 border-t text-sm ${pagerClassName}`}
+        >
+          <span className="text-xs text-gray-500">
+            Showing {start + 1}–{Math.min(start + pageSize, total)} of {total}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+              disabled={safePage === 0}
+              className="px-2 py-1 border rounded text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+            <button
+              type="button"
+              onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+              disabled={safePage >= pageCount - 1}
+              className="px-2 py-1 border rounded text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

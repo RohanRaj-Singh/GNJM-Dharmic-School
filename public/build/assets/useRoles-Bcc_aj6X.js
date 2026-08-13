@@ -1,0 +1,1 @@
+import{u as o}from"./app-C-RZ9jsO.js";function t(){const{auth:n}=o().props,e=n?.user?.role??null;return{role:e,isAdmin:e==="admin",isAccountant:e==="accountant",isTeacher:e==="teacher"}}export{t as u};

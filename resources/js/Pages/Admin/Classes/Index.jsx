@@ -265,6 +265,7 @@ export default function Index() {
         data={data}
         columns={columns}
         sortable
+        pagination
         getRowId={(row) => (row.id ? `class-${row.id}` : row.__tempId)}
         globalFilter={globalFilter}
         onGlobalFilterChange={setGlobalFilter}

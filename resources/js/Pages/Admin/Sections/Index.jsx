@@ -323,6 +323,8 @@ export default function Index() {
         data={data}
         columns={columns}
         sortable
+        pagination
+        pagerClassName="sticky bottom-0 bg-white"
         getRowId={(row) => (row.id ? `section-${row.id}` : row.__tempId)}
         globalFilter={globalFilter}
         onGlobalFilterChange={setGlobalFilter}

@@ -4,7 +4,7 @@ import { router } from "@inertiajs/react";
 import DataTable from "@/Components/DataTable";
 import MultiSelect from "@/Components/MultiSelect";
 import toast from "react-hot-toast";
-import { Trash2, Key, CheckCircle } from "lucide-react";
+import { Trash2, Key } from "lucide-react";
 
 function csrf() {
   return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ?? "";
@@ -390,6 +390,7 @@ export default function Index() {
         <DataTable
           data={users}
           columns={columns}
+          pagination
           emptyMessage="No users found"
           containerClassName="overflow-x-auto bg-white rounded-lg border"
           tableClassName="min-w-full text-sm"
