@@ -163,7 +163,9 @@ class DashboardController extends Controller
 
             return [
                 'type' => $type,
-                'title' => $type === 'kirtan' ? 'Kirtan' : 'Gurmukhi',
+                // Data-driven label (Stage B4) — matches the report suite's
+                // ucfirst() convention, so a third division names itself.
+                'title' => ucfirst($type),
                 'stats' => $stats,
                 'fees' => $fees,
                 'attendance' => $attendance,
