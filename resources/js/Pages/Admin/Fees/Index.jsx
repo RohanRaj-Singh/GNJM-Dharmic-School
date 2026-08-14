@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import DataTable from "@/Components/DataTable";
 import toast from "react-hot-toast";
 import { generateMonthOptions } from "@/utils/helper";
-import { division } from "@/utils/divisionType";
+import { divisionMeta } from "@/utils/divisionType";
 
 function getTodayDateInput() {
   const now = new Date();
@@ -590,37 +590,35 @@ export default function FeesIndex() {
       return 0;
     };
 
-    const gurmukhiFees = fees.filter((fee) => division(fee.class_type, fee.class_name) !== "kirtan");
-    const kirtanFees = fees.filter((fee) => division(fee.class_type, fee.class_name) === "kirtan");
-
-    const gurmukhiUnpaid = gurmukhiFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
-    const gurmukhiPaid = gurmukhiFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
-    const kirtanUnpaid = kirtanFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
-    const kirtanPaid = kirtanFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
+    // Map-over-divisions (Stage B): one section per distinct division across
+    // the student's fees. Each fee already carries its resolved division from
+    // the backend; a third class gets its own column instead of collapsing
+    // into the Gurmukhi one.
+    const divisions = [...new Set(fees.map((fee) => fee.class_type).filter(Boolean))].sort();
 
     return (
       <div className="overflow-x-auto min-w-full px-2 py-3">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {gurmukhiUnpaid.length + gurmukhiPaid.length > 0 ? (
-            <FeeGroupColumn
-              title="Gurmukhi"
-              titleClassName="text-blue-700"
-              unpaidFees={gurmukhiUnpaid}
-              paidFees={gurmukhiPaid}
-              onCollect={openCollectModal}
-              onDeCollect={deCollectFee}
-            />
-          ) : null}
-          {kirtanUnpaid.length + kirtanPaid.length > 0 ? (
-            <FeeGroupColumn
-              title="Kirtan"
-              titleClassName="text-purple-700"
-              unpaidFees={kirtanUnpaid}
-              paidFees={kirtanPaid}
-              onCollect={openCollectModal}
-              onDeCollect={deCollectFee}
-            />
-          ) : null}
+          {divisions.map((divisionKey) => {
+            const divFees = fees.filter((fee) => fee.class_type === divisionKey);
+            const divUnpaid = divFees.filter((fee) => !fee.is_paid).sort(sortByMonthDesc);
+            const divPaid = divFees.filter((fee) => fee.is_paid).sort(sortByMonthDesc);
+
+            if (divUnpaid.length + divPaid.length === 0) return null;
+
+            const meta = divisionMeta(divisionKey);
+            return (
+              <FeeGroupColumn
+                key={divisionKey}
+                title={meta.title}
+                titleClassName={meta.text}
+                unpaidFees={divUnpaid}
+                paidFees={divPaid}
+                onCollect={openCollectModal}
+                onDeCollect={deCollectFee}
+              />
+            );
+          })}
         </div>
       </div>
     );

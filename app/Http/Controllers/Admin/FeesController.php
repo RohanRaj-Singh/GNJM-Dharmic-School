@@ -76,8 +76,11 @@ class FeesController extends Controller
             'students.name as student_name',
             'students.father_name as father_name',
             // class_type from the ORIGINAL enrollment — correctly resolves
-            // Kirtan vs Gurmukhi per fee, even for students with both.
+            // Kirtan vs Gurmukhi per fee, even for students with both. The
+            // explicit division rides along so the resolver can return a
+            // third+ class's own key instead of the gurmukhi default.
             'orig_class.type as class_type',
+            'orig_class.division as class_division',
             // Current section: the student's active enrollment in the SAME
             // class (handles within-class section changes), falling back to
             // the original enrollment's section once the student has moved on.
@@ -182,10 +185,15 @@ class FeesController extends Controller
         // Collect unique class/section names across all of this student's fees
         $classNames = $items->pluck('class_name')->filter()->unique()->values()->toArray();
         $sectionNames = $items->pluck('section_name')->filter()->unique()->values()->toArray();
+        // Map-over-divisions (Stage B): the distinct divisions this student has
+        // fees in, each resolved through the canonical seam with the explicit
+        // division. A third class keeps its own key instead of collapsing into
+        // the gurmukhi bucket.
         $classTypes = $items
             ->map(fn ($f) => DivisionTypeResolver::division(
                 $f->class_type ?? null,
-                $f->class_name ?? null
+                $f->class_name ?? null,
+                $f->class_division ?? null
             ))
             ->filter()
             ->unique()
@@ -193,19 +201,13 @@ class FeesController extends Controller
             ->toArray();
 
         $combinedClass = implode(', ', $classNames);
-        $hasKirtan = in_array('kirtan', $classTypes);
 
         return [
             'student_id'   => $first->student_id,
             'student_name' => $first->student_name,
             'father_name'  => $first->father_name ?? '',
             'class_name'   => $combinedClass,
-            'class_type'   => $hasKirtan
-                ? 'kirtan'
-                : DivisionTypeResolver::division(
-                    $first->class_type ?? null,
-                    $first->class_name ?? null
-                ),
+            'class_types'  => $classTypes,
             'section_name' => implode(', ', $sectionNames),
             'paid_count'   => $paid->count(),
             'paid_amount'  => $paid->sum('amount'),
@@ -222,7 +224,8 @@ class FeesController extends Controller
                     'paid_at'    => $f->paid_at,
                     'class_type' => DivisionTypeResolver::division(
                         $f->class_type ?? null,
-                        $f->class_name ?? null
+                        $f->class_name ?? null,
+                        $f->class_division ?? null
                     ),
                     'is_paid'    => (bool) $f->is_paid,
                 ];

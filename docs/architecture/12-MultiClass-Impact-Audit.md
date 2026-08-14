@@ -457,7 +457,7 @@ the two existing ones — the correct safe posture.
 | Step | Change | Proof |
 |---|---|---|
 | B1 | **Dashboard** — `DashboardController::buildDivisions` map-over-divisions; the label ternary becomes per-division; frontend already array-driven | Dashboard smoke test unchanged |
-| B2 | **Fees** — `FeesController` `hasKirtan` collapse (the silent-merge bug) → map-over-divisions; `Fees/Index.jsx` and `ReceiveFee.jsx` fixed two sections → dynamic sections | `FeesIndexQueryTest` unchanged; a third class no longer merges into a Gurmukhi bucket |
+| B2 | **Fees** — `FeesController` `hasKirtan` collapse (the silent-merge bug) → map-over-divisions; `Fees/Index.jsx` and `ReceiveFee.jsx` fixed two sections → dynamic sections | `FeesIndexQueryTest` rows now expose `class_types` (array of every division the student has fees in); a third class no longer merges into a Gurmukhi bucket |
 | B3 | **Attendance** — per-class day rules (only after gate items 1/3); `AdminAttendanceController` grid + `AbsenteeService` driven by the class's days; accountant attendance-summary filter via the resolver | Attendance/absentee tests unchanged |
 | B4 | **Student center** — `StudentController` grouping + `Students/Show.jsx` tabs data-driven (drop the `=== 'kirtan' ? kirtan : gurmukhi` coercion) | `StudentFrontRoutesTest` unchanged |
 | B5 | **Progression / promote flow** — labels from class name/division, not the ternary; remove the `"gurmukhi"` default | Progression feature tests unchanged |

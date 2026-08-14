@@ -149,7 +149,7 @@ class MultiClassBackwardCompatTest extends TestCase
         // Fees index: the Music student's row AND each of its fees is labelled gurmukhi.
         $row = $this->feeRowForStudent($music['student']->id);
         $this->assertNotNull($row, 'Music student should appear in the fees index');
-        $this->assertSame('gurmukhi', $row['class_type']);
+        $this->assertSame(['gurmukhi'], $row['class_types']);
         $this->assertSame(['gurmukhi'], array_values(array_unique(array_column($row['fees'], 'class_type'))));
 
         // Student center: the Music enrollment is grouped under class_type_key gurmukhi.

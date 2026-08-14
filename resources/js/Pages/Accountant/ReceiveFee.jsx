@@ -1,7 +1,7 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
 import { useState } from "react";
 import { router, Link } from "@inertiajs/react";
-import { isKirtan } from "@/utils/divisionType";
+import { divisionMeta } from "@/utils/divisionType";
 
 export default function ReceiveFee({ student, fees = [] }) {
   const getTodayDateInput = () => {
@@ -26,13 +26,19 @@ export default function ReceiveFee({ student, fees = [] }) {
   const [processing, setProcessing] = useState(false);
   const [collectionDate, setCollectionDate] = useState(getTodayDateInput);
 
-  // Group fees by division (kirtan vs gurmukhi) via the canonical rule.
-  const gurmukhiFees = fees.filter(f => !isKirtan(f.class_type, f.class_name));
-  const kirtanFees = fees.filter(f => isKirtan(f.class_type, f.class_name));
+  // Map-over-divisions: group the pending fees by their resolved division. The
+  // backend sends each fee's canonical class_type; a third class keeps its own
+  // collapsible section instead of merging into the Gurmukhi one.
+  const divisions = [...new Set(fees.map((f) => f.class_type).filter(Boolean))].sort();
 
-  // Collapsible section state - Gurmukhi open by default
-  const [gurmukhiOpen, setGurmukhiOpen] = useState(true);
-  const [kirtanOpen, setKirtanOpen] = useState(false);
+  // Collapsible section state — first division (Gurmukhi when present) open by
+  // default, matching the legacy behaviour.
+  const [openDivisions, setOpenDivisions] = useState(() =>
+    divisions[0] ? { [divisions[0]]: true } : {}
+  );
+
+  const toggleDivision = (divisionKey) =>
+    setOpenDivisions((cur) => ({ ...cur, [divisionKey]: !cur[divisionKey] }));
 
   const toggleFee = (feeId) => {
     setSelectedFees((prev) =>
@@ -97,77 +103,48 @@ export default function ReceiveFee({ student, fees = [] }) {
             </p>
           )}
 
-          {/* Gurmukhi Section - Collapsible, open by default */}
-          {gurmukhiFees.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <button
-                onClick={() => setGurmukhiOpen(!gurmukhiOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-blue-600 font-medium">Gurmukhi</span>
-                  <span className="text-xs text-gray-500">({gurmukhiFees.length} fees)</span>
-                </div>
-                <svg
-                  className={`w-5 h-5 text-blue-600 transition-transform ${gurmukhiOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+          {/* One collapsible section per division — Gurmukhi/Kirtan keep their
+              legacy colours; any third class gets a generated section. */}
+          {divisions.map((divisionKey) => {
+            const divFees = fees.filter((f) => f.class_type === divisionKey);
+            const meta = divisionMeta(divisionKey);
+            const isOpen = openDivisions[divisionKey] ?? false;
+
+            return (
+              <div key={divisionKey} className="border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => toggleDivision(divisionKey)}
+                  className={`w-full flex items-center justify-between px-4 py-3 ${meta.bg} ${meta.bgHover} transition-colors`}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+                  <div className="flex items-center gap-2">
+                    <span className={`${meta.accent} font-medium`}>{meta.title}</span>
+                    <span className="text-xs text-gray-500">({divFees.length} fees)</span>
+                  </div>
+                  <svg
+                    className={`w-5 h-5 ${meta.accent} transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
 
-              {gurmukhiOpen && (
-                <div className="p-3 space-y-2">
-                  {gurmukhiFees.map((fee) => (
-                    <FeeCheckbox
-                      key={fee.id}
-                      fee={fee}
-                      selected={selectedFees.includes(fee.id)}
-                      onToggle={() => toggleFee(fee.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Kirtan Section - Collapsible, closed by default */}
-          {kirtanFees.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <button
-                onClick={() => setKirtanOpen(!kirtanOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-purple-50 hover:bg-purple-100 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-purple-600 font-medium">Kirtan</span>
-                  <span className="text-xs text-gray-500">({kirtanFees.length} fees)</span>
-                </div>
-                <svg
-                  className={`w-5 h-5 text-purple-600 transition-transform ${kirtanOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {kirtanOpen && (
-                <div className="p-3 space-y-2">
-                  {kirtanFees.map((fee) => (
-                    <FeeCheckbox
-                      key={fee.id}
-                      fee={fee}
-                      selected={selectedFees.includes(fee.id)}
-                      onToggle={() => toggleFee(fee.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                {isOpen && (
+                  <div className="p-3 space-y-2">
+                    {divFees.map((fee) => (
+                      <FeeCheckbox
+                        key={fee.id}
+                        fee={fee}
+                        selected={selectedFees.includes(fee.id)}
+                        onToggle={() => toggleFee(fee.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Total */}

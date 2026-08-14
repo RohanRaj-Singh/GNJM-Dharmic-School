@@ -14,6 +14,7 @@ use App\Http\Controllers\{
     FeePaymentController
 };
 use App\Http\Controllers\Accountant\LateFeeSummaryController;
+use App\Support\DivisionTypeResolver;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,25 +83,17 @@ Route::get('/', fn () =>
             'enrollments.section',
         ])->findOrFail(request('student_id'));
 
-        // Flatten fees with class type info
-        // Use class NAME to determine kirtan vs gurmukhi (not type field)
+        // Flatten fees with class type info — the division resolved through the
+        // canonical seam (explicit division first, then type/name). A third
+        // class keeps its own division key instead of the gurmukhi default.
         $fees = $student->enrollments->flatMap(function ($enrollment) {
-            $className = $enrollment->schoolClass?->name ?? '';
-            $classTypeRaw = $enrollment->schoolClass?->type ?? '';
-
-            // Determine kirtan vs gurmukhi based on class NAME (more reliable)
-            // Class names typically contain "Kirtan" or "Gurmukhi"
-            $isKirtan = stripos($className, 'kirtan') !== false;
-            $classType = $isKirtan ? 'kirtan' : 'gurmukhi';
-
-            // Debug logging
-            \Log::info('[ReceiveFee] Enrollment:', [
-                'enrollment_id' => $enrollment->id,
-                'class_id' => $enrollment->class_id,
-                'class_name' => $className,
-                'class_type_field' => $classTypeRaw,
-                'determined_type' => $classType,
-            ]);
+            $class = $enrollment->schoolClass;
+            $className = $class?->name ?? '';
+            $classType = DivisionTypeResolver::division(
+                $class?->type ?? null,
+                $className,
+                $class?->division ?? null,
+            );
 
             return $enrollment->fees->map(function ($fee) use ($classType, $className) {
                 return [
@@ -113,9 +106,6 @@ Route::get('/', fn () =>
                 ];
             });
         });
-
-        // Debug: Log all fees before returning
-        \Log::info('[ReceiveFee] Final fees array:', $fees->toArray());
 
         return Inertia::render('Accountant/ReceiveFee', [
             'student' => $student,

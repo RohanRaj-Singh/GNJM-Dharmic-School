@@ -108,7 +108,7 @@ class FeesIndexQueryTest extends TestCase
             ->where('fees.0.student_name', 'Seema')
             ->where('fees.0.section_name', 'Section B')
             ->where('fees.0.class_name', 'Gurmukhi')
-            ->where('fees.0.class_type', 'gurmukhi')
+            ->where('fees.0.class_types', ['gurmukhi'])
             ->where('fees.0.fees.0.class_type', 'gurmukhi')
             ->where('fees.0.fees.0.month', $this->currentMonth()));
     }
@@ -138,7 +138,7 @@ class FeesIndexQueryTest extends TestCase
             ->where('fees.0.student_name', 'Ravi')
             ->where('fees.0.section_name', 'Section A')
             ->where('fees.0.class_name', 'Gurmukhi')
-            ->where('fees.0.class_type', 'gurmukhi'));
+            ->where('fees.0.class_types', ['gurmukhi']));
     }
 
     public function test_kirtan_and_gurmukhi_fees_keep_their_own_class_type(): void
@@ -166,8 +166,11 @@ class FeesIndexQueryTest extends TestCase
             ->where('fees.0.student_name', 'Simran'));
 
         $row = $response->inertiaPage()['props']['fees'][0];
-        // Any Kirtan fee makes the student row Kirtan; both class names appear.
-        $this->assertSame('kirtan', $row['class_type']);
+        // Map-over-divisions (Stage B): the student row lists BOTH divisions
+        // it has fees in — no collapse to a single 'kirtan' label.
+        $rowClassTypes = $row['class_types'];
+        sort($rowClassTypes);
+        $this->assertSame(['gurmukhi', 'kirtan'], $rowClassTypes);
         $this->assertStringContainsString('Gurmukhi', $row['class_name']);
         $this->assertStringContainsString('Kirtan', $row['class_name']);
 
