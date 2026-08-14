@@ -154,6 +154,49 @@ class MonthlyFeesGenerationTest extends TestCase
             ->value('amount'));
     }
 
+    public function test_configured_class_fee_policy_controls_generation(): void
+    {
+        // A new class that opts INTO monthly fees → fee generated.
+        $tabla = SchoolClass::create([
+            'name' => 'Tabla',
+            'type' => 'music',
+            'division' => 'tabla',
+            'charges_monthly_fee' => true,
+            'default_monthly_fee' => 200,
+        ]);
+        $sectionT = Section::create([
+            'class_id' => $tabla->id,
+            'name' => 'Tabla A',
+            'monthly_fee' => 200,
+        ]);
+        $paidTabla = $this->makeEnrollment('Paid Tabla', 'paid', $tabla, $sectionT);
+
+        // A new class that opts OUT → skipped (no fee).
+        $punjabi = SchoolClass::create([
+            'name' => 'Punjabi',
+            'type' => 'music',
+            'division' => 'punjabi',
+            'charges_monthly_fee' => false,
+            'default_monthly_fee' => 300,
+        ]);
+        $sectionP = Section::create([
+            'class_id' => $punjabi->id,
+            'name' => 'Punjabi A',
+            'monthly_fee' => 300,
+        ]);
+        $paidPunjabi = $this->makeEnrollment('Paid Punjabi', 'paid', $punjabi, $sectionP);
+
+        Artisan::call('fees:generate-monthly');
+
+        $this->assertSame(1, $this->monthlyFeesFor($paidTabla['student']->id));
+        $this->assertSame(200, Fee::where('student_id', $paidTabla['student']->id)
+            ->where('type', 'monthly')
+            ->where('month', $this->currentMonth())
+            ->value('amount'));
+
+        $this->assertSame(0, $this->monthlyFeesFor($paidPunjabi['student']->id));
+    }
+
     public function test_generate_button_route_generates_fees(): void
     {
         $data = $this->seedData();

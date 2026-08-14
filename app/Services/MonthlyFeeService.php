@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Fee;
 use App\Models\StudentSection;
-use App\Support\DivisionTypeResolver;
 use Carbon\Carbon;
 
 /**
@@ -68,10 +67,12 @@ class MonthlyFeeService
     /**
      * Generate monthly fees for a month across all active enrollments — the
      * "generate monthly fees" run shared by the CLI command and the admin
-     * button. Free enrollments get their unpaid monthly fees cleared, Kirtan
-     * is skipped, and a fee that already exists for the student that month (on
-     * any enrollment) is never duplicated. Returns the ids of every student
-     * whose fees may have changed so callers can invalidate report caches.
+     * button. Free enrollments get their unpaid monthly fees cleared, classes
+     * that do not charge monthly fees are skipped (Kirtan's legacy exclusion is
+     * the unconfigured fallback), and a fee that already exists for the student
+     * that month (on any enrollment) is never duplicated. Returns the ids of
+     * every student whose fees may have changed so callers can invalidate
+     * report caches.
      */
     public function generateForMonth(Carbon|string $month): array
     {
@@ -91,11 +92,10 @@ class MonthlyFeeService
                 continue;
             }
 
-            // Kirtan is excluded from monthly fee generation.
-            if (DivisionTypeResolver::isKirtan(
-                $enrollment->schoolClass->type ?? null,
-                $enrollment->schoolClass->name ?? null
-            )) {
+            // Skip classes that do not charge monthly fees. Kirtan's legacy
+            // exclusion is the unconfigured fallback (ClassSchedule seam); a
+            // configured class opts in/out explicitly.
+            if (!$enrollment->schoolClass->chargesMonthlyFee()) {
                 continue;
             }
 
