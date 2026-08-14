@@ -3,14 +3,16 @@
 namespace App\Support\StudentReport;
 
 use App\Support\DivisionTypeResolver;
-use App\Support\StudentReport\Enums\Division;
 
 /**
  * Single source of truth for "which division does this class belong to?".
  *
- * The detection rule itself now lives in {@see \App\Support\DivisionTypeResolver}
- * (Sprint 1.3 canonicalisation); this facade exists so the Student Report
- * suite keeps working with the enum-typed return it already relies on.
+ * The detection rule lives in {@see \App\Support\DivisionTypeResolver}.
+ *
+ * Stage A3: returns a plain string — the open division key — instead of the
+ * former closed two-case enum. A third+ division is now representable without
+ * throwing (the enum's Division::from() threw ValueError on any value other
+ * than gurmukhi/kirtan).
  *
  * Resolution order (see DivisionTypeResolver):
  *  1. `type` contains 'kirtan'   -> kirtan
@@ -20,8 +22,8 @@ use App\Support\StudentReport\Enums\Division;
  */
 final class NormalizeDivision
 {
-    public static function fromClass(?string $classType, ?string $className = null): Division
+    public static function fromClass(?string $classType, ?string $className = null): string
     {
-        return Division::from(DivisionTypeResolver::division($classType, $className));
+        return DivisionTypeResolver::division($classType, $className);
     }
 }

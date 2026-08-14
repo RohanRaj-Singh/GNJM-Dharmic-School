@@ -4,7 +4,6 @@ namespace App\Services\StudentReport;
 
 use App\Support\StudentReport\DayCell;
 use App\Support\StudentReport\Enums\AttendanceStatus;
-use App\Support\StudentReport\Enums\Division;
 use App\Support\StudentReport\MonthCell;
 use App\Support\StudentReport\MonthRange;
 use Carbon\Carbon;
@@ -31,7 +30,7 @@ final class CalendarBuilder
     public function build(
         MonthRange $range,
         array $attendanceRows,
-        Division $division,
+        string $division, // open division key (Stage A3)
     ): array {
         // Group attendance rows by date.
         $byDate = [];

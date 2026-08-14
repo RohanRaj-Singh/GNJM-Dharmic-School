@@ -8,7 +8,6 @@ use App\Models\Student;
 use App\Models\StudentSection;
 use App\Services\StudentReport\StudentReportCache;
 use App\Services\StudentReport\StudentReportService;
-use App\Support\StudentReport\Enums\Division;
 use App\Support\StudentReport\StudentReportRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -72,8 +71,8 @@ class StudentReportCacheInvalidationTest extends TestCase
         // Both reports should reflect the same identity + fees.
         $this->assertSame($r1->identity->id, $r2->identity->id);
         $this->assertSame(
-            $r1->divisions[Division::Gurmukhi->value]->fees->totalCharged,
-            $r2->divisions[Division::Gurmukhi->value]->fees->totalCharged
+            $r1->divisions['gurmukhi']->fees->totalCharged,
+            $r2->divisions['gurmukhi']->fees->totalCharged
         );
     }
 

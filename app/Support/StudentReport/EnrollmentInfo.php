@@ -2,8 +2,6 @@
 
 namespace App\Support\StudentReport;
 
-use App\Support\StudentReport\Enums\Division;
-
 /**
  * Lightweight enrollment summary for the Student Snapshot.
  *
@@ -17,7 +15,7 @@ final class EnrollmentInfo
         public readonly int $classId,
         public readonly string $className,
         public readonly string $sectionName,
-        public readonly Division $division,
+        public readonly string $division, // open division key (Stage A3)
     ) {}
 
     public function label(): string
@@ -32,8 +30,8 @@ final class EnrollmentInfo
             'class_id' => $this->classId,
             'class_name' => $this->className,
             'section_name' => $this->sectionName,
-            'division' => $this->division->value,
-            'division_label' => $this->division->label(),
+            'division' => $this->division,
+            'division_label' => ucfirst($this->division),
             'label' => $this->label(),
         ];
     }

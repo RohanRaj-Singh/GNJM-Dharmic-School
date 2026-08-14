@@ -5,7 +5,6 @@ namespace App\Services\StudentReport;
 use App\Support\StudentReport\AttendanceSummary;
 use App\Support\StudentReport\DivisionReport;
 use App\Support\StudentReport\EnrollmentHistory;
-use App\Support\StudentReport\Enums\Division;
 use App\Support\StudentReport\FeeSummary;
 use App\Support\StudentReport\KirtanScore;
 use App\Support\StudentReport\MonthRange;
@@ -60,11 +59,14 @@ final class StudentReportService
             // ALL enrollments — this captures fees/attendance even from
             // archived (section-changed) enrollments.
             $classIdsByDivision = [
-                Division::Gurmukhi->value => [],
-                Division::Kirtan->value => [],
+                'gurmukhi' => [],
+                'kirtan' => [],
             ];
             foreach ($identity->enrollments as $e) {
-                $classIdsByDivision[$e->division->value][] = $e->classId;
+                // Division is an open string (Stage A3). A third+ division key
+                // auto-creates and is simply never built for today's two-key
+                // request, until a stage wires it in.
+                $classIdsByDivision[$e->division][] = $e->classId;
             }
             // Deduplicate — many enrollments may share the same class_id.
             $classIdsByDivision = array_map(fn ($ids) => array_values(array_unique($ids)), $classIdsByDivision);
@@ -73,17 +75,17 @@ final class StudentReportService
 
             if ($req->wantsGurmukhi()) {
                 $divisions['gurmukhi'] = $this->buildDivisionReport(
-                    Division::Gurmukhi,
+                    'gurmukhi',
                     $identity->id,
-                    $classIdsByDivision[Division::Gurmukhi->value],
+                    $classIdsByDivision['gurmukhi'],
                     $startMonth, $endMonth, $startDate, $endDate,
                 );
             }
             if ($req->wantsKirtan()) {
                 $divisions['kirtan'] = $this->buildDivisionReport(
-                    Division::Kirtan,
+                    'kirtan',
                     $identity->id,
-                    $classIdsByDivision[Division::Kirtan->value],
+                    $classIdsByDivision['kirtan'],
                     $startMonth, $endMonth, $startDate, $endDate,
                 );
             }
@@ -113,7 +115,7 @@ final class StudentReportService
      * @param  list<int>  $classIds  class_ids for this division
      */
     private function buildDivisionReport(
-        Division $division,
+        string $division, // open division key (Stage A3)
         int $studentId,
         array $classIds,
         string $startMonth,
@@ -153,7 +155,7 @@ final class StudentReportService
         );
 
         $kirtanScore = null;
-        if ($division === Division::Kirtan) {
+        if ($division === 'kirtan') {
             $lessonsLearned = $this->sumLessons($attendanceRows);
             $kirtanScore = $this->kirtanScoreCalculator->compute(
                 present: $attendance->present,

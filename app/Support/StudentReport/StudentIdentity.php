@@ -40,7 +40,7 @@ final class StudentIdentity
      */
     public function divisionLabel(): string
     {
-        $divisions = array_unique(array_map(fn ($e) => $e->division->label(), $this->enrollments));
+        $divisions = array_unique(array_map(fn ($e) => ucfirst($e->division), $this->enrollments));
         sort($divisions);
         return implode(' + ', $divisions);
     }
@@ -48,7 +48,7 @@ final class StudentIdentity
     /**
      * Convenience: does the student have at least one enrollment in this division?
      */
-    public function isEnrolledIn(\App\Support\StudentReport\Enums\Division $division): bool
+    public function isEnrolledIn(string $division): bool
     {
         foreach ($this->enrollments as $e) {
             if ($e->division === $division) {

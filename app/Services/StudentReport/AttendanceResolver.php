@@ -4,7 +4,6 @@ namespace App\Services\StudentReport;
 
 use App\Support\StudentReport\AttendanceSummary;
 use App\Support\StudentReport\Enums\AttendanceStatus;
-use App\Support\StudentReport\Enums\Division;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 

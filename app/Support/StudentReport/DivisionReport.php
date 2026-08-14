@@ -2,8 +2,6 @@
 
 namespace App\Support\StudentReport;
 
-use App\Support\StudentReport\Enums\Division;
-
 /**
  * Per-division report: attendance + fees + (Kirtan) performance + calendar.
  *
@@ -16,7 +14,7 @@ final class DivisionReport
      * @param  list<MonthCell>  $months
      */
     public function __construct(
-        public readonly Division $division,
+        public readonly string $division, // open division key (Stage A3)
         public readonly bool $enrolled,
         public readonly AttendanceSummary $attendance,
         public readonly FeeSummary $fees,
@@ -27,8 +25,8 @@ final class DivisionReport
     public function toArray(): array
     {
         return [
-            'division' => $this->division->value,
-            'division_label' => $this->division->label(),
+            'division' => $this->division,
+            'division_label' => ucfirst($this->division),
             'enrolled' => $this->enrolled,
             'attendance' => $this->attendance->toArray(),
             'fees' => $this->fees->toArray(),
