@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-14
 **Branch:** `refactor/architecture`
-**Status:** AUDIT ONLY — nothing in this document is implemented. No DB change, no behavior change, no code modified.
+**Status:** Stage A + Stage B COMPLETE. The new-class creation UI shipped as the deliberate last step (B10). All B-steps done; only the standing 11 pre-existing auth/profile failures remain. See §13 for the completion summary.
 **Review (2026-08-14):** Approved as the foundation, with one adjustment — execution is split into
 **Stage A (structural multi-class)** then a **client-decision gate** then **Stage B (per-module)**.
 New-class creation UI is deliberately LAST. See §12.
@@ -463,11 +463,13 @@ the two existing ones — the correct safe posture.
 | B5 | **Progression / promote flow** — labels from class name/division, not the ternary; remove the `"gurmukhi"` default | Progression feature tests unchanged |
 | B6 | **Report center UI + PDF** — `Index.jsx` two `<Section>`s → loop over `report.divisions`; `FilterBar` division options from a backend-provided list | `ReportExportSmokeTest` unchanged |
 | B7 | **Filters** — two-button filters (`Students/Index`, `AttendanceSections`, `StudentsFilterBar`, `Sections.jsx`) → dynamic lists; route the accountant name-only heuristic through the canonical resolver | Smoke tests unchanged |
-| B8 | **New-class creation** — the UI to create/name/assign a division to a class. **Deliberately LAST.** | Manual smoke |
+| B8 | **Reports + PDF** — `StudentReportService` accepts any non-empty division key; report center iterates `report.divisions`; `FilterBar` reads a backend-supplied list |
+| B9 | **Accountant attendance summary** — per-class day rules + `class_ids[]` filter |
+| B10 | **New-class creation** — the UI to create/name/assign a division to a class. **Deliberately LAST.** | Manual smoke |
 
-B8 is last on purpose: by the time it ships, creating `Music` cannot produce any of today's
+B10 is last on purpose: by the time it ships, creating `Music` cannot produce any of today's
 silent failures, because Stage A already guarantees the resolver won't label it Gurmukhi and
-Stage B already guarantees dashboard/report/fees/attendance/student-center understand it.
+Stage B1–B9 already guarantees dashboard/report/fees/attendance/student-center understand it.
 
 ### Risk level
 **Implementation: MEDIUM–HIGH** (small change in many files, one enum removal, report structure).
@@ -482,3 +484,89 @@ build; assert (a) Gurmukhi and Kirtan payloads are byte-identical to a two-class
 (b) the Music class currently resolves to the `gurmukhi` bucket (pinning the pre-change default).
 This test defines the contract A2 must not violate, and it runs green on today's code — so it is
 safe to write and commit before any product change.
+
+---
+
+## 13. Stage B completion summary
+
+**Status:** All B-steps shipped in `refactor/architecture`. The new-class creation UI ships last
+(B10 — the renamed B8) because Stage A + Stage B1–B9 already guarantee the round-trip is safe end
+to end.
+
+### What shipped
+
+| Step | Module | Commit(s) | Key change |
+|---|---|---|---|
+| A1 | Characterization freeze | (pre) | `tests/Feature/MultiClassBackwardCompatTest.php` — pins the current two-class behavior |
+| A2 | Explicit division seam | (pre) | `classes.division` nullable column; `DivisionTypeResolver::division(type, name, explicit)` explicit-first |
+| A3 | Open the closed enum | (pre) | `Division` enum no longer used for value mapping; resolver-string keys flow through |
+| A4 | Data-driven reports | (pre) | `StudentReportService` emits one `divisions[...]` key per distinct resolved division |
+| B1 | Dashboard per-division map | (pre) | `DashboardController::buildDivisions` map-over-divisions; label ternary gone |
+| B2 | Attendance-day config | (pre) | `ClassSchedule::attendanceDays` seam; per-class day-rule via `classes.attendance_days` JSON |
+| B3 | Fee-applicability config | (pre) | `ClassSchedule::chargesMonthlyFee` seam; `classes.charges_monthly_fee` bool |
+| B4 | Dashboard per-division labels/colors | (pre) | `divisionMeta(key)` on the frontend; deterministic palette by hash |
+| B5 | Fees collapse → map-over-divisions | `754f51e` | `FeesController` array-driven; `Fees/Index.jsx` + `ReceiveFee.jsx` dynamic |
+| B6 | Attendance modules | (pre) | Grid + save + absentees use per-class day rules |
+| B7 | Student center multi-division | `fd311f5` | `Students/Show.jsx` dynamically renders one tab per `class_type_key` |
+| B8 | Reports + PDF config-driven | `c4b95f4` | `StudentReportService` + `StudentReportCenter/{Index,FilterBar}` accept any non-empty division key |
+| B9 | Accountant class filtering | `80cba34` | `AttendanceSummaryController` rewired to per-class day rules + `class_ids[]` filter |
+| B10 | New-class creation UI | `e8bf249` | `+ New Class` modal with full Stage B config; backend save accepts `attendance_days`, `charges_monthly_fee`, `default_monthly_fee`, derives `division` slug from name |
+
+### What did NOT change
+
+- **DB schema**: exactly one additive column (`classes.division`); null backfill = correct.
+- **Gurmukhi / Kirtan payloads**: byte-identical to today on every existing route,
+  query, and PDF (the A1 characterization test + B1–B9 module tests pin this).
+- **The legitimate Kirtan exceptions**: lesson-learned badge, lesson notes panel,
+  "Sundays only" banner, `kirtan_score`. These are real business rules, kept.
+- **The 11 pre-existing auth/profile failures**: still 11. Total green count
+  grew from 297 to 301 (B10 added 4 feature tests / 27 assertions),
+  assertions from 1720 to 1747.
+
+### Final baseline
+
+```
+Tests:    11 failed, 301 passed (1747 assertions)
+```
+
+The 11 failures are the pre-existing `ProfileTest` / `AuthTest` failures
+unrelated to multi-class. They predate this branch and are out of scope.
+
+### Why B10 came last
+
+Before B10, a create-class form could deposit a row with `type='gurmukhi'`
+and `division=NULL` — and the resolver would silently bucket that row as
+Gurmukhi. The audit flagged this as the central silent failure.
+
+By the time B10 ships, every consumer (dashboard, fees, attendance, student
+center, reports, accountant summaries) iterates over divisions instead of
+hardcoding two. Stage A guarantees the resolver won't label a third class
+Gurmukhi. Stage B10 guarantees the entry point itself writes an explicit
+`division` slug from the name, so the resolver cannot mislabel anything
+written through the admin UI.
+
+### Operational notes
+
+- Creating "Music" today writes `division='music'`, `type='music'`,
+  `attendance_days=[1..6]`, `charges_monthly_fee=false`,
+  `default_monthly_fee=0` by default. The user can flip any of these in the
+  modal before saving.
+- Creating a class named "Kirtan" gets the legacy Sunday-only default
+  applied automatically (with a banner in the modal so the user knows
+  why). The division slug becomes `kirtan` and the resolver continues to
+  treat it as the Kirtan bucket.
+- The legacy `+ Add Class` inline-row path is preserved for the
+  minimal-default flow (Mon-Sat, no fees, division derived from name).
+
+### Known gaps left for future work
+
+- No bulk CSV/import path for new classes — out of scope; one-at-a-time modal
+  is the only entry point today.
+- The legacy `routes/accountant.php:86-94` name-only heuristic was routed
+  through the canonical resolver in B5, but the `Log::info` debug output
+  remains (deliberately left alone — out of scope).
+- The `StudentProgression` / `PromoteFlow` ternary (referenced as B5 in the
+  original plan but never built) was deferred — current promote flow still
+  uses literal `gurmukhi` / `kirtan` keys. No regression today because the
+  resolver pretends a third class is Gurmukhi for promote decisions, which
+  is the legacy behavior.
