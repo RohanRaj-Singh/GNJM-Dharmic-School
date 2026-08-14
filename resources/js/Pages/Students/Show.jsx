@@ -3,6 +3,7 @@ import useRoles from "@/Hooks/useRoles";
 import FeeSection from "./FeeSection";
 import { usePage, Link } from "@inertiajs/react";
 import { useState, useMemo } from "react";
+import { divisionMeta } from "@/utils/divisionType";
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -13,36 +14,49 @@ export default function StudentShow({ student, summary = [] }) {
     const { isTeacher, isAccountant, isAdmin } = useRoles();
     const { auth } = usePage().props;
 
-    // Build the tab list from available summary items
+    // Build the tab list dynamically from the summary items. The backend groups
+    // enrollments by canonical class_type_key (DivisionTypeResolver), so each
+    // item's key — for a third class as well as Gurmukhi/Kirtan — is one tab.
+    // The tab label + color come from divisionMeta; the Kirtan Sunday-only UI
+    // inside the tab is gated by item.class_type_key === 'kirtan' separately.
     const tabs = useMemo(() => {
-        const allowed = [];
-
-        if (isAccountant || isAdmin) {
-            // Both tabs allowed for accountant/admin.
-            // Use class_type_key (set by backend grouping) — no heuristic needed.
-            const gurmukhi = summary.findIndex((s) => s.class_type_key !== "kirtan");
-            const kirtan = summary.findIndex((s) => s.class_type_key === "kirtan");
-            if (gurmukhi !== -1) allowed.push({ key: "gurmukhi", label: "Gurmukhi", index: gurmukhi });
-            if (kirtan !== -1) allowed.push({ key: "kirtan", label: "Kirtan", index: kirtan });
-            // If only one type exists, show it
-            if (allowed.length === 0 && summary.length > 0) {
-                allowed.push({ key: "default", label: "Summary", index: 0 });
-            }
-        }
+        const makeTab = (item, idx) => {
+            const meta = divisionMeta(item.class_type_key);
+            return {
+                key: item.class_type_key,
+                label: meta.title,
+                accent: meta.accent,
+                pillBg: meta.pillBg,
+                pillText: meta.pillText,
+                index: idx,
+            };
+        };
 
         if (isTeacher) {
             const allowedSectionNames = auth?.user?.sections?.map((s) => s.name) ?? [];
+            const seen = new Set();
+            const tabs = [];
             summary.forEach((item, idx) => {
-                if (allowedSectionNames.includes(item.section)) {
-                    const key = item.class_type_key === "kirtan" ? "kirtan" : "gurmukhi";
-                    if (!allowed.find((t) => t.key === key)) {
-                        allowed.push({ key, label: key === "kirtan" ? "Kirtan" : "Gurmukhi", index: idx });
-                    }
-                }
+                if (!allowedSectionNames.includes(item.section)) return;
+                if (seen.has(item.class_type_key)) return;
+                seen.add(item.class_type_key);
+                tabs.push(makeTab(item, idx));
             });
+            return tabs;
         }
 
-        return allowed;
+        if (isAccountant || isAdmin) {
+            const seen = new Set();
+            return summary
+                .map((item, idx) => {
+                    if (seen.has(item.class_type_key)) return null;
+                    seen.add(item.class_type_key);
+                    return makeTab(item, idx);
+                })
+                .filter(Boolean);
+        }
+
+        return [];
     }, [summary, isTeacher, isAccountant, isAdmin, auth]);
 
     const [activeTab, setActiveTab] = useState(0);
@@ -72,7 +86,7 @@ export default function StudentShow({ student, summary = [] }) {
                     <ContactRow label="Mother Phone" number={student.mother_phone} />
                 </div>
 
-                {/* Tabs — only show when multiple types are detected */}
+                {/* Tabs — only show when more than one division is present */}
                 {tabs.length > 1 && (
                     <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
                         {tabs.map((tab, idx) => (
@@ -81,7 +95,7 @@ export default function StudentShow({ student, summary = [] }) {
                                 onClick={() => setActiveTab(idx)}
                                 className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition ${
                                     activeTab === idx
-                                        ? "bg-white text-gray-800 shadow"
+                                        ? `bg-white ${tab.accent} shadow`
                                         : "text-gray-500 hover:text-gray-700"
                                 }`}
                             >
@@ -169,8 +183,10 @@ function TabContent({ item, student, isKirtanTab, canViewFees }) {
             {/* Class & Section badge */}
             <div className="bg-white rounded-xl shadow p-5">
                 <div className="flex flex-wrap gap-2">
-                    <Pill color={isKirtanTab ? "purple" : "blue"}>{item.class}</Pill>
-                    <Pill color="gray">{item.section}</Pill>
+                    <Pill bgClassName={divisionMeta(item.class_type_key).pillBg} textClassName={divisionMeta(item.class_type_key).pillText}>
+                        {item.class}
+                    </Pill>
+                    <Pill bgClassName="bg-gray-100" textClassName="text-gray-700">{item.section}</Pill>
                 </div>
             </div>
 
@@ -306,14 +322,9 @@ function AcademicHistory({ studentId, studentName }) {
     return null;
 }
 
-function Pill({ children, color = "gray" }) {
-    const map = {
-        gray: "bg-gray-100 text-gray-700",
-        blue: "bg-blue-100 text-blue-700",
-        purple: "bg-purple-100 text-purple-700",
-    };
+function Pill({ children, bgClassName = "bg-gray-100", textClassName = "text-gray-700" }) {
     return (
-        <span className={`text-xs px-3 py-1 rounded-full font-medium ${map[color] || map.gray}`}>
+        <span className={`text-xs px-3 py-1 rounded-full font-medium ${bgClassName} ${textClassName}`}>
             {children}
         </span>
     );

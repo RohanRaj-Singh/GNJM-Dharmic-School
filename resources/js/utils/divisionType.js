@@ -57,6 +57,8 @@ const LEGACY_META = {
     bg: "bg-blue-50",
     bgHover: "hover:bg-blue-100",
     accent: "text-blue-600",
+    pillBg: "bg-blue-100",
+    pillText: "text-blue-700",
   },
   kirtan: {
     title: "Kirtan",
@@ -64,16 +66,18 @@ const LEGACY_META = {
     bg: "bg-purple-50",
     bgHover: "hover:bg-purple-100",
     accent: "text-purple-600",
+    pillBg: "bg-purple-100",
+    pillText: "text-purple-700",
   },
 };
 
 // Palette for generated divisions — full class strings so Tailwind keeps them.
 const PALETTE = [
-  { text: "text-emerald-700", bg: "bg-emerald-50", bgHover: "hover:bg-emerald-100", accent: "text-emerald-600" },
-  { text: "text-orange-700", bg: "bg-orange-50", bgHover: "hover:bg-orange-100", accent: "text-orange-600" },
-  { text: "text-teal-700", bg: "bg-teal-50", bgHover: "hover:bg-teal-100", accent: "text-teal-600" },
-  { text: "text-rose-700", bg: "bg-rose-50", bgHover: "hover:bg-rose-100", accent: "text-rose-600" },
-  { text: "text-indigo-700", bg: "bg-indigo-50", bgHover: "hover:bg-indigo-100", accent: "text-indigo-600" },
+  { text: "text-emerald-700", bg: "bg-emerald-50", bgHover: "hover:bg-emerald-100", accent: "text-emerald-600", pillBg: "bg-emerald-100", pillText: "text-emerald-700" },
+  { text: "text-orange-700", bg: "bg-orange-50", bgHover: "hover:bg-orange-100", accent: "text-orange-600", pillBg: "bg-orange-100", pillText: "text-orange-700" },
+  { text: "text-teal-700", bg: "bg-teal-50", bgHover: "hover:bg-teal-100", accent: "text-teal-600", pillBg: "bg-teal-100", pillText: "text-teal-700" },
+  { text: "text-rose-700", bg: "bg-rose-50", bgHover: "hover:bg-rose-100", accent: "text-rose-600", pillBg: "bg-rose-100", pillText: "text-rose-700" },
+  { text: "text-indigo-700", bg: "bg-indigo-50", bgHover: "hover:bg-indigo-100", accent: "text-indigo-600", pillBg: "bg-indigo-100", pillText: "text-indigo-700" },
 ];
 
 function titleCase(value) {
@@ -90,9 +94,10 @@ function stableHash(value) {
 
 /**
  * Presentation metadata for a division key: a human title plus Tailwind color
- * classes (heading text, header background, hover background, accent text).
- * Gurmukhi/Kirtan keep their legacy colors; any other key gets a deterministic
- * palette color and a title-cased label.
+ * classes (heading text, header background, hover background, accent text,
+ * plus pillBg/pillText for badge styling). Gurmukhi/Kirtan keep their legacy
+ * colors; any other key gets a deterministic palette color and a title-cased
+ * label.
  */
 export function divisionMeta(divisionKey) {
   const key = String(divisionKey ?? "").trim().toLowerCase();
