@@ -6,7 +6,6 @@ use App\Models\Section;
 use App\Models\StudentSection;
 use App\Http\Controllers\AttendanceController;
 use App\Models\Attendance;
-use App\Support\DivisionTypeResolver;
 
 // Note: prefix 'attendance' is already added in web.php
 // Don't add prefix here to avoid duplicate /attendance/attendance
@@ -55,23 +54,12 @@ Route::get('/', fn () =>
             'studentSections.student',
         ]);
 
-        /* ---------- Day rules ---------- */
-        $today = now()->dayOfWeek; // 0 = Sunday
-        $isKirtan = DivisionTypeResolver::isKirtan(
-            $section->schoolClass->type ?? null,
-            $section->schoolClass->name ?? null
-        );
-
-        if ($today === 0 && !$isKirtan) {
+        /* ---------- Day rules (config-driven, Stage B) ---------- */
+        $class = $section->schoolClass;
+        if (!$class->isAttendanceDay(now())) {
             return redirect()
                 ->route('attendance.sections')
-                ->with('error', '📅 Gurmukhi attendance cannot be marked on Sunday.');
-        }
-
-        if ($today !== 0 && $isKirtan) {
-            return redirect()
-                ->route('attendance.sections')
-                ->with('error', '📅 Kirtan attendance can only be marked on Sunday.');
+                ->with('error', '📅 Attendance for '.$class->name.' can only be marked on '.$class->attendanceDaysLabel().'.');
         }
 
         /* ---------- Attendance ---------- */

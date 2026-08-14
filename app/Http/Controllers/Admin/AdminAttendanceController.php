@@ -50,27 +50,26 @@ class AdminAttendanceController extends Controller
             'studentSections.student',
         ])->findOrFail($request->section_id);
 
+        $class = $section->schoolClass;
+
+        // Lesson-learned is a Kirtan-only field; the grid day-rule itself is
+        // now driven by the class's configured attendance days (Stage B).
         $isKirtan = DivisionTypeResolver::isKirtan(
-            $section->schoolClass->type ?? null,
-            $section->schoolClass->name ?? null
+            $class->type ?? null,
+            $class->name ?? null,
+            $class->division ?? null,
         );
 
         $start = Carbon::create($request->year, $request->month, 1);
         $end   = $start->copy()->endOfMonth();
 
-        /* ---------- Days ---------- */
+        /* ---------- Days (config-driven) ---------- */
         $days = [];
         for ($d = $start->copy(); $d <= $end; $d->addDay()) {
-            $isSunday = $d->isSunday();
-
-            $enabled = $isKirtan
-                ? $isSunday
-                : !$isSunday;
-
             $days[] = [
                 'date'    => $d->toDateString(),
                 'day'     => $d->format('d'),
-                'enabled' => $enabled,
+                'enabled' => $class->isAttendanceDay($d),
             ];
         }
 

@@ -25,6 +25,11 @@ class SchoolClass extends Model
         'charges_monthly_fee' => 'boolean',
     ];
 
+    // Effective attendance days (explicit config or legacy fallback) are
+    // serialized so the frontend day-rule UI reads them directly instead of
+    // re-deriving kirtan/gurmukhi from type/name.
+    protected $appends = ['attendance_days_effective'];
+
     public function sections(): HasMany
     {
         return $this->hasMany(Section::class, 'class_id');
@@ -82,5 +87,10 @@ class SchoolClass extends Model
     public function attendanceDaysLabel(): string
     {
         return ClassSchedule::dayLabel($this->type, $this->name, $this->attendance_days, $this->division);
+    }
+
+    public function getAttendanceDaysEffectiveAttribute(): array
+    {
+        return $this->attendanceDays();
     }
 }

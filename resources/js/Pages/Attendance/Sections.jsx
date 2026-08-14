@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import toast from "react-hot-toast";
 import useRoles from "@/Hooks/useRoles";
 import { division } from "@/utils/divisionType";
+import { isAttendanceDay, attendanceDaysLabel } from "@/utils/attendanceDays";
 
 export default function Sections({ sections = [] }) {
     const { isAccountant } = useRoles();
@@ -32,19 +33,24 @@ export default function Sections({ sections = [] }) {
             return division(cls?.type, cls?.name) === classFilter;
         });
     }, [sections, classFilter, isAccountant]);
-    const isSunday = new Date().getDay() === 0;
+    // Config-driven day rule (Stage B): a section is markable when today falls
+    // on its class's effective attendance days. Legacy Kirtan resolves to
+    // Sunday-only via the backend seam; the serialized payload always carries
+    // attendance_days_effective, and the division fallback below is defensive.
     const canMarkToday = (section) => {
         const cls = getClassObj(section);
-        return division(cls?.type, cls?.name) === "kirtan" ? isSunday : !isSunday;
+        const days = cls?.attendance_days_effective;
+        if (Array.isArray(days) && days.length > 0) {
+            return isAttendanceDay(days, new Date());
+        }
+        const d = division(cls?.type, cls?.name);
+        return d === "kirtan" ? new Date().getDay() === 0 : new Date().getDay() !== 0;
     };
     const dayRuleMessage = (section) => {
         const cls = getClassObj(section);
-        const d = division(cls?.type, cls?.name);
-        if (d === "gurmukhi" && isSunday) {
-            return "Gurmukhi attendance is closed on Sunday";
-        }
-        if (d === "kirtan" && !isSunday) {
-            return "Kirtan attendance opens only on Sunday";
+        const days = cls?.attendance_days_effective;
+        if (Array.isArray(days) && days.length > 0 && !isAttendanceDay(days, new Date())) {
+            return `Attendance for ${cls?.name ?? "Class"} opens only on ${attendanceDaysLabel(days)}`;
         }
         return "";
     };

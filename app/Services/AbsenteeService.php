@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Support\DivisionTypeResolver;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
 
@@ -14,14 +13,15 @@ use Illuminate\Support\Carbon;
  * filters, Inertia render); this service owns the business rules:
  *
  *   - status normalisation (legacy 'a'/'l'/'p' single-letter codes)
- *   - kirtan-vs-gurmukhi valid-day rules (Sunday only / never Sunday)
+ *   - valid-day rules from the class's configured attendance days (Stage B;
+ *     Kirtan's Sunday-only legacy rule is the unconfigured fallback)
  *   - streak + category computation (absent_1/2/3+, leave_1/2+, clear)
  *   - the (quirky) streak_days computation — preserved exactly
  *   - today-absentees classification and sorting by total_days ASC
  *
- * The division (kirtan/gurmukhi) question is delegated to the canonical
- * {@see DivisionTypeResolver} (Sprint 1.3) — the duplicate `isClassType`
- * predicate that lived here was removed.
+ * The valid-day question is delegated to the schoolClass's configuration
+ * (explicit attendance_days, else the legacy Kirtan rule) — the duplicate
+ * `isClassType` predicate that lived here was removed in Sprint 1.3.
  *
  * Behaviour is pinned by tests/Feature/AttendanceAbsenteesTest.php.
  */
@@ -81,19 +81,14 @@ class AbsenteeService
                 }
             }
 
-            $isKirtanClass = DivisionTypeResolver::isKirtan(
-                $enrollment->schoolClass->type ?? null,
-                $enrollment->schoolClass->name ?? null
-            );
+            $class = $enrollment->schoolClass;
 
             $attendance = $enrollment->attendance
-                // Filter by date range + valid day
-                ->filter(function ($a) use ($startDate, $endDate, $includeToday, $today, $isKirtanClass) {
+                // Filter by date range + valid day (config-driven)
+                ->filter(function ($a) use ($startDate, $endDate, $includeToday, $today, $class) {
                     $date = Carbon::parse($a->date);
-                    $isSunday = $date->dayOfWeek === Carbon::SUNDAY;
-                    $validDay = $isKirtanClass ? $isSunday : !$isSunday;
 
-                    if (!$validDay) {
+                    if (!$class->isAttendanceDay($date)) {
                         return false;
                     }
 
@@ -108,12 +103,10 @@ class AbsenteeService
 
             // Check if absent TODAY (separate category)
             $todayAttendance = $enrollment->attendance
-                ->filter(function ($a) use ($today, $isKirtanClass) {
+                ->filter(function ($a) use ($today, $class) {
                     $date = Carbon::parse($a->date);
-                    $isSunday = $date->dayOfWeek === Carbon::SUNDAY;
-                    $validDay = $isKirtanClass ? $isSunday : !$isSunday;
 
-                    return $validDay && $date->isSameDay($today);
+                    return $class->isAttendanceDay($date) && $date->isSameDay($today);
                 })
                 ->first();
 
