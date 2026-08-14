@@ -345,10 +345,49 @@ Route::prefix('classes')->name('classes.')->group(function () {
                 continue;
             }
 
+            // New row — accept Stage B config from the modal-driven path
+            // (full create form) or fall back to sensible defaults for the
+            // inline-row path. The division slug is always derived from the
+            // name and stored explicitly so DivisionTypeResolver picks the
+            // correct bucket regardless of what the legacy `type` heuristic
+            // would otherwise produce.
+            $name = trim((string) ($row['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+
+            $slug = \Illuminate\Support\Str::slug($name);
+            if ($slug === '') {
+                $slug = 'class';
+            }
+
+            // Kirtan name preserves the real business rule (Sunday-only,
+            // no monthly fees); any other name defaults to Mon-Sat with
+            // the same "off by default" behaviour the inline-row path
+            // historically had. The user can flip the toggle in the modal.
+            if (strtolower($name) === 'kirtan') {
+                $attendanceDays = $row['attendance_days'] ?? [0];
+                $chargesMonthlyFee = array_key_exists('charges_monthly_fee', $row)
+                    ? (bool) $row['charges_monthly_fee']
+                    : false;
+            } else {
+                $attendanceDays = $row['attendance_days'] ?? [1, 2, 3, 4, 5, 6];
+                $chargesMonthlyFee = array_key_exists('charges_monthly_fee', $row)
+                    ? (bool) $row['charges_monthly_fee']
+                    : false;
+            }
+
             SchoolClass::create([
-                'name' => $row['name'],
-                'type' => $row['type'] ?? 'gurmukhi',
-                'default_monthly_fee' => 0,
+                'name' => $name,
+                'type' => $slug,            // legacy compat with the
+                                            //   type-based fallback rules
+                'division' => $slug,        // Stage A2 explicit override —
+                                            //   the seam that lets a third+
+                                            //   class escape the Gurmukhi
+                                            //   bucket
+                'attendance_days' => $attendanceDays,
+                'charges_monthly_fee' => $chargesMonthlyFee,
+                'default_monthly_fee' => (int) ($row['default_monthly_fee'] ?? 0),
             ]);
         }
         return back();

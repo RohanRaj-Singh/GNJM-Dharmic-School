@@ -5,6 +5,43 @@ import toast from "react-hot-toast";
 
 import DataTable from "@/Components/DataTable";
 
+/*
+ * Stage B10 — full-class-creation modal.
+ *
+ * Replaces the silent-failure inline-row pattern with an explicit form so a
+ * new class cannot land in the database without conscious Stage B config:
+ * attendance days (Mon-Sat default, Sunday-only for Kirtan name), monthly
+ * fee toggle + amount. The division slug is auto-derived from the name and
+ * stored explicitly on `classes.division` so DivisionTypeResolver picks the
+ * right bucket regardless of the legacy `type` heuristic.
+ *
+ * The two creation paths coexist:
+ *   - inline "+ Add Class" row: minimal default config (Mon-Sat, no fees)
+ *   - modal "+ New Class": full Stage B config the user picks explicitly
+ */
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function deriveDivisionSlug(name) {
+  const slug = (name || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "class";
+}
+
+function isKirtanName(name) {
+  return (name || "").toLowerCase().trim() === "kirtan";
+}
+
+const DEFAULT_CREATE_STATE = () => ({
+  name: "",
+  attendanceDays: [1, 2, 3, 4, 5, 6],
+  chargesMonthlyFee: false,
+  defaultMonthlyFee: 0,
+});
+
 export default function Index() {
   const [data, setData] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -19,6 +56,12 @@ export default function Index() {
     effective_to: "",
     sectionOptions: [],
     resetSectionIds: [],
+  });
+
+  const [createModal, setCreateModal] = useState({
+    open: false,
+    saving: false,
+    ...DEFAULT_CREATE_STATE(),
   });
 
   const newRowRef = useRef(null);
@@ -221,6 +264,83 @@ export default function Index() {
     });
   }
 
+  function openCreateModal() {
+    setCreateModal({ open: true, saving: false, ...DEFAULT_CREATE_STATE() });
+  }
+
+  function closeCreateModal() {
+    setCreateModal({ open: false, saving: false, ...DEFAULT_CREATE_STATE() });
+  }
+
+  function updateCreateField(patch) {
+    setCreateModal((prev) => ({ ...prev, ...patch }));
+  }
+
+  // Name change keeps the rest of the form in sync: a Kirtan name snaps
+  // attendance to Sunday-only, any other name defaults to Mon-Sat.
+  function onCreateNameChange(value) {
+    const next = { name: value };
+    if (isKirtanName(value)) {
+      next.attendanceDays = [0];
+      next.chargesMonthlyFee = false;
+    } else if (isKirtanName(createModal.name)) {
+      // User just renamed away from "Kirtan" — restore Mon-Sat default.
+      next.attendanceDays = [1, 2, 3, 4, 5, 6];
+    }
+    updateCreateField(next);
+  }
+
+  function toggleAttendanceDay(day, checked) {
+    setCreateModal((prev) => {
+      const set = new Set(prev.attendanceDays);
+      if (checked) {
+        set.add(day);
+      } else {
+        set.delete(day);
+      }
+      return { ...prev, attendanceDays: Array.from(set).sort((a, b) => a - b) };
+    });
+  }
+
+  async function submitCreate() {
+    const name = (createModal.name || "").trim();
+    if (!name) {
+      toast.error("Class name cannot be empty");
+      return;
+    }
+    if (createModal.attendanceDays.length === 0) {
+      toast.error("Pick at least one attendance day");
+      return;
+    }
+
+    setCreateModal((prev) => ({ ...prev, saving: true }));
+    try {
+      await window.axios.post(
+        "/admin/classes/save",
+        {
+          classes: [
+            {
+              name,
+              attendance_days: createModal.attendanceDays,
+              charges_monthly_fee: createModal.chargesMonthlyFee,
+              default_monthly_fee: Number(createModal.defaultMonthlyFee || 0),
+            },
+          ],
+        },
+        { headers: { Accept: "application/json" } }
+      );
+      toast.success(`Created class "${name}"`);
+      closeCreateModal();
+      loadData();
+    } catch (err) {
+      const payload = err?.response?.data;
+      const msg =
+        payload?.message || Object.values(payload?.errors ?? {}).flat()?.[0] || err?.message;
+      toast.error(msg || "Could not create class");
+      setCreateModal((prev) => ({ ...prev, saving: false }));
+    }
+  }
+
   function saveChanges() {
     if (data.some((r) => !r.name?.trim())) {
       toast.error("Class name cannot be empty");
@@ -253,6 +373,10 @@ export default function Index() {
         <div className="flex gap-2">
           <button onClick={addNewRow} className="px-4 py-2 bg-blue-600 text-white rounded">
             + Add Class
+          </button>
+
+          <button onClick={openCreateModal} className="px-4 py-2 bg-indigo-600 text-white rounded">
+            + New Class
           </button>
 
           <button onClick={saveChanges} className="px-4 py-2 bg-green-600 text-white rounded">
@@ -394,6 +518,145 @@ export default function Index() {
           </div>
         </div>
       )}
+
+      {createModal.open && (
+        <CreateClassModal
+          state={createModal}
+          onChange={updateCreateField}
+          onNameChange={onCreateNameChange}
+          onToggleDay={toggleAttendanceDay}
+          onSubmit={submitCreate}
+          onClose={closeCreateModal}
+        />
+      )}
     </AdminLayout>
+  );
+}
+
+function CreateClassModal({
+  state,
+  onChange,
+  onNameChange,
+  onToggleDay,
+  onSubmit,
+  onClose,
+}) {
+  const derivedSlug = deriveDivisionSlug(state.name);
+  const kirtanBanner = isKirtanName(state.name);
+
+  return (
+    <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
+      <div className="bg-white rounded shadow-xl w-full max-w-lg p-4 space-y-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="font-semibold text-base">Create a new class</h3>
+            <p className="text-xs text-gray-500">
+              The division tag is auto-derived from the class name and stored
+              explicitly so the resolvers, dashboard, fees, attendance and
+              reports all pick the right bucket.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-sm text-gray-500">
+            Close
+          </button>
+        </div>
+
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Class name</label>
+          <input
+            autoFocus
+            type="text"
+            value={state.name}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder="e.g. Music, Tabla, Punjabi"
+            className="w-full px-3 py-2 border rounded text-sm"
+          />
+          <div className="text-[11px] text-gray-500 mt-1">
+            Division tag:&nbsp;
+            <span className="font-mono font-medium text-gray-700">{derivedSlug}</span>
+          </div>
+        </div>
+
+        {kirtanBanner && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded px-3 py-2 text-xs">
+            Kirtan name detected — defaulted to <b>Sundays only</b> with no
+            monthly fees. Override the days below if that's not what you want.
+          </div>
+        )}
+
+        <div>
+          <div className="text-xs text-gray-500 mb-1">Attendance days</div>
+          <div className="flex flex-wrap gap-2">
+            {DAY_LABELS.map((label, day) => {
+              const checked = state.attendanceDays.includes(day);
+              return (
+                <label
+                  key={day}
+                  className={[
+                    "px-3 py-1.5 rounded-full border text-xs cursor-pointer select-none",
+                    checked
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50",
+                  ].join(" ")}
+                >
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={checked}
+                    onChange={(e) => onToggleDay(day, e.target.checked)}
+                  />
+                  {label}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border rounded p-3 space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={state.chargesMonthlyFee}
+              onChange={(e) =>
+                onChange({ chargesMonthlyFee: e.target.checked })
+              }
+            />
+            <span>Charges a monthly fee</span>
+          </label>
+          {state.chargesMonthlyFee && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Monthly fee amount (Rs.)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={state.defaultMonthlyFee}
+                onChange={(e) =>
+                  onChange({ defaultMonthlyFee: Number(e.target.value || 0) })
+                }
+                className="w-full px-3 py-2 border rounded text-sm"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm border rounded bg-white text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={state.saving}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300"
+          >
+            {state.saving ? "Creating…" : "Create class"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
