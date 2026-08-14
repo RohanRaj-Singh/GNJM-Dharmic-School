@@ -27,11 +27,9 @@ class StudentReportCenterRequest extends FormRequest
                 FilterRequest::RANGE_MONTH,
                 FilterRequest::RANGE_RANGE,
             ])],
-            'division' => ['required', Rule::in([
-                FilterRequest::DIVISION_ALL,
-                FilterRequest::DIVISION_GURMUKHI,
-                FilterRequest::DIVISION_KIRTAN,
-            ])],
+            // Division is an open string (Stage B): a third+ class's
+            // division key is representable. Engine validates non-empty.
+            'division' => ['required', 'string', 'min:1'],
         ];
 
         $mode = $this->input('range_mode');

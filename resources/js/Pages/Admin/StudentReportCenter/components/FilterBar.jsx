@@ -37,6 +37,7 @@ export default function FilterBar({
   rangeEnd,
   rangeMonths,
   division,
+  divisionOptions = [],
   loading,
   canExport,
   setStudentId,
@@ -54,11 +55,24 @@ export default function FilterBar({
     [students]
   );
 
-  const divisionOptions = [
-    { value: "all",      label: "Gurmukhi + Kirtan" },
-    { value: "gurmukhi", label: "Gurmukhi only"      },
-    { value: "kirtan",   label: "Kirtan only"        },
-  ];
+  // Map-over-divisions (Stage B): division options come from the backend,
+  // including any third+ class's division key. The 'all' sentinel means
+  // "every division the selected student is enrolled in".
+  const divisionSelectOptions = useMemo(() => {
+    const labels = {
+      all: "All Divisions",
+      gurmukhi: "Gurmukhi only",
+      kirtan: "Kirtan only",
+    };
+    const opts = divisionOptions.map((value) => ({
+      value,
+      label: labels[value] ?? `${value.charAt(0).toUpperCase()}${value.slice(1)} only`,
+    }));
+    // Move 'all' to the front so the default is always visible.
+    const allOpt = opts.find((o) => o.value === "all");
+    const rest = opts.filter((o) => o.value !== "all");
+    return allOpt ? [allOpt, ...rest] : opts;
+  }, [divisionOptions]);
 
   const presets = [
     { key: "this_month",     label: "This Month"      },
@@ -155,7 +169,7 @@ export default function FilterBar({
 
       <Step step={3} title="Pick a division">
         <MultiSelect
-          options={divisionOptions}
+          options={divisionSelectOptions}
           value={[division]}
           onChange={(ids) => setDivision(ids[0] ?? "all")}
           single

@@ -58,7 +58,9 @@ class StudentReportCenterController extends Controller
             'single_month' => ['nullable', 'date_format:Y-m'],
             'range_start'  => ['nullable', 'date_format:Y-m'],
             'range_end'    => ['nullable', 'date_format:Y-m'],
-            'division'     => ['nullable', 'in:all,gurmukhi,kirtan'],
+            // Division is an open string (Stage B): a third+ class's
+            // division key is representable.
+            'division'     => ['nullable', 'string', 'min:1'],
         ]);
 
         // Inject the canonical 'all' default for division to match the POST
@@ -113,12 +115,32 @@ class StudentReportCenterController extends Controller
             $yearOptions[] = ['value' => $y, 'label' => (string) $y];
         }
 
+        // Available division keys — every distinct non-null classes.division
+        // plus the two legacy keys (gurmukhi, kirtan). Stage B: third+
+        // divisions are surfaced as their own filter option without a UI
+        // change.
+        $divisionOptions = ['all', 'gurmukhi', 'kirtan'];
+        $explicit = \App\Models\SchoolClass::query()
+            ->whereNotNull('division')
+            ->where('division', '!=', '')
+            ->distinct()
+            ->pluck('division')
+            ->all();
+        foreach ($explicit as $d) {
+            $d = strtolower(trim((string) $d));
+            if ($d !== '' && !in_array($d, $divisionOptions, true)) {
+                $divisionOptions[] = $d;
+            }
+        }
+        sort($divisionOptions); // deterministic: all < gurmukhi < kirtan < …
+
         return Inertia::render('Admin/StudentReportCenter/Index', [
             'students' => $students,
             'yearOptions' => $yearOptions,
             'currentYear' => $currentYear,
             'earliestYear' => $currentYear - 10,
             'latestYear' => $currentYear + 1,
+            'divisionOptions' => $divisionOptions,
         ]);
     }
 }

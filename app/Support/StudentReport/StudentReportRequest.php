@@ -25,6 +25,9 @@ final class StudentReportRequest
     public const RANGE_RANGE = 'range';
 
     public const DIVISION_ALL = 'all';
+    // Legacy division keys are exposed here so legacy callers don't drift.
+    // Validation (validate()) is intentionally open — any non-empty string
+    // is a valid division filter, so a third+ class is representable.
     public const DIVISION_GURMUKHI = 'gurmukhi';
     public const DIVISION_KIRTAN = 'kirtan';
 
@@ -101,8 +104,11 @@ final class StudentReportRequest
             default => throw new InvalidArgumentException("Unknown range_mode: {$this->rangeMode}"),
         };
 
-        if (!in_array($this->division, [self::DIVISION_ALL, self::DIVISION_GURMUKHI, self::DIVISION_KIRTAN], true)) {
-            throw new InvalidArgumentException("Unknown division: {$this->division}");
+        // Division is an open string (Stage B): any non-empty value is
+        // accepted. 'all' is the sentinel for "every division the student
+        // is enrolled in"; a specific key filters to that single division.
+        if ($this->division === '') {
+            throw new InvalidArgumentException('division must be a non-empty string.');
         }
     }
 }

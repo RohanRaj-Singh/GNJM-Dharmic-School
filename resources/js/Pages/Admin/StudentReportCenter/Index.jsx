@@ -35,7 +35,7 @@ const INITIAL_STATE = (currentYear) => {
   };
 };
 
-export default function Index({ students, earliestYear, latestYear, currentYear }) {
+export default function Index({ students, earliestYear, latestYear, currentYear, divisionOptions = [] }) {
   const [s, setS] = useState(() => INITIAL_STATE(currentYear));
   const set = (patch) => setS((prev) => ({ ...prev, ...patch }));
 
@@ -222,6 +222,7 @@ export default function Index({ students, earliestYear, latestYear, currentYear 
         rangeEnd={s.rangeEnd}
         rangeMonths={rangeMonths}
         division={s.division}
+        divisionOptions={divisionOptions}
         loading={loading}
         hasReport={!!report && !isStale}
         setStudentId={(v) => set({ studentId: v })}
@@ -281,9 +282,16 @@ export default function Index({ students, earliestYear, latestYear, currentYear 
 
 function ReportBody({ report }) {
   const identity = report.identity;
-  const gurmukhi  = report.divisions?.gurmukhi;
-  const kirtan    = report.divisions?.kirtan;
   const isFree    = identity.student_type === "free";
+  const divisions = report.divisions ?? {};
+
+  // Map-over-divisions (Stage B): one section per distinct division the
+  // backend reported, in sorted order so legacy gurmukhi < kirtan < … stays
+  // stable. Kirtan-specific widgets (kirtan_score, lesson-learned badge) are
+  // gated on the division key — the single intentional Kirtan special case.
+  const divisionEntries = Object.entries(divisions).sort(([a], [b]) =>
+    a.localeCompare(b)
+  );
 
   return (
     <>
@@ -294,60 +302,51 @@ function ReportBody({ report }) {
 
       <IdentityBlock identity={identity} />
 
-      {gurmukhi && (
-        <Section title="Gurmukhi (Academic)" enrolled={gurmukhi.enrolled}>
-          <AttendanceSectionLite
-            title="Gurmukhi"
-            attendance={gurmukhi.attendance}
-            enrolled={gurmukhi.enrolled}
-            monthCount={report.range.total_months}
-          />
-          <FeeSectionLite
-            title="Gurmukhi"
-            fees={gurmukhi.fees}
-            enrolled={gurmukhi.enrolled}
-            isFree={isFree}
-          />
-          <CalendarSectionLite
-            title="Gurmukhi"
-            months={gurmukhi.months}
-            enrolled={gurmukhi.enrolled}
-            showLesson={false}
-          />
-        </Section>
-      )}
-
-      {kirtan && (
-        <Section title="Kirtan (Spiritual)" enrolled={kirtan.enrolled}>
-          <AttendanceSectionLite
-            title="Kirtan"
-            attendance={kirtan.attendance}
-            enrolled={kirtan.enrolled}
-            monthCount={report.range.total_months}
-          />
-          <FeeSectionLite
-            title="Kirtan"
-            fees={kirtan.fees}
-            enrolled={kirtan.enrolled}
-            isFree={isFree}
-          />
-          <KirtanSectionLite
-            kirtanScore={kirtan.kirtan_score}
-            enrolled={kirtan.enrolled}
-          />
-          <CalendarSectionLite
-            title="Kirtan"
-            months={kirtan.months}
-            enrolled={kirtan.enrolled}
-            showLesson={true}
-          />
-        </Section>
-      )}
+      {divisionEntries.map(([divisionKey, payload]) => {
+        const isKirtan = divisionKey === "kirtan";
+        const titleSuffix = isKirtan ? "Spiritual" : "Academic";
+        const sectionTitle = payload.division
+          ? `${titleCase(payload.division)} (${titleSuffix})`
+          : "";
+        return (
+          <Section key={divisionKey} title={sectionTitle} enrolled={payload.enrolled}>
+            <AttendanceSectionLite
+              title={payload.division}
+              attendance={payload.attendance}
+              enrolled={payload.enrolled}
+              monthCount={report.range.total_months}
+            />
+            <FeeSectionLite
+              title={payload.division}
+              fees={payload.fees}
+              enrolled={payload.enrolled}
+              isFree={isFree}
+            />
+            {isKirtan && (
+              <KirtanSectionLite
+                kirtanScore={payload.kirtan_score}
+                enrolled={payload.enrolled}
+              />
+            )}
+            <CalendarSectionLite
+              title={payload.division}
+              months={payload.months}
+              enrolled={payload.enrolled}
+              showLesson={isKirtan}
+            />
+          </Section>
+        );
+      })}
 
       {/* Enrollment History Timeline — shows all sections regardless of range */}
       <HistoryTimeline history={report.history} />
     </>
   );
+}
+
+function titleCase(value) {
+  const s = String(value ?? "").trim();
+  return s.length === 0 ? "" : s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function Section({ title, enrolled, children }) {
