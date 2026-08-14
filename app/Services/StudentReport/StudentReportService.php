@@ -57,35 +57,31 @@ final class StudentReportService
 
             // Group CLASS IDs (not student_section_ids) by division from
             // ALL enrollments — this captures fees/attendance even from
-            // archived (section-changed) enrollments.
-            $classIdsByDivision = [
-                'gurmukhi' => [],
-                'kirtan' => [],
-            ];
+            // archived (section-changed) enrollments. The division is an open
+            // string (Stage A3), so a third+ division key is representable.
+            $classIdsByDivision = [];
             foreach ($identity->enrollments as $e) {
-                // Division is an open string (Stage A3). A third+ division key
-                // auto-creates and is simply never built for today's two-key
-                // request, until a stage wires it in.
                 $classIdsByDivision[$e->division][] = $e->classId;
             }
             // Deduplicate — many enrollments may share the same class_id.
             $classIdsByDivision = array_map(fn ($ids) => array_values(array_unique($ids)), $classIdsByDivision);
+            ksort($classIdsByDivision); // deterministic: gurmukhi < kirtan < …
+
+            // Build ONLY the divisions the request asks for — data-driven, not
+            // a fixed two-list (Stage A4). `all` builds every division the
+            // student is actually enrolled in (a third+ division included); a
+            // specific filter builds just that one.
+            $requested = match ($req->division) {
+                StudentReportRequest::DIVISION_ALL => array_keys($classIdsByDivision),
+                default => [$req->division],
+            };
 
             $divisions = [];
-
-            if ($req->wantsGurmukhi()) {
-                $divisions['gurmukhi'] = $this->buildDivisionReport(
-                    'gurmukhi',
+            foreach ($requested as $division) {
+                $divisions[$division] = $this->buildDivisionReport(
+                    $division,
                     $identity->id,
-                    $classIdsByDivision['gurmukhi'],
-                    $startMonth, $endMonth, $startDate, $endDate,
-                );
-            }
-            if ($req->wantsKirtan()) {
-                $divisions['kirtan'] = $this->buildDivisionReport(
-                    'kirtan',
-                    $identity->id,
-                    $classIdsByDivision['kirtan'],
+                    $classIdsByDivision[$division] ?? [],
                     $startMonth, $endMonth, $startDate, $endDate,
                 );
             }

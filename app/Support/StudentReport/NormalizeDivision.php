@@ -15,6 +15,7 @@ use App\Support\DivisionTypeResolver;
  * than gurmukhi/kirtan).
  *
  * Resolution order (see DivisionTypeResolver):
+ *  0. explicit `division` (the nullable classes.division) -> returned verbatim
  *  1. `type` contains 'kirtan'   -> kirtan
  *  2. `type` contains 'gurmukhi' -> gurmukhi
  *  3. `name` contains 'kirtan'   -> kirtan
@@ -22,8 +23,8 @@ use App\Support\DivisionTypeResolver;
  */
 final class NormalizeDivision
 {
-    public static function fromClass(?string $classType, ?string $className = null): string
+    public static function fromClass(?string $classType, ?string $className = null, ?string $explicitDivision = null): string
     {
-        return DivisionTypeResolver::division($classType, $className);
+        return DivisionTypeResolver::division($classType, $className, $explicitDivision);
     }
 }

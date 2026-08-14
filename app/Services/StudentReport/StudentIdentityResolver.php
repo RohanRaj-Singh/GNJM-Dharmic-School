@@ -38,6 +38,7 @@ final class StudentIdentityResolver
                 'c.id as class_id',
                 'c.name as class_name',
                 'c.type as class_type',
+                'c.division as class_division',
                 'sec.id as section_id',
                 'sec.name as section_name',
                 'ss.student_type',
@@ -50,6 +51,7 @@ final class StudentIdentityResolver
                 division: \App\Support\StudentReport\NormalizeDivision::fromClass(
                     (string) ($row->class_type ?? ''),
                     (string) ($row->class_name ?? ''),
+                    $row->class_division ?? null, // explicit division seam (Stage A2)
                 ),
             ))
             ->values()

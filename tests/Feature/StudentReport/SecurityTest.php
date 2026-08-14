@@ -112,8 +112,12 @@ class SecurityTest extends TestCase
         $response->assertStatus(200);
         $body = $response->json();
         $this->assertSame($student->id, $body['identity']['id']);
+        // Data-driven divisions (Stage A4): 'all' surfaces ONLY the divisions
+        // the student is actually enrolled in. This fixture student is in a
+        // single gurmukhi class, so gurmukhi is present and kirtan is absent —
+        // no empty enrolled:false stub for a division the student has no data in.
         $this->assertArrayHasKey('gurmukhi', $body['divisions']);
-        $this->assertArrayHasKey('kirtan', $body['divisions']);
+        $this->assertArrayNotHasKey('kirtan', $body['divisions']);
     }
 
     public function test_post_build_validates_filter_shape(): void

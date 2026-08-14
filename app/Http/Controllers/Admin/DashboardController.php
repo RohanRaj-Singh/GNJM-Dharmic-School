@@ -106,7 +106,10 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        $classIdsByDivision = ['gurmukhi' => [], 'kirtan' => []];
+        // Bucket classes by their resolved division — data-driven, not a fixed
+        // two-key map (Stage A4). A third+ division (via classes.division) gets
+        // its own bucket automatically.
+        $classIdsByDivision = [];
         foreach ($classes as $class) {
             $normalizedType = DivisionTypeResolver::division(
                 $class->type ?? null,
@@ -116,6 +119,7 @@ class DashboardController extends Controller
 
             $classIdsByDivision[$normalizedType][] = (int) $class->id;
         }
+        ksort($classIdsByDivision); // deterministic: gurmukhi < kirtan < …
 
         return collect($classIdsByDivision)->map(function (array $classIds, string $type) use ($years, $classes) {
             $divisionClasses = $classes->whereIn('id', $classIds)->values();

@@ -63,16 +63,6 @@ final class StudentReportRequest
         };
     }
 
-    public function wantsGurmukhi(): bool
-    {
-        return $this->division === self::DIVISION_ALL || $this->division === self::DIVISION_GURMUKHI;
-    }
-
-    public function wantsKirtan(): bool
-    {
-        return $this->division === self::DIVISION_ALL || $this->division === self::DIVISION_KIRTAN;
-    }
-
     public function filterPayload(): array
     {
         return [
