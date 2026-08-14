@@ -12,6 +12,7 @@ class SchoolClass extends Model
     protected $fillable = [
         'name',
         'type',
+        'division', // nullable explicit division override (Stage A2)
         'default_monthly_fee',
     ];
 

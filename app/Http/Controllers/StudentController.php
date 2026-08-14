@@ -95,7 +95,7 @@ class StudentController extends Controller
             // school class; it falls back to the class name so a Kirtan class
             // with a missing type field is still recognised correctly.
             $class = $enrollment->schoolClass;
-            $type  = DivisionTypeResolver::division($class?->type, $class?->name);
+            $type  = DivisionTypeResolver::division($class?->type, $class?->name, $class?->division);
 
             if (!isset($grouped[$type])) $grouped[$type] = collect();
             $grouped[$type]->push($enrollment);

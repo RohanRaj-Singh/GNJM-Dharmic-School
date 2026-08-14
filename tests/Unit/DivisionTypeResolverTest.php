@@ -119,4 +119,39 @@ class DivisionTypeResolverTest extends TestCase
     {
         $this->assertSame('kirtan', DivisionTypeResolver::division('kirtan', 'Gurmukhi Beginner'));
     }
+
+    /* ───────────────────────────────────────────────
+       Explicit division override (Stage A2 seam)
+       ─────────────────────────────────────────────── */
+
+    public function test_explicit_division_wins_over_detected_type(): void
+    {
+        $this->assertSame('kirtan', DivisionTypeResolver::division('gurmukhi', 'Gurmukhi A', 'kirtan'));
+        $this->assertSame('gurmukhi', DivisionTypeResolver::division('kirtan', 'Kirtan A', 'gurmukhi'));
+    }
+
+    public function test_explicit_division_can_introduce_a_third_division(): void
+    {
+        $this->assertSame('music', DivisionTypeResolver::division('music', 'Music', 'music'));
+    }
+
+    public function test_null_or_empty_explicit_division_preserves_inference(): void
+    {
+        $this->assertSame('kirtan', DivisionTypeResolver::division('kirtan', 'Kirtan A', null));
+        $this->assertSame('gurmukhi', DivisionTypeResolver::division('music', 'Music', ''));
+        $this->assertSame('gurmukhi', DivisionTypeResolver::division('music', 'Music', '  '));
+    }
+
+    public function test_explicit_division_is_normalised(): void
+    {
+        $this->assertSame('music', DivisionTypeResolver::division('gurmukhi', 'Gurmukhi A', '  Music  '));
+        $this->assertSame('music', DivisionTypeResolver::division('gurmukhi', 'Gurmukhi A', 'MUSIC'));
+    }
+
+    public function test_explicit_division_flows_through_kirtan_helpers(): void
+    {
+        $this->assertTrue(DivisionTypeResolver::isKirtan('gurmukhi', 'Gurmukhi A', 'kirtan'));
+        $this->assertFalse(DivisionTypeResolver::isKirtan('kirtan', 'Kirtan A', 'music'));
+        $this->assertTrue(DivisionTypeResolver::isGurmukhi('kirtan', 'Kirtan A', 'gurmukhi'));
+    }
 }

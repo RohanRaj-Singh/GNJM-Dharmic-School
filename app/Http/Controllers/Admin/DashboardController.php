@@ -102,13 +102,17 @@ class DashboardController extends Controller
     private function buildDivisions(array $years): array
     {
         $classes = DB::table('classes')
-            ->select('id', 'name', 'type')
+            ->select('id', 'name', 'type', 'division')
             ->orderBy('name')
             ->get();
 
         $classIdsByDivision = ['gurmukhi' => [], 'kirtan' => []];
         foreach ($classes as $class) {
-            $normalizedType = DivisionTypeResolver::division($class->type ?? null, $class->name ?? null);
+            $normalizedType = DivisionTypeResolver::division(
+                $class->type ?? null,
+                $class->name ?? null,
+                $class->division ?? null
+            );
 
             $classIdsByDivision[$normalizedType][] = (int) $class->id;
         }
