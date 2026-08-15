@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\SchoolClass;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -490,14 +491,13 @@ class ReportController extends Controller
             $endDt   = \Carbon\Carbon::parse($dateEnd);
             $totalDays = (int) $startDt->diffInDays($endDt) + 1;
 
-            // Working days = Mon-Sat (school default). Kirtan-only reports
-            // would use Sunday-only, but since a report can span multiple
-            // classes we default to the Gurmukhi (majority) calendar.
-            for ($d = $startDt->copy(); $d->lte($endDt); $d->addDay()) {
-                if ($d->dayOfWeek !== \Carbon\Carbon::SUNDAY) {
-                    $workingDays++;
-                }
-            }
+            // Working days = distinct weekdays the report's classes may have
+            // attendance on (Stage B). For each class we resolve its attendance
+            // days through ClassSchedule — Kirtan = [0] (Sunday only), Gurmukhi
+            // = [1..6] (Mon-Sat), any explicit Stage B config wins. The union
+            // across all classes in the report gives the right "working days"
+            // for both single-class and multi-class reports.
+            $workingDays = $this->countWorkingDaysForReport($startDt, $endDt, $request->class_ids ?? []);
         }
 
         // Compute month count for the range label
@@ -728,5 +728,70 @@ class ReportController extends Controller
                 'students' => $students,
             ],
         ];
+    }
+
+    /**
+     * B13 — Count working days in the report range that match the attendance
+     * days of the selected classes.
+     *
+     * The previous hardcoded loop assumed Mon-Sat (6) for every class, which
+     * silently dropped Sunday-only classes (Kirtan) and any future class with
+     * a different schedule. The fix unions the attendance days of every class
+     * in the report (with the canonical ClassSchedule seam) and counts matching
+     * calendar days in the inclusive [$start, $end] range.
+     *
+     * Empty selection (no class_ids) → defaults to Mon-Sat (6) so existing
+     * reports over "all classes" keep producing usable numbers.
+     */
+    private function countWorkingDaysForReport(\Carbon\Carbon $startDt, \Carbon\Carbon $endDt, array $classIds): int
+    {
+        $attendanceDays = $this->resolveAttendanceDaysForReport($classIds);
+
+        if (empty($attendanceDays)) {
+            $attendanceDays = [1, 2, 3, 4, 5, 6]; // Mon-Sat fallback for "no classes selected"
+        }
+
+        $count = 0;
+        $cursor = $startDt->copy()->startOfDay();
+
+        while ($cursor->lte($endDt)) {
+            // Carbon::dayOfWeek: 0 = Sunday … 6 = Saturday
+            if (in_array($cursor->dayOfWeek, $attendanceDays, true)) {
+                $count++;
+            }
+            $cursor->addDay();
+        }
+
+        return $count;
+    }
+
+    /**
+     * Resolve the union of attendance days across the given class IDs.
+     * Uses the canonical ClassSchedule seam so a class with a custom schedule
+     * (e.g. "Tue + Thu") contributes those days instead of a fallback.
+     */
+    private function resolveAttendanceDaysForReport(array $classIds): array
+    {
+        if (empty($classIds)) {
+            return [];
+        }
+
+        $classes = SchoolClass::whereIn('id', $classIds)->get();
+
+        $union = [];
+        foreach ($classes as $class) {
+            // SchoolClass::attendanceDays() delegates to ClassSchedule and is
+            // the canonical seam — explicit JSON wins, NULL falls back to the
+            // legacy Kirtan rule. Single source of truth for class schedules.
+            foreach ($class->attendanceDays() as $day) {
+                $day = (int) $day;
+                if (!in_array($day, $union, true)) {
+                    $union[] = $day;
+                }
+            }
+        }
+
+        sort($union);
+        return $union;
     }
 }

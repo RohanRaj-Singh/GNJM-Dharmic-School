@@ -6,12 +6,12 @@
       1. Cover / school header
       2. Range strip
       3. Student Snapshot (identity block)
-      4. Gurmukhi division (attendance + fees + monthly breakdown + calendar)
-      5. Kirtan division (attendance + fees + Kirtan performance + calendar)
-      6. Footer
+      4. One section per division (Gurmukhi + Kirtan + any third+ class)
+      5. Footer
 
-    Each major section starts on a new page. Calendar partials are
-    paginated by 3 months per row inside the section.
+    The per-division block is the partial at
+    reports.partials.student_center_division — data-driven, so adding a
+    Music class needs no template change.
 --}}
 <!DOCTYPE html>
 <html>
@@ -143,180 +143,22 @@
 </table>
 
 @php
-    $gurmukhi = $divisions['gurmukhi'] ?? null;
-    $kirtan   = $divisions['kirtan']   ?? null;
-    $isFree   = ($identity['student_type'] ?? '') === 'free';
+    $isFree = ($identity['student_type'] ?? '') === 'free';
 @endphp
 
-{{-- ============== GURMUKHI ============== --}}
-@if($gurmukhi)
-<h2>Gurmukhi (Academic)</h2>
-
-@if(!$gurmukhi['enrolled'])
-    <p class="empty-state">Student is not enrolled in Gurmukhi. No attendance or fees to show.</p>
-@else
-    <h3>Attendance</h3>
-    <table class="stat-table no-break">
-        <tr>
-            <td><div class="lbl">Present</div><div class="val">{{ $gurmukhi['attendance']['present'] }}</div></td>
-            <td><div class="lbl">Absent</div><div class="val">{{ $gurmukhi['attendance']['absent'] }}</div></td>
-            <td><div class="lbl">Leave</div><div class="val">{{ $gurmukhi['attendance']['leave'] }}</div></td>
-            <td><div class="lbl">Marked</div><div class="val">{{ $gurmukhi['attendance']['marked_days'] }}</div></td>
-            <td><div class="lbl">Attendance %</div><div class="val">{{ number_format($gurmukhi['attendance']['percentage'], 2) }}%</div></td>
-        </tr>
-    </table>
-
-    @if(!empty($gurmukhi['attendance']['current_streak_length']))
-        <p>Current streak: <strong>{{ $gurmukhi['attendance']['current_streak_length'] }}</strong> day(s) of <strong>{{ $gurmukhi['attendance']['current_streak_status'] }}</strong></p>
-    @endif
-
-    <h3>Fees</h3>
-    <table class="stat-table no-break">
-        <tr>
-            <td><div class="lbl">Total Charged</div><div class="val">Rs. {{ number_format($gurmukhi['fees']['total_charged']) }}</div></td>
-            <td><div class="lbl">Total Paid</div><div class="val">Rs. {{ number_format($gurmukhi['fees']['total_paid']) }}</div></td>
-            <td><div class="lbl">Pending</div><div class="val">Rs. {{ number_format($gurmukhi['fees']['pending']) }}</div></td>
-            <td><div class="lbl">Outstanding Months</div><div class="val">{{ $gurmukhi['fees']['outstanding_months'] }}</div></td>
-        </tr>
-    </table>
-    @if(!empty($gurmukhi['fees']['last_payment_date']))
-        <p>Last payment: <strong>{{ $gurmukhi['fees']['last_payment_date'] }}</strong></p>
-    @endif
-
-    @if($isFree)
-        <p><em>This student is exempt from monthly fees. Only custom fees are listed below (if any).</em></p>
-    @endif
-
-    @if(!empty($gurmukhi['fees']['monthly_breakdown']))
-        <h4>Monthly Breakdown</h4>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Month</th>
-                    <th class="amount">Charged</th>
-                    <th class="amount">Paid</th>
-                    <th class="amount">Pending</th>
-                    <th class="center">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($gurmukhi['fees']['monthly_breakdown'] as $m)
-                    <tr>
-                        <td>{{ $m['month'] }}</td>
-                        <td class="amount">Rs. {{ number_format($m['charged']) }}</td>
-                        <td class="amount">Rs. {{ number_format($m['paid']) }}</td>
-                        <td class="amount {{ $m['pending'] > 0 ? 'unpaid' : '' }}">Rs. {{ number_format($m['pending']) }}</td>
-                        <td class="center {{ $m['is_paid'] ? 'paid' : 'unpaid' }}">{{ $m['is_paid'] ? 'PAID' : 'DUE' }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    @endif
-
-    @if(empty($gurmukhi['fees']['rows']))
-        <p class="empty-state">No fee records in this range.</p>
-    @endif
-
-    <h3>Calendar</h3>
-    @include('reports.partials.student_center_calendar', [
-        'months'     => $gurmukhi['months'] ?? [],
-        'year'       => (int) ($range['start_label'] ? substr($range['start_label'], 0, 4) : date('Y')),
-        'showLesson' => false,
+{{-- ============== DIVISION SECTIONS (data-driven) ============== --}}
+{{-- Renders one section per division the StudentReportService returns. A
+     third+ class (Music, Tabla, …) gets its own section with the same
+     layout — title comes from the service-supplied division_label. The
+     partial gates Kirtan-only features (lesson-marker, kirtan-score) on
+     the division key. --}}
+@foreach($divisions ?? [] as $divisionKey => $division)
+    @include('reports.partials.student_center_division', [
+        'division' => $division,
+        'range'    => $range ?? [],
+        'isFree'   => $isFree,
     ])
-@endif
-@endif
-
-{{-- ============== KIRTAN ============== --}}
-@if($kirtan)
-<h2>Kirtan (Spiritual)</h2>
-
-@if(!$kirtan['enrolled'])
-    <p class="empty-state">Student is not enrolled in Kirtan. No attendance or fees to show.</p>
-@else
-    <h3>Attendance</h3>
-    <table class="stat-table no-break">
-        <tr>
-            <td><div class="lbl">Present</div><div class="val">{{ $kirtan['attendance']['present'] }}</div></td>
-            <td><div class="lbl">Absent</div><div class="val">{{ $kirtan['attendance']['absent'] }}</div></td>
-            <td><div class="lbl">Leave</div><div class="val">{{ $kirtan['attendance']['leave'] }}</div></td>
-            <td><div class="lbl">Marked</div><div class="val">{{ $kirtan['attendance']['marked_days'] }}</div></td>
-            <td><div class="lbl">Attendance %</div><div class="val">{{ number_format($kirtan['attendance']['percentage'], 2) }}%</div></td>
-        </tr>
-    </table>
-
-    @if(!empty($kirtan['attendance']['current_streak_length']))
-        <p>Current streak: <strong>{{ $kirtan['attendance']['current_streak_length'] }}</strong> day(s) of <strong>{{ $kirtan['attendance']['current_streak_status'] }}</strong></p>
-    @endif
-
-    <h3>Fees</h3>
-    <table class="stat-table no-break">
-        <tr>
-            <td><div class="lbl">Total Charged</div><div class="val">Rs. {{ number_format($kirtan['fees']['total_charged']) }}</div></td>
-            <td><div class="lbl">Total Paid</div><div class="val">Rs. {{ number_format($kirtan['fees']['total_paid']) }}</div></td>
-            <td><div class="lbl">Pending</div><div class="val">Rs. {{ number_format($kirtan['fees']['pending']) }}</div></td>
-            <td><div class="lbl">Outstanding Months</div><div class="val">{{ $kirtan['fees']['outstanding_months'] }}</div></td>
-        </tr>
-    </table>
-    @if(!empty($kirtan['fees']['last_payment_date']))
-        <p>Last payment: <strong>{{ $kirtan['fees']['last_payment_date'] }}</strong></p>
-    @endif
-
-    @if(!empty($kirtan['kirtan_score']))
-        <h3>Kirtan Performance</h3>
-        @if(($kirtan['kirtan_score']['data_status'] ?? '') === 'no_data')
-            <p class="empty-state">No attendance recorded in the selected range — score is not available.</p>
-        @else
-            <table class="stat-table no-break">
-                <tr>
-                    <td><div class="lbl">Score</div><div class="val">{{ number_format($kirtan['kirtan_score']['score'], 1) }}%</div></td>
-                    <td><div class="lbl">Rating</div><div class="val">{{ $kirtan['kirtan_score']['rating'] }}</div></td>
-                    <td><div class="lbl">Total Classes</div><div class="val">{{ $kirtan['kirtan_score']['total_classes'] }}</div></td>
-                    <td><div class="lbl">Lessons Learned</div><div class="val">{{ $kirtan['kirtan_score']['lessons_learned'] }}</div></td>
-                </tr>
-            </table>
-            <p>Attendance component: <strong>{{ number_format($kirtan['kirtan_score']['components']['attendance'], 2) }}%</strong> × 0.6
-               · Lesson component: <strong>{{ number_format($kirtan['kirtan_score']['components']['lesson'], 2) }}%</strong> × 0.4</p>
-        @endif
-    @endif
-
-    @if(!empty($kirtan['fees']['monthly_breakdown']))
-        <h4>Monthly Breakdown</h4>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Month</th>
-                    <th class="amount">Charged</th>
-                    <th class="amount">Paid</th>
-                    <th class="amount">Pending</th>
-                    <th class="center">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($kirtan['fees']['monthly_breakdown'] as $m)
-                    <tr>
-                        <td>{{ $m['month'] }}</td>
-                        <td class="amount">Rs. {{ number_format($m['charged']) }}</td>
-                        <td class="amount">Rs. {{ number_format($m['paid']) }}</td>
-                        <td class="amount {{ $m['pending'] > 0 ? 'unpaid' : '' }}">Rs. {{ number_format($m['pending']) }}</td>
-                        <td class="center {{ $m['is_paid'] ? 'paid' : 'unpaid' }}">{{ $m['is_paid'] ? 'PAID' : 'DUE' }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    @endif
-
-    @if(empty($kirtan['fees']['rows']))
-        <p class="empty-state">No fee records in this range.</p>
-    @endif
-
-    <h3>Calendar</h3>
-    @include('reports.partials.student_center_calendar', [
-        'months'     => $kirtan['months'] ?? [],
-        'year'       => (int) ($range['start_label'] ? substr($range['start_label'], 0, 4) : date('Y')),
-        'showLesson' => true,
-    ])
-@endif
-@endif
+@endforeach
 
 <div class="footer">
     Generated on {{ now()->format('d M Y, h:i A') }} · Guru Nanak Ji Mission Dharmic School · Student Report Center
