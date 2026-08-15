@@ -1,4 +1,4 @@
-import { division, isKirtan } from "@/utils/divisionType";
+import { division, divisionMeta } from "@/utils/divisionType";
 
 export function normalizeText(value) {
   return String(value ?? "").trim();
@@ -38,13 +38,23 @@ export function getEnrollmentBadges(enrollments = []) {
     const schoolClassName = enrollment?.school_class?.name ?? "Class";
     const sectionName = enrollment?.section?.name ?? "Section";
 
+    // Resolve the division via the 3-arg resolver (honors the explicit
+    // classes.division seam — see class-rename-bucket-lock). Then pull
+    // presentation classes from divisionMeta() so a third+ division badge
+    // inherits the deterministic palette with no JSX change here.
+    const divisionKey = division(
+      enrollment?.school_class?.type,
+      enrollment?.school_class?.name,
+      enrollment?.school_class?.division
+    );
+    const meta = divisionMeta(divisionKey);
+
     return {
       id: enrollment?.id ?? `${schoolClassName}-${sectionName}`,
       label: `${schoolClassName} - ${sectionName}`,
-      isKirtan: isKirtan(
-        enrollment?.school_class?.type,
-        enrollment?.school_class?.name
-      ),
+      divisionKey,
+      pillBg: meta.pillBg,
+      pillText: meta.pillText,
     };
   });
 }

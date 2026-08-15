@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Models\Section;
+use App\Support\DivisionTypeResolver;
 
 /*
 |--------------------------------------------------------------------------
@@ -10,9 +12,31 @@ use Inertia\Inertia;
 | Attendance-only role (Phase 1)
 */
 
-Route::get('/', fn () =>
-    Inertia::render('Teacher/Dashboard')
-)->name('teacher.dashboard');
+Route::get('/', function () {
+    $user = auth()->user();
+
+    // myDivisions: every distinct division key the teacher owns sections in,
+    // computed via the resolver (3-arg, explicit-first). Drives the dashboard's
+    // division legend and per-division action-card hints. See
+    // docs/architecture/14-Accountant-Teacher-UI-UX-Audit.md §3.1.
+    $sections = $user->isTeacher()
+        ? $user->sections()->with('schoolClass')->get()
+        : Section::query()->with('schoolClass')->get();
+
+    $myDivisions = $sections
+        ->map(fn (Section $s) => DivisionTypeResolver::division(
+            $s->schoolClass->type ?? null,
+            $s->schoolClass->name ?? null,
+            $s->schoolClass->division ?? null,
+        ))
+        ->unique()
+        ->values()
+        ->all();
+
+    return Inertia::render('Teacher/Dashboard', [
+        'myDivisions' => $myDivisions,
+    ]);
+})->name('teacher.dashboard');
 
 /*
 |--------------------------------------------------------------------------
@@ -21,9 +45,28 @@ Route::get('/', fn () =>
 */
 Route::prefix('attendance')->group(function () {
 
-    Route::get('/', fn () =>
-        Inertia::render('Attendance/Dashboard')
-    )->name('teacher.attendance.dashboard');
+    Route::get('/', function () {
+        $user = auth()->user();
+
+        // Teacher dashboard: only divisions the teacher owns sections in.
+        $sections = $user->isTeacher()
+            ? $user->sections()->with('schoolClass')->get()
+            : collect();
+
+        $divisions = $sections
+            ->map(fn ($s) => DivisionTypeResolver::division(
+                $s->schoolClass->type ?? null,
+                $s->schoolClass->name ?? null,
+                $s->schoolClass->division ?? null,
+            ))
+            ->unique()
+            ->values()
+            ->all();
+
+        return Inertia::render('Attendance/Dashboard', [
+            'divisions' => $divisions,
+        ]);
+    })->name('teacher.attendance.dashboard');
 
     Route::get('/sections', fn () =>
         Inertia::render('Attendance/Sections')

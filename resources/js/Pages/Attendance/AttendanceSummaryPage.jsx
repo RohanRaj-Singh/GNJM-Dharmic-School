@@ -2,7 +2,7 @@ import AttendanceRecordCard from "@/Components/AttendanceRecordCard";
 
 export default function AttendanceSummaryPage({
   records = [],
-  isKirtan,
+  divisionKey = "",
   updateRecord,
   onSave,
 }) {
@@ -25,7 +25,7 @@ export default function AttendanceSummaryPage({
             status={r.status}
             lessonLearned={r.lesson_learned}
             lessonNote={r.lesson_note}
-            showLesson={isKirtan}
+            divisionKey={divisionKey}
             studentSectionId={r.student_section_id}
             onStatusChange={(status) =>
               updateRecord(r.student_id, { status })

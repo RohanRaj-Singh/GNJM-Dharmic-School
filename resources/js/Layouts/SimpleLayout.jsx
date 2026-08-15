@@ -3,11 +3,18 @@ import { router } from "@inertiajs/react";
 import { usePage } from "@inertiajs/react";
 import { useState, useEffect, useRef } from "react";
 import TabSessionTimeout from "@/Components/TabSessionTimeout";
+import { divisionMeta } from "@/utils/divisionType";
 
 const PROTECTED_HISTORY_KEY = "gnjm.protected.history";
 
 /**
  * SimpleLayout - Layout for teacher/accountant mobile views
+ *
+ * Pass `divisions` (array of string keys or {key, title} objects) to render
+ * a cross-division color legend strip below the header. The legend uses the
+ * same divisionMeta() palette as the admin dashboard so accountants and
+ * teachers see consistent colors across the app. See
+ * docs/architecture/14-Accountant-Teacher-UI-UX-Audit.md §5.5 + §7.4.
  */
 export default function SimpleLayout({
   title,
@@ -17,7 +24,9 @@ export default function SimpleLayout({
   alwaysConfirmLeave = false,
   onLogout,
   backRoute = null,
-  homeRoute = null
+  homeRoute = null,
+  divisions = null,
+  LegendComponent = null,
 }) {
   const { auth } = usePage().props;
   const todayLabel = new Date().toLocaleDateString(undefined, {
@@ -238,6 +247,17 @@ export default function SimpleLayout({
       </header>
 
       <main className="max-w-md mx-auto px-4 py-4 pb-24">
+        {/* Cross-division color legend — pages pass `divisions` (array
+            of keys) to surface this strip. Renders nothing when omitted. */}
+        {(divisions || LegendComponent) ? (
+          <div className="mb-3 px-1">
+            {LegendComponent ? (
+              <LegendComponent />
+            ) : (
+              <SimpleLegend divisions={divisions} />
+            )}
+          </div>
+        ) : null}
         {children}
       </main>
 
@@ -284,6 +304,39 @@ export default function SimpleLayout({
       </div>
 
       <TabSessionTimeout />
+    </div>
+  );
+}
+
+/**
+ * SimpleLegend - light-weight in-house legend for the mobile layout.
+ *
+ * Renders one swatch+label per division using divisionMeta() for both
+ * color and title. Pages that already use <DivisionLegend/> (the admin
+ * component) can pass that in via the LegendComponent slot instead.
+ */
+function SimpleLegend({ divisions = [] }) {
+  if (!Array.isArray(divisions) || divisions.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+      <span className="uppercase tracking-wide text-slate-500 mr-1">Divisions:</span>
+      {divisions.map((d) => {
+        const key = typeof d === "string" ? d : d?.key;
+        if (!key) return null;
+        const meta = divisionMeta(key);
+        return (
+          <span
+            key={key}
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-transparent ${meta.pillBg} ${meta.pillText}`}
+          >
+            <span
+              aria-hidden="true"
+              className={`inline-block h-2 w-2 rounded-full ${meta.accent.replace("text-", "bg-")}`}
+            />
+            {meta.title}
+          </span>
+        );
+      })}
     </div>
   );
 }

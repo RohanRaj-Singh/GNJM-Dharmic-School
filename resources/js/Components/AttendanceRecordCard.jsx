@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { BookOpen } from "lucide-react";
+import { divisionMeta } from "@/utils/divisionType";
 
+/**
+ * Per-student attendance summary card.
+ *
+ * `showLesson` was a boolean prop the caller computed (`isKirtan`). It's now
+ * derived from `divisionMeta(key).hasLessonNotes` — see
+ * docs/architecture/14-Accountant-Teacher-UI-UX-Audit.md §7.2.
+ */
 export default function AttendanceRecordCard({
   name,
   fatherName,
@@ -10,9 +18,11 @@ export default function AttendanceRecordCard({
   onStatusChange,
   onLessonChange,
   onLessonNoteChange,
-  showLesson = true,
+  divisionKey = "",
   studentSectionId,
 }) {
+  const meta = divisionMeta(divisionKey);
+  const showLesson = Boolean(meta.hasLessonNotes);
   const lessonDisabled = status === "absent" || status === "leave";
 
   const [historyNotes, setHistoryNotes] = useState([]);
@@ -68,7 +78,7 @@ export default function AttendanceRecordCard({
           })}
         </div>
 
-        {/* Lesson Learned checkbox (Kirtan only) */}
+        {/* Lesson Learned checkbox (only for divisions with lesson notes) */}
         {showLesson && (
           <div className="flex items-center gap-2 text-sm">
             <input
@@ -85,7 +95,7 @@ export default function AttendanceRecordCard({
         )}
       </div>
 
-      {/* Lesson Note + History (Kirtan only — below the record card) */}
+      {/* Lesson Note + History (only for divisions with lesson notes) */}
       {showLesson && (
         <div className="space-y-2 pl-2">
           {/* Note textarea */}
@@ -94,7 +104,8 @@ export default function AttendanceRecordCard({
             onChange={(e) => onLessonNoteChange(e.target.value)}
             placeholder="How did the student perform today?"
             rows={1}
-            className="w-full border rounded-lg px-2.5 py-1.5 text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+            className={`w-full border rounded-lg px-2.5 py-1.5 text-sm resize-none outline-none ${meta.bg} ${meta.text}`}
+            style={{ borderColor: "currentColor" }}
           />
 
           {/* History */}
@@ -107,10 +118,11 @@ export default function AttendanceRecordCard({
               {historyNotes.map((note, i) => (
                 <div
                   key={i}
-                  className="bg-purple-50 border border-purple-200 rounded-lg px-2.5 py-2"
+                  className={`${meta.bg} border rounded-lg px-2.5 py-2`}
+                  style={{ borderColor: "currentColor" }}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs text-purple-800 leading-relaxed whitespace-pre-wrap">
+                    <p className={`text-xs ${meta.text} leading-relaxed whitespace-pre-wrap`}>
                       {note.lesson_note}
                     </p>
                     <span className="shrink-0 mt-0.5">
@@ -121,7 +133,7 @@ export default function AttendanceRecordCard({
                       )}
                     </span>
                   </div>
-                  <p className="text-[10px] text-purple-500 mt-0.5 font-medium">
+                  <p className={`text-[10px] mt-0.5 font-medium ${meta.accent}`}>
                     {formatDate(note.date)}
                   </p>
                 </div>

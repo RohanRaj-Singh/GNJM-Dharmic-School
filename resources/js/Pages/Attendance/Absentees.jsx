@@ -1,5 +1,5 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { router } from "@inertiajs/react";
 
 import AbsenteesFiltersPanel from "./Absentees/AbsenteesFiltersPanel";
@@ -14,6 +14,28 @@ import {
   getFilteredSections,
 } from "./Absentees/utils";
 
+// Server-round-tripped filter state (5 fields: dates, include_today, class,
+// section). Set on Apply; read back via `filters` prop on next navigation.
+const blankServerFilters = (startDate, endDate) => ({
+  start_date: startDate,
+  end_date: endDate,
+  include_today: false,
+  class_id: "",
+  section_id: "",
+});
+
+// UI-only state (7 fields: collapsible panels + per-row sort/search prefs).
+// Reset every time the user hits Apply/Reset, since the row set changes.
+const blankUiState = () => ({
+  filterOpen: false,
+  todayOpen: false,
+  expandedStudents: {},
+  searchTerm: "",
+  sortBy: "days_desc",
+  hideZeroAbsentees: false,
+  hideZeroLeaves: false,
+});
+
 export default function Absentees({
   students = [],
   today_absentees = [],
@@ -26,28 +48,31 @@ export default function Absentees({
     []
   );
 
-  const [startDate, setStartDate] = useState(filters.start_date || defaultStartDate);
-  const [endDate, setEndDate] = useState(filters.end_date || defaultEndDate);
-  const [includeToday, setIncludeToday] = useState(!!filters.include_today);
-  const [classId, setClassId] = useState(filters.class_id || "");
-  const [sectionId, setSectionId] = useState(filters.section_id || "");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [todayOpen, setTodayOpen] = useState(false);
-  const [expandedStudents, setExpandedStudents] = useState({});
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("days_desc");
-  const [hideZeroAbsentees, setHideZeroAbsentees] = useState(false);
-  const [hideZeroLeaves, setHideZeroLeaves] = useState(false);
+  const [serverFilters, setServerFilters] = useState(() =>
+    blankServerFilters(
+      filters.start_date || defaultStartDate,
+      filters.end_date || defaultEndDate
+    )
+  );
+  const [ui, setUi] = useState(blankUiState);
 
-  const hasCustomFilter = !!filters.has_custom_filter;
-  const hasActiveFilters = hasCustomFilter || !!classId || !!sectionId || includeToday;
-
+  // Re-hydrate server filter state from the next-page props (when the user
+  // navigates back/forward or re-applies). UI state intentionally NOT
+  // re-hydrated — it resets on every server round-trip.
   useEffect(() => {
-    setStartDate(filters.start_date || defaultStartDate);
-    setEndDate(filters.end_date || defaultEndDate);
-    setIncludeToday(!!filters.include_today);
-    setClassId(filters.class_id || "");
-    setSectionId(filters.section_id || "");
+    setServerFilters(
+      blankServerFilters(
+        filters.start_date || defaultStartDate,
+        filters.end_date || defaultEndDate
+      )
+    );
+    setServerFilters((current) => ({
+      ...current,
+      include_today: !!filters.include_today,
+      class_id: filters.class_id || "",
+      section_id: filters.section_id || "",
+    }));
+    setUi(blankUiState());
   }, [
     defaultEndDate,
     defaultStartDate,
@@ -57,6 +82,28 @@ export default function Absentees({
     filters.section_id,
     filters.start_date,
   ]);
+
+  const { startDate, endDate, includeToday, classId, sectionId } = serverFilters;
+  const {
+    filterOpen,
+    todayOpen,
+    expandedStudents,
+    searchTerm,
+    sortBy,
+    hideZeroAbsentees,
+    hideZeroLeaves,
+  } = ui;
+
+  // Single source of truth for "are any filters user-visible active?".
+  // Both the panel badge and the page-level UX read this — no duplicate.
+  const hasActiveFilters = useMemo(
+    () =>
+      !!filters.has_custom_filter ||
+      includeToday ||
+      !!classId ||
+      !!sectionId,
+    [filters.has_custom_filter, includeToday, classId, sectionId]
+  );
 
   const daysCount = useMemo(() => getDaysCount(startDate, endDate), [startDate, endDate]);
   const dateRangeError =
@@ -83,27 +130,15 @@ export default function Absentees({
     [hideZeroAbsentees, hideZeroLeaves, searchTerm, sortBy, studentRecords]
   );
 
-  const resetClientState = () => {
-    setSearchTerm("");
-    setSortBy("days_desc");
-    setHideZeroAbsentees(false);
-    setHideZeroLeaves(false);
-    setExpandedStudents({});
-  };
+  const setField = (field, value) =>
+    setServerFilters((current) => ({ ...current, [field]: value }));
 
-  const toggleStudent = (studentKey) => {
-    setExpandedStudents((prev) => ({
-      ...prev,
-      [studentKey]: !prev[studentKey],
-    }));
-  };
+  const setUiField = (field, value) =>
+    setUi((current) => ({ ...current, [field]: value }));
 
-  const applyFilter = () => {
-    if (dateRangeError) {
-      return;
-    }
-
-    resetClientState();
+  const applyFilter = useCallback(() => {
+    if (dateRangeError) return;
+    setUi(blankUiState());
 
     router.get(
       "/attendance/absentees",
@@ -116,27 +151,22 @@ export default function Absentees({
       },
       { preserveScroll: true }
     );
-  };
+  }, [dateRangeError, startDate, endDate, includeToday, classId, sectionId]);
 
-  const resetFilter = () => {
+  const resetFilter = useCallback(() => {
     const { startDate: nextStartDate, endDate: nextEndDate } = getDefaultDateRange();
-
-    setStartDate(nextStartDate);
-    setEndDate(nextEndDate);
-    setIncludeToday(false);
-    setClassId("");
-    setSectionId("");
-    resetClientState();
+    setServerFilters(blankServerFilters(nextStartDate, nextEndDate));
+    setUi(blankUiState());
 
     router.get("/attendance/absentees", {}, { preserveScroll: true });
-  };
+  }, []);
 
   return (
     <SimpleLayout title="Attendance - Absent & Leave Register">
       <div className="space-y-4">
         <AbsenteesFiltersPanel
           filterOpen={filterOpen}
-          onToggleOpen={() => setFilterOpen((current) => !current)}
+          onToggleOpen={() => setUiField("filterOpen", !filterOpen)}
           hasActiveFilters={hasActiveFilters}
           startDate={startDate}
           endDate={endDate}
@@ -147,14 +177,14 @@ export default function Absentees({
           filteredSections={filteredSections}
           daysCount={daysCount}
           dateRangeError={dateRangeError}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
+          onStartDateChange={(value) => setField("start_date", value)}
+          onEndDateChange={(value) => setField("end_date", value)}
           onClassChange={(value) => {
-            setClassId(value);
-            setSectionId("");
+            setField("class_id", value);
+            setField("section_id", "");
           }}
-          onSectionChange={setSectionId}
-          onIncludeTodayChange={setIncludeToday}
+          onSectionChange={(value) => setField("section_id", value)}
+          onIncludeTodayChange={(value) => setField("include_today", value)}
           onApply={applyFilter}
           onReset={resetFilter}
         />
@@ -166,18 +196,23 @@ export default function Absentees({
           hideZeroAbsentees={hideZeroAbsentees}
           hideZeroLeaves={hideZeroLeaves}
           expandedStudents={expandedStudents}
-          onSearchChange={setSearchTerm}
-          onSortChange={setSortBy}
-          onHideZeroAbsenteesChange={setHideZeroAbsentees}
-          onHideZeroLeavesChange={setHideZeroLeaves}
-          onToggleStudent={toggleStudent}
+          onSearchChange={(value) => setUiField("searchTerm", value)}
+          onSortChange={(value) => setUiField("sortBy", value)}
+          onHideZeroAbsenteesChange={(value) => setUiField("hideZeroAbsentees", value)}
+          onHideZeroLeavesChange={(value) => setUiField("hideZeroLeaves", value)}
+          onToggleStudent={(studentKey) =>
+            setUiField("expandedStudents", {
+              ...expandedStudents,
+              [studentKey]: !expandedStudents[studentKey],
+            })
+          }
           getDayName={getDayName}
         />
 
         <TodayAbsenteesPanel
           students={today_absentees}
           isOpen={todayOpen}
-          onToggle={() => setTodayOpen((current) => !current)}
+          onToggle={() => setUiField("todayOpen", !todayOpen)}
         />
 
         {visibleStudentRecords.length === 0 && (!today_absentees || today_absentees.length === 0) && (

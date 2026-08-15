@@ -2,48 +2,74 @@ export function normalizeText(value) {
   return String(value ?? "").trim();
 }
 
+// "all" sentinel — applies to the class/section filter IDs.
+export const ALL_FILTER = "all";
+
 export function hasActiveFilters({ classFilter, sectionFilter, search }) {
   return (
-    classFilter !== "all" ||
-    sectionFilter !== "all" ||
+    classFilter !== ALL_FILTER ||
+    sectionFilter !== ALL_FILTER ||
     normalizeText(search) !== ""
   );
 }
 
+// Build the class filter list keyed by class ID (collision-safe). Display
+// label is still the class name. See
+// docs/architecture/14-Accountant-Teacher-UI-UX-Audit.md §2.4.
 export function buildClassOptions(items = []) {
-  return Array.from(
-    new Set(items.map((item) => normalizeText(item?.class)).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b));
+  const byId = new Map();
+  for (const item of items) {
+    const id = item?.class_id;
+    const name = normalizeText(item?.class);
+    if (id == null || name === "") continue;
+    if (!byId.has(id)) byId.set(id, { id, name });
+  }
+  return Array.from(byId.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 }
 
 export function buildSectionOptions(items = [], classFilter) {
   const source =
-    classFilter === "all"
+    classFilter === ALL_FILTER
       ? items
-      : items.filter((item) => normalizeText(item?.class) === classFilter);
+      : items.filter((item) => String(item?.class_id) === String(classFilter));
 
-  return Array.from(
-    new Set(source.map((item) => normalizeText(item?.section)).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b));
+  const byId = new Map();
+  for (const item of source) {
+    const id = item?.section_id;
+    const name = normalizeText(item?.section);
+    if (id == null || name === "") continue;
+    if (!byId.has(id)) byId.set(id, { id, name });
+  }
+  return Array.from(byId.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 }
 
 export function applyFilters(items = [], { classFilter, sectionFilter, search }) {
   const term = normalizeText(search).toLowerCase();
 
   return items.filter((item) => {
-    const cls = normalizeText(item?.class);
-    const sec = normalizeText(item?.section);
+    const clsId = item?.class_id;
+    const secId = item?.section_id;
+    const clsName = normalizeText(item?.class);
+    const secName = normalizeText(item?.section);
     const student = normalizeText(item?.student).toLowerCase();
 
-    if (classFilter !== "all" && cls !== classFilter) return false;
-    if (sectionFilter !== "all" && sec !== sectionFilter) return false;
+    if (classFilter !== ALL_FILTER && String(clsId) !== String(classFilter)) {
+      return false;
+    }
+    if (sectionFilter !== ALL_FILTER && String(secId) !== String(sectionFilter)) {
+      return false;
+    }
 
     if (!term) return true;
 
     return (
       student.includes(term) ||
-      cls.toLowerCase().includes(term) ||
-      sec.toLowerCase().includes(term)
+      clsName.toLowerCase().includes(term) ||
+      secName.toLowerCase().includes(term)
     );
   });
 }

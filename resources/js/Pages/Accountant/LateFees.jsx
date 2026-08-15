@@ -9,6 +9,7 @@ import {
   buildSectionOptions,
   getFilteredTotal,
   hasActiveFilters,
+  ALL_FILTER,
 } from "./LateFees/utils";
 
 export default function LateFees({
@@ -16,8 +17,8 @@ export default function LateFees({
   dueOlder = [],
   totalPending = 0,
 }) {
-  const [classFilter, setClassFilter] = useState("all");
-  const [sectionFilter, setSectionFilter] = useState("all");
+  const [classFilter, setClassFilter] = useState(ALL_FILTER);
+  const [sectionFilter, setSectionFilter] = useState(ALL_FILTER);
   const [search, setSearch] = useState("");
 
   const allItems = useMemo(
@@ -69,21 +70,21 @@ export default function LateFees({
           sectionOptions={sectionOptions}
           onClassFilterChange={(value) => {
             setClassFilter(value);
-            setSectionFilter("all");
+            setSectionFilter(ALL_FILTER);
           }}
           onSectionFilterChange={setSectionFilter}
           onSearchChange={setSearch}
         />
 
         <LateFeesSectionCard
-          emoji="[This Month]"
+          emoji="📅"
           title="Due This Month"
           description="Students whose monthly fee is pending for the current month"
           items={filteredDueThisMonth}
         />
 
         <LateFeesSectionCard
-          emoji="[Older]"
+          emoji="📦"
           title="Pending From Previous Months"
           description="Fees pending from earlier months"
           items={filteredDueOlder}

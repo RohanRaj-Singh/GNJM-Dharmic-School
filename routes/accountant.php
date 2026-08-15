@@ -21,9 +21,26 @@ use App\Support\DivisionTypeResolver;
 | Accountant Area
 |--------------------------------------------------------------------------
 */
-Route::get('/', fn () =>
-        Inertia::render('Accountant/Dashboard')
-    );
+Route::get('/', function () {
+        // Ship the school's distinct divisions so the dashboard's
+        // SimpleLayout legend has data to render. Drives the cross-division
+        // color strip below the header. See
+        // docs/architecture/14-Accountant-Teacher-UI-UX-Audit.md §2.1 + §7.4.
+        $divisions = SchoolClass::query()
+            ->get(['type', 'name', 'division'])
+            ->map(fn ($c) => DivisionTypeResolver::division(
+                $c->type ?? null,
+                $c->name ?? null,
+                $c->division ?? null,
+            ))
+            ->unique()
+            ->values()
+            ->all();
+
+        return Inertia::render('Accountant/Dashboard', [
+            'divisions' => $divisions,
+        ]);
+    });
 
     // Route::get('/students/create', function () {
     //     return Inertia::render('Accountant/Students/Create', [

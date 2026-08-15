@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 
 import AttendanceMarkPage from "./AttendanceMarkPage";
 import AttendanceSummaryPage from "./AttendanceSummaryPage";
-import { isKirtan as resolveIsKirtan } from "@/utils/divisionType";
+import { division as resolveDivision } from "@/utils/divisionType";
 
 export default function Mark({
   section,
@@ -21,9 +21,12 @@ export default function Mark({
     return false;
   };
 
-  const isKirtan = resolveIsKirtan(
+  // 3-arg resolver (with explicit `classes.division`) — see
+  // class-rename-bucket-lock. Honors the seam before falling back to name/type.
+  const divisionKey = resolveDivision(
     section.school_class?.type,
-    section.school_class?.name
+    section.school_class?.name,
+    section.school_class?.division
   );
   const now = new Date();
   const dayLabel = now.toLocaleDateString(undefined, { weekday: "long" });
@@ -156,7 +159,7 @@ return (
           records={records}
           index={index}
           setIndex={setIndex}
-          isKirtan={isKirtan}
+          divisionKey={divisionKey}
           updateCurrent={updateCurrent}
           onFinish={() => setMode("summary")}
         />
@@ -165,7 +168,7 @@ return (
       {mode === "summary" && records.length > 0 && (
         <AttendanceSummaryPage
           records={records}
-          isKirtan={isKirtan}
+          divisionKey={divisionKey}
           updateRecord={updateRecord}
           onSave={saveAttendance}
         />

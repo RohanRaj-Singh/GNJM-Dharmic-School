@@ -59,6 +59,7 @@ const LEGACY_META = {
     accent: "text-blue-600",
     pillBg: "bg-blue-100",
     pillText: "text-blue-700",
+    hasLessonNotes: false,
   },
   kirtan: {
     title: "Kirtan",
@@ -68,6 +69,7 @@ const LEGACY_META = {
     accent: "text-purple-600",
     pillBg: "bg-purple-100",
     pillText: "text-purple-700",
+    hasLessonNotes: true,
   },
 };
 
@@ -79,6 +81,12 @@ const PALETTE = [
   { text: "text-rose-700", bg: "bg-rose-50", bgHover: "hover:bg-rose-100", accent: "text-rose-600", pillBg: "bg-rose-100", pillText: "text-rose-700" },
   { text: "text-indigo-700", bg: "bg-indigo-50", bgHover: "hover:bg-indigo-100", accent: "text-indigo-600", pillBg: "bg-indigo-100", pillText: "text-indigo-700" },
 ];
+
+// Default flags applied to any palette entry; opt-in only via LEGACY_META
+// for legacy divisions. See docs/architecture/14-Accountant-Teacher-UI-UX-Audit.md §7.2.
+function withDefaults(entry) {
+  return { ...entry, hasLessonNotes: false };
+}
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -104,8 +112,8 @@ export function divisionMeta(divisionKey) {
   if (LEGACY_META[key]) return LEGACY_META[key];
 
   const palette = PALETTE[stableHash(key) % PALETTE.length];
-  return {
+  return withDefaults({
     title: key === "" ? "Class" : titleCase(key),
     ...palette,
-  };
+  });
 }

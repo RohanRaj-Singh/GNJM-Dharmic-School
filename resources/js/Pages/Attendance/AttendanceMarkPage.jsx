@@ -2,7 +2,7 @@ import AttendanceStudentCard from "@/Components/AttendanceStudentCard";
 
 export default function AttendanceMarkPage({
   records,
-  isKirtan,
+  divisionKey,
   index,
   setIndex,
   updateCurrent,
@@ -18,7 +18,7 @@ export default function AttendanceMarkPage({
 
       <AttendanceStudentCard
         student={current}
-        isKirtan={isKirtan}
+        divisionKey={divisionKey}
         onStatusChange={(status) => updateCurrent({ status })}
         onLessonChange={(value) => updateCurrent({ lesson_learned: value })}
         onLessonNoteChange={(value) => updateCurrent({ lesson_note: value })}

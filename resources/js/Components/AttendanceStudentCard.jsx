@@ -1,20 +1,32 @@
 import { useEffect, useState } from "react";
 import { BookOpen } from "lucide-react";
+import { divisionMeta } from "@/utils/divisionType";
 
+/**
+ * Per-student attendance card.
+ *
+ * The "show lesson notes?" decision used to be a boolean `isKirtan` prop
+ * the caller had to compute. That's now driven by `divisionMeta(key).hasLessonNotes`
+ * — see docs/architecture/14-Accountant-Teacher-UI-UX-Audit.md §7.2.
+ * Kirtan alone has `hasLessonNotes=true` today; a future Music/Tabla division
+ * opts in by adding to LEGACY_META (no JSX change here).
+ */
 export default function AttendanceStudentCard({
   student,
-  isKirtan,
+  divisionKey = "",
   onStatusChange,
   onLessonChange,
   onLessonNoteChange,
 }) {
+  const meta = divisionMeta(divisionKey);
+  const hasLessonNotes = Boolean(meta.hasLessonNotes);
   const isDisabledLesson =
     student.status === "absent" || student.status === "leave";
 
   const [historyNotes, setHistoryNotes] = useState([]);
 
   useEffect(() => {
-    if (!isKirtan || !student.student_section_id) return;
+    if (!hasLessonNotes || !student.student_section_id) return;
     let cancelled = false;
     fetch(`/attendance/lesson-notes/${student.student_section_id}`)
       .then((r) => r.json())
@@ -23,7 +35,7 @@ export default function AttendanceStudentCard({
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [isKirtan, student.student_section_id]);
+  }, [hasLessonNotes, student.student_section_id]);
 
   const formatDate = (d) => {
     const date = new Date(d + "T00:00:00");
@@ -71,8 +83,8 @@ export default function AttendanceStudentCard({
           })}
         </div>
 
-        {/* Lesson Learned (Kirtan only) */}
-        {isKirtan && (
+        {/* Lesson Learned (only for divisions with lesson notes) */}
+        {hasLessonNotes && (
           <div className="flex items-center justify-center gap-3 pt-2">
             <input
               type="checkbox"
@@ -92,8 +104,8 @@ export default function AttendanceStudentCard({
         )}
       </div>
 
-      {/* Lesson Note Section (Kirtan only — below the mark card) */}
-      {isKirtan && (
+      {/* Lesson Note Section (only for divisions with lesson notes) */}
+      {hasLessonNotes && (
         <div className="space-y-3">
           {/* Lesson Note Textarea */}
           <div className="bg-white border-2 rounded-2xl p-4 space-y-2">
@@ -105,7 +117,8 @@ export default function AttendanceStudentCard({
               onChange={(e) => onLessonNoteChange(e.target.value)}
               placeholder="How did the student perform today?"
               rows={2}
-              className="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+              className={`w-full border rounded-lg px-3 py-2 text-sm resize-none outline-none ${meta.bg} ${meta.text} focus:ring-2 focus:border-transparent`}
+              style={{ borderColor: "currentColor" }}
             />
           </div>
 
@@ -120,10 +133,11 @@ export default function AttendanceStudentCard({
                 {historyNotes.map((note, i) => (
                   <div
                     key={i}
-                    className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2.5"
+                    className={`${meta.bg} border rounded-lg px-3 py-2.5`}
+                    style={{ borderColor: "currentColor" }}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm text-purple-800 leading-relaxed whitespace-pre-wrap">
+                      <p className={`text-sm ${meta.text} leading-relaxed whitespace-pre-wrap`}>
                         {note.lesson_note}
                       </p>
                       <span className="shrink-0 mt-0.5">
@@ -134,7 +148,7 @@ export default function AttendanceStudentCard({
                         )}
                       </span>
                     </div>
-                    <p className="text-[10px] text-purple-500 mt-1 font-medium">
+                    <p className={`text-[10px] mt-1 font-medium ${meta.accent}`}>
                       {formatDate(note.date)}
                     </p>
                   </div>

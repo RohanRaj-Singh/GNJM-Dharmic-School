@@ -17,11 +17,7 @@ function StudentCard({ student }) {
         {badges.map((badge) => (
           <span
             key={badge.id}
-            className={`px-2 py-1 rounded-full ${
-              badge.isKirtan
-                ? "bg-purple-100 text-purple-700"
-                : "bg-gray-100 text-gray-700"
-            }`}
+            className={`px-2 py-1 rounded-full ${badge.pillBg} ${badge.pillText}`}
           >
             {badge.label}
           </span>

@@ -1,0 +1,4 @@
+- [student-fees-attendance-linked-to-student](student-fees-attendance-linked-to-student.md) — Fees and attendance linked via student_id not just student_section_id
+- [class-rename-bucket-lock](class-rename-bucket-lock.md) — Renaming a class only updates `name`; `type` + `division` are frozen at first-save (bucket is locked, cannot be re-derived)
+- [admin-divisions-page](admin-divisions-page.md) — Division settings page lives at `/admin/divisions`; sidebar entry at `AdminLayout.jsx:188`
+- [cross-division-report-contract](cross-division-report-contract.md) — Fees + Attendance reports accept any class_ids[] list; Student Report Center has `division='all'`; Accountant Students is cross-division by default

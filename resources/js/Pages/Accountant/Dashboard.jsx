@@ -1,9 +1,9 @@
 import SimpleLayout from "@/Layouts/SimpleLayout";
 import { Link } from "@inertiajs/react";
 
-export default function Dashboard() {
+export default function Dashboard({ divisions = [] }) {
   return (
-    <SimpleLayout title="Accountant">
+    <SimpleLayout title="Accountant" divisions={divisions}>
       <div className="space-y-4">
 
         <ActionCard
@@ -15,26 +15,25 @@ export default function Dashboard() {
 
         <ActionCard
           href="/attendance/absentees"
-          emoji="❌"
+          emoji="🚫"
           title="Absentees"
           description="See absent students"
         />
 
         <ActionCard
           href="/accountant/late-fees"
-          emoji="❗"
+          emoji="⏰"
           title="Late Fees"
           description="See overdue payments"
           highlight
         />
-<ActionCard
-  href="/attendance"
-  emoji="🕒"
-  title="Attendance"
-  description="Mark & view attendance"
-/>
 
-
+        <ActionCard
+          href="/attendance/sections"
+          emoji="🕒"
+          title="Attendance"
+          description="Mark & view attendance"
+        />
       </div>
     </SimpleLayout>
   );

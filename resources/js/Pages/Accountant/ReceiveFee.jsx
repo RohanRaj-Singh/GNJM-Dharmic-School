@@ -92,6 +92,7 @@ export default function ReceiveFee({ student, fees = [] }) {
             <input
               type="date"
               value={collectionDate}
+              max={getTodayDateInput()}
               onChange={(e) => setCollectionDate(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm"
             />

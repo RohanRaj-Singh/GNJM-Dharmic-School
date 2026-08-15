@@ -1,5 +1,6 @@
 import SearchInput from "@/Components/SearchInput";
 import { FilterSelect } from "@/Components/FilterBar";
+import { ALL_FILTER } from "./utils";
 
 export default function LateFeesFiltersPanel({
   classFilter,
@@ -17,7 +18,10 @@ export default function LateFeesFiltersPanel({
         <FilterSelect
           value={classFilter}
           onChange={onClassFilterChange}
-          options={classOptions.map((cls) => ({ value: cls, label: cls }))}
+          options={[
+            { value: ALL_FILTER, label: "All Classes" },
+            ...classOptions.map((cls) => ({ value: String(cls.id), label: cls.name })),
+          ]}
           placeholder="All Classes"
           className="border rounded-lg px-3 py-2 text-sm"
         />
@@ -25,10 +29,13 @@ export default function LateFeesFiltersPanel({
         <FilterSelect
           value={sectionFilter}
           onChange={onSectionFilterChange}
-          options={sectionOptions.map((section) => ({
-            value: section,
-            label: section,
-          }))}
+          options={[
+            { value: ALL_FILTER, label: "All Sections" },
+            ...sectionOptions.map((section) => ({
+              value: String(section.id),
+              label: section.name,
+            })),
+          ]}
           placeholder="All Sections"
           className="border rounded-lg px-3 py-2 text-sm"
         />

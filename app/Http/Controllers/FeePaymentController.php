@@ -20,7 +20,10 @@ class FeePaymentController extends Controller
     $request->validate([
         'fee_ids' => ['required', 'array', 'min:1'],
         'fee_ids.*' => ['exists:fees,id'],
-        'collection_date' => ['required', 'date'],
+        // before_or_equal:today — a future-dated payment is almost certainly
+        // a typo (you can't collect money tomorrow). See
+        // docs/architecture/14-Accountant-Teacher-UI-UX-Audit.md §2.3.
+        'collection_date' => ['required', 'date', 'before_or_equal:today'],
     ]);
 
     $collectionDate = Carbon::parse($request->collection_date, config('app.timezone'))
