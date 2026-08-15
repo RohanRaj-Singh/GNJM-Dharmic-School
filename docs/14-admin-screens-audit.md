@@ -55,15 +55,15 @@
 
 **Confirmed via `php artisan route:list`:**
 
-| URL | Resolved name |
-|---|---|
-| `GET /admin/dashboard/summary` | `admin.admin.dashboard.summary` |
-| `GET /admin/divisions` | `admin.admin.divisions.index` |
-| `GET /admin/divisions/data` | `admin.admin.divisions.data` |
+| URL | Resolved name (before) | Resolved name (after B2 fix) |
+|---|---|---|
+| `GET /admin/dashboard/summary` | `admin.admin.dashboard.summary` | `admin.dashboard.summary` |
+| `GET /admin/divisions` | `admin.admin.divisions.index` | `admin.divisions.index` |
+| `GET /admin/divisions/data` | `admin.admin.divisions.data` | `admin.divisions.data` |
 
 **Root cause:** `web.php:42` applies `->name('admin.')` prefix to the admin group. Three route definitions inside `routes/admin.php` then call `->name('admin.dashboard.summary')` / `admin.divisions.*` — full names, not relative ones. Laravel concatenates, producing `admin.admin.X`.
 
-**Latency:** No code currently calls `route('admin.dashboard.summary')` etc. (`grep -rn` returned no matches). The bug is currently latent — any future call site would throw `RouteNotFoundException`. The 3 URLs themselves are correct.
+**Latency:** No code currently calls `route('admin.dashboard.summary')` etc. (`grep -rn` returned no matches). The bug is currently latent — any future call site would throw `RouteNotFoundException`. The 3 URLs themselves are correct. The bug was independently re-discovered by the B18/B1 test, which initially failed with `RouteNotFoundException` until the test was switched to hit the URL directly.
 
 **Fix:**
 ```php
@@ -183,7 +183,7 @@ If a class is added with `type='music'` and `division='music'`, the 2-arg return
 | Dashboard | `GET /admin/dashboard` → `admin.dashboard` | ✓ |
 | Students | `GET /admin/students` → `admin.students.index` | ✓ |
 | Classes | `GET /admin/classes` → `admin.classes.index` | ✓ |
-| Divisions | `GET /admin/divisions` → `admin.admin.divisions.index` (B2: name bug) | ✓ URL |
+| Divisions | `GET /admin/divisions` → `admin.divisions.index` | ✓ |
 | Sections | `GET /admin/sections` → `admin.sections.index` | ✓ |
 | Attendance | `GET /admin/attendance` → `admin.attendance.index` | ✓ |
 | Manage Fees | `GET /admin/fees/` → `admin.fees.index` | ✓ |

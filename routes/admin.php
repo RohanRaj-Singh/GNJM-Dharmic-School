@@ -274,7 +274,7 @@ Route::get('/utilities/master-directory/data', function (Request $request) {
 })->name('utilities.master-directory.data');
 
 Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardController::class, 'summary'])
-    ->name('admin.dashboard.summary');
+    ->name('dashboard.summary');
 
 
 /* =========================================================
@@ -287,9 +287,9 @@ Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardControlle
    | verify which bucket Music actually sits in".
    ========================================================= */
 Route::get('/divisions', [\App\Http\Controllers\Admin\DivisionController::class, 'index'])
-    ->name('admin.divisions.index');
+    ->name('divisions.index');
 Route::get('/divisions/data', [\App\Http\Controllers\Admin\DivisionController::class, 'data'])
-    ->name('admin.divisions.data');
+    ->name('divisions.data');
 
 
 /* =========================================================
