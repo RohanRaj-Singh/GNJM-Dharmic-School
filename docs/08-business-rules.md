@@ -104,3 +104,49 @@ INSUFFICIENT INFORMATION on whether Kirtan is meant to have monthly fees; the se
 ## 8.15 Reports "is paid" denominator
 
 For Fees, Attendance, Dashboard, and Student Performa, **paid** is computed via `payments.id IS NOT NULL` (left join with `deleted_at IS NULL`) or `EXISTS(SELECT 1 FROM payments WHERE fee_id=fees.id AND deleted_at IS NULL)`. Custom fees and monthly fees are joined with the same predicate, so the definition is consistent.
+
+## 8.16 Class creation — slug derivation and Kirtan-name snap
+
+When an admin creates a new class through `/admin/classes/save` (Stage B10 modal path or inline-row path), the route handler derives the **division slug** from the class name and stores it in two columns. This section is the source of truth for that derivation and the snap that affects Kirtan.
+
+### Slug derivation
+
+- Source: `$row['name']`.
+- Rule: `Str::slug($name)` — lowercase, hyphenated, alphanumeric only.
+- Storage: the slug is written to **both** `classes.type` (legacy column, used by older string-comparison code) **and** `classes.division` (Stage A2 explicit override). Mirroring the value keeps both code paths honest — any new business rule should prefer `DivisionTypeResolver::division($class->type, $class->name, $class->division)` over reading either column directly.
+- Edge case: if `Str::slug($name)` returns an empty string (e.g. name in a non-Latin script that slugifies to nothing), the slug falls back to the literal string `'class'`.
+- The admin cannot override the slug through the UI. Intentional — see audit C5.
+
+**Examples:**
+
+| Class name     | Stored slug (`type` = `division`) | Division bucket |
+|---|---|---|
+| `Gurmukhi`     | `gurmukhi`     | gurmukhi |
+| `Kirtan`       | `kirtan`       | kirtan (also snaps — see below) |
+| `Gurmukhi 2`   | `gurmukhi-2`   | gurmukhi-2 (own bucket — does not collide with `gurmukhi`) |
+| `Music`        | `music`        | music |
+| `Tabla`        | `tabla`        | tabla |
+| `Sunday`       | `sunday`       | gurmukhi (does NOT snap to kirtan — name match only fires on `'kirtan'`) |
+
+### Kirtan-name snap
+
+If the class name is exactly `kirtan` (case-insensitive — `strtolower($name) === 'kirtan'`), the route handler **pre-fills** the new class with the Kirtan business defaults so an admin doesn't have to remember to flip them manually:
+
+- `attendance_days = [0]` (Sunday-only)
+- `charges_monthly_fee = false`
+
+The admin can still override these toggles in the Stage B10 modal — the snap is a *default*, not a lock. The snap exists because the Kirtan day-rule is a real business rule (Sunday-only spiritual class), and any class legitimately named "Kirtan" should pick up those defaults by construction.
+
+**Edge cases the snap does NOT cover:**
+
+- A class named "Kirtan Advanced" or "Beginner Kirtan" does NOT snap — the match is exact-string, not substring. The slug becomes `kirtan-advanced` (or `beginner-kirtan`), which the route handler writes to **both** `type` and `division`. The explicit `division` column is non-empty, so `DivisionTypeResolver::division()` returns it verbatim at read time — `'kirtan-advanced'` is its own bucket and is **not** treated as `'kirtan'` by downstream rules.
+  - In practice, "Kirtan Advanced" surfaces as the `kirtan-advanced` bucket with **Gurmukhi defaults** (Mon-Sat, charges fees) — usually NOT what the admin wants. The remedy: name the class exactly `Kirtan`, or set the toggles manually in the modal.
+- A class named `sunday` does NOT snap to Kirtan. The match is exact `'kirtan'` only. (Audit C7.)
+
+### Where the rules live in code
+
+- Slug + Kirtan snap: `routes/admin.php` `/admin/classes/save` POST handler (the closure starting around line 335).
+- Slug fallback to `'class'`: same handler, the `if ($slug === '')` branch.
+- Division resolution at read time: `app/Support/DivisionTypeResolver.php` (resolution order is documented in the class doc-block).
+- Attendance-day + monthly-fee fallbacks: `app/Support/ClassSchedule.php` (the explicit-config seam that the slug mirrors into `classes.attendance_days` and `classes.charges_monthly_fee`).
+

@@ -593,7 +593,7 @@ These are *workflow* issues, not code issues. They are surfaced for the next pla
 ### 🟡 MEDIUM (next sprint, nice-to-have)
 - ~~**M-1** Add admin sidebar entry for `/admin/classes` in `AdminLayout`.~~ **RESOLVED (B15):** already present at `resources/js/Layouts/AdminLayout.jsx:187`. See C1 above.
 - **M-2** Add admin "delete class" and "rename class" workflows.
-- **M-3** Document the auto-derive rule for division slug + the Kirtan-name snap behavior in the admin user guide.
+- ~~**M-3** Document the auto-derive rule for division slug + the Kirtan-name snap behavior in the admin user guide.~~ **RESOLVED (B16):** see `docs/08-business-rules.md` §8.16. Documents the slug rule (`Str::slug($name)` → both `type` and `division`, empty-slug fallback to `'class'`) and the Kirtan-name snap (`name === 'kirtan'`, case-insensitive, pre-fills Sunday-only + no monthly fees). Pins the four edge cases the audit's C5/C7/M-3 call out: empty-slug fallback, case-insensitive Kirtan snap, "Kirtan Advanced" trap (only exact `'kirtan'` snaps), `'Sunday'` non-snap.
 
 ### 🟢 LOW (backlog, not blocking)
 - **L-1** Admin "division settings" page that lists every division with its business-rule summary (Kirtan Sunday-only, etc.).
