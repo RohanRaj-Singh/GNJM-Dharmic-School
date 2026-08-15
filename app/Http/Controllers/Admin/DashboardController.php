@@ -433,6 +433,9 @@ class DashboardController extends Controller
                 'students.father_name',
                 'classes.name as class_name',
                 'classes.type as class_type',
+                // B18/B1: ship the explicit division so the resolver can return a
+                // third+ class's own bucket instead of collapsing into 'gurmukhi'.
+                'classes.division as class_division',
                 'sections.name as section_name',
                 DB::raw('COUNT(*) as absent_days')
             )
@@ -445,6 +448,7 @@ class DashboardController extends Controller
                 'students.father_name',
                 'classes.name',
                 'classes.type',
+                'classes.division',
                 'sections.name'
             )
             ->orderByDesc('absent_days')
@@ -462,7 +466,15 @@ class DashboardController extends Controller
                 'section_id' => (int) ($row->section_id ?? 0),
                 'class_name' => (string) $row->class_name,
                 'section_name' => (string) ($row->section_name ?? ''),
-                'division_type' => DivisionTypeResolver::division($row->class_type ?? null, $row->class_name ?? null),
+                // 3-arg form: explicit division wins over the legacy
+                // type/name heuristic. Without this, a class with
+                // type='gurmukhi' + division='music' was collapsed into
+                // the Gurmukhi card on the admin dashboard.
+                'division_type' => DivisionTypeResolver::division(
+                    $row->class_type ?? null,
+                    $row->class_name ?? null,
+                    $row->class_division ?? null
+                ),
                 'absent_days' => (int) ($row->absent_days ?? 0),
             ];
         })->all();
@@ -493,6 +505,8 @@ class DashboardController extends Controller
                 'students.father_name',
                 'classes.name as class_name',
                 'classes.type as class_type',
+                // B18/B1: ship the explicit division (mirror of topAbsentees).
+                'classes.division as class_division',
                 'sections.name as section_name',
                 DB::raw('SUM(fees.amount) as pending_amount'),
                 DB::raw('COUNT(fees.id) as pending_fee_count')
@@ -506,6 +520,7 @@ class DashboardController extends Controller
                 'students.father_name',
                 'classes.name',
                 'classes.type',
+                'classes.division',
                 'sections.name'
             )
             ->orderByDesc('pending_amount')
@@ -523,7 +538,12 @@ class DashboardController extends Controller
                 'section_id' => (int) ($row->section_id ?? 0),
                 'class_name' => (string) $row->class_name,
                 'section_name' => (string) ($row->section_name ?? ''),
-                'division_type' => DivisionTypeResolver::division($row->class_type ?? null, $row->class_name ?? null),
+                // 3-arg form — see topAbsentees for rationale.
+                'division_type' => DivisionTypeResolver::division(
+                    $row->class_type ?? null,
+                    $row->class_name ?? null,
+                    $row->class_division ?? null
+                ),
                 'pending_amount' => (int) ($row->pending_amount ?? 0),
                 'pending_fee_count' => (int) ($row->pending_fee_count ?? 0),
             ];
