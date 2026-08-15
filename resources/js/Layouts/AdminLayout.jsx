@@ -185,6 +185,7 @@ export default function AdminLayout({ title, children }) {
           <SidebarLink href="/admin/dashboard" label="Dashboard" />
           <SidebarLink href="/admin/students" label="Students" />
           <SidebarLink href="/admin/classes" label="Classes" />
+          <SidebarLink href="/admin/divisions" label="Divisions" />
           <SidebarLink href="/admin/sections" label="Sections" />
           <SidebarLink href="/admin/attendance" label="Attendance" />
 

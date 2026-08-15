@@ -187,7 +187,20 @@ export default function AttendanceReport() {
                 <div className="flex flex-wrap gap-3 items-end">
                     <div>
                         <label className="block text-xs text-gray-500 mb-1">Class(es)</label>
-                        <FeeFilterSelect options={classes.map(c=>({value:c.id,label:c.name}))} value={classIds} onChange={setClassIds} width="min-w-[220px]" />
+                        <div className="flex items-center gap-2">
+                            <FeeFilterSelect options={classes.map(c=>({value:c.id,label:c.name}))} value={classIds} onChange={setClassIds} width="min-w-[220px]" />
+                            {/* Sprint 6.4 / L-2 — cross-division quick-pick.
+                                Selects every class so the report runs over
+                                the union of all divisions. */}
+                            <button
+                                type="button"
+                                onClick={() => setClassIds(classes.map(c => c.id))}
+                                disabled={!classes.length || classIds.length === classes.length}
+                                className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                All Classes
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-xs text-gray-500 mb-1">Section(s)</label>

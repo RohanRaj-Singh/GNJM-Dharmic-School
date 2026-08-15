@@ -278,6 +278,21 @@ Route::get('/dashboard/summary', [\App\Http\Controllers\Admin\DashboardControlle
 
 
 /* =========================================================
+   | Sprint 6.4 / L-1 — Division settings (read-only diagnostic).
+   |
+   | Lists every division the resolver surfaces with its
+   | business-rule summary (attendance days, charges-monthly-fee,
+   | default monthly fee) and operational counts. No editing —
+   | the audit frames this purely as "admins should be able to
+   | verify which bucket Music actually sits in".
+   ========================================================= */
+Route::get('/divisions', [\App\Http\Controllers\Admin\DivisionController::class, 'index'])
+    ->name('admin.divisions.index');
+Route::get('/divisions/data', [\App\Http\Controllers\Admin\DivisionController::class, 'data'])
+    ->name('admin.divisions.data');
+
+
+/* =========================================================
      | Students
      ========================================================= */
 

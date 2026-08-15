@@ -1,4 +1,5 @@
 import AdminLayout from "@/Layouts/AdminLayout";
+import DivisionLegend from "@/Components/DivisionLegend";
 import { formatPKR } from "@/utils/helper";
 import { useEffect, useMemo, useState } from "react";
 
@@ -262,6 +263,16 @@ export default function Dashboard() {
                     </button>
                   ))}
                 </div>
+
+                {/* L-3: legend tells the admin which palette color
+                    corresponds to which division (e.g. "emerald = Music").
+                    Only renders when at least one division exists. */}
+                <DivisionLegend
+                  divisions={(data.divisions ?? []).map((d) => ({
+                    key: d.type,
+                    title: d.title,
+                  }))}
+                />
 
                 {activeDivision ? (
                   <div className="flex items-center gap-2">
