@@ -24,6 +24,7 @@
 
 ### What is missing for genuine "any class" support
 - **Class creation UI** beyond the modal shipped in B10 is fine; the gap is *operational*. There is no "Classes" entry in `AdminLayout` navigation that an admin would naturally look for, and the "+ New Class" modal is hidden behind `/admin/classes` which is only reachable from `/admin/classes/save` redirects or direct URL.
+  - **Resolved (B15):** `resources/js/Layouts/AdminLayout.jsx:187` ships `<SidebarLink href="/admin/classes" label="Classes" />`. The page is now discoverable from the main admin sidebar; the audit's claim of "no entry" was incorrect against the current code.
 - **Section creation** is fully tied to the inline-row + modal flow on `/admin/classes/:id` (it lives in the per-class edit page). For a third class, sections must be created through the same flow — works, but the discoverability is "find the class, click edit, scroll down".
 - **Dashboard division picker** defaults to "gurmukhi" and the dashboard section was not validated against a three-division payload in any test. (Stage B4 palette does the *display*, but the active-division state machine was not tested for "third division + missing data".)
 - **Reports** have not been audited for whether PDF exports, CSV exports, or print views hardcode "Gurmukhi / Kirtan" headers anywhere.
@@ -543,7 +544,7 @@ For every module: **Screens**, **Backend**, **Frontend**, **Business Workflow**,
 | 2 | **Stale comment** "guaranteed 'gurmukhi' or 'kirtan'" | Module 7 (StudentController.php:119) | 🟡 Minor |
 | 3 | **PDF/CSV templates not audited** for division string compares | Module 14 | 🟡 Unknown until checked |
 | 4 | **No three-division feature test** for dashboard API + frontend button rendering | Module 11 | 🟡 Test gap |
-| 5 | **Admin sidebar discoverability** for `/admin/classes` route (not visible from any menu we audited) | Module 1 | 🟡 Operational gap |
+| 5 | ~~**Admin sidebar discoverability** for `/admin/classes` route~~ | **RESOLVED (B15):** the sidebar already exposed `<SidebarLink href="/admin/classes" label="Classes" />` (`AdminLayout.jsx:187`). Pinning test added so it can't silently disappear. | 🟢 Fixed |
 | 6 | **Kirtan-specific UI gates** (lesson_learned, "Sundays only" pill, lesson-notes block) are string-compares against `'kirtan'` in the frontend | Modules 7, 8 | 🟢 Legitimate (these are Kirtan-only features by business design) |
 | 7 | **Division label cosmetic** — `ucfirst($type)` in `DashboardController` works but the frontend `divisionMeta()` already does title-casing | Module 11 | ⚪ None |
 
@@ -555,7 +556,7 @@ The B10 modal (`CreateClassModal`) is structurally complete. The remaining gaps 
 
 | # | Gap | Why it matters | Severity |
 |---|-----|----------------|----------|
-| C1 | No discoverable menu entry for `/admin/classes` in `AdminLayout` sidebar | Admins don't know the page exists | 🟡 UX |
+| ~~C1~~ | ~~No discoverable menu entry for `/admin/classes` in `AdminLayout` sidebar~~ | **RESOLVED (B15):** `resources/js/Layouts/AdminLayout.jsx:187` already ships `<SidebarLink href="/admin/classes" label="Classes" />`. `tests/Feature/AdminClassesSidebarLinkTest.php` pins it so a future refactor can't silently drop the entry. | 🟢 Fixed |
 | C2 | Sections are edited per-class, not in a dedicated "Sections" admin surface | OK for two classes, friction at five | 🟡 UX |
 | C3 | No way to *delete* a class through the UI (only soft edits) | Data hygiene risk if a class is created by mistake | 🟡 UX |
 | C4 | No way to *rename* a class through the UI | OK today; required if a division is renamed mid-year | 🟡 UX |
@@ -590,7 +591,7 @@ These are *workflow* issues, not code issues. They are surfaced for the next pla
 - **H-3** Update stale comment in `StudentController.php:119` ("guaranteed 'gurmukhi' or 'kirtan'").
 
 ### 🟡 MEDIUM (next sprint, nice-to-have)
-- **M-1** Add admin sidebar entry for `/admin/classes` in `AdminLayout`.
+- ~~**M-1** Add admin sidebar entry for `/admin/classes` in `AdminLayout`.~~ **RESOLVED (B15):** already present at `resources/js/Layouts/AdminLayout.jsx:187`. See C1 above.
 - **M-2** Add admin "delete class" and "rename class" workflows.
 - **M-3** Document the auto-derive rule for division slug + the Kirtan-name snap behavior in the admin user guide.
 

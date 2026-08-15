@@ -116,7 +116,12 @@ class StudentController extends Controller
             $unpaidFees = $allFees->filter(fn ($f) => $f->payments->isEmpty());
 
             return [
-                'class_type_key' => $type,   // guaranteed 'gurmukhi' or 'kirtan'
+                // Resolved division key (Stage A2) — e.g. 'gurmukhi', 'kirtan',
+                // 'music', 'tabla'. NOT the raw SchoolClass.type — the resolver
+                // normalises through the explicit-division seam so a class
+                // with division='music' surfaces as 'music' regardless of its
+                // legacy type column.
+                'class_type_key' => $type,
                 'class'          => $displayEnrollment->schoolClass->name,
                 'class_type'     => $displayEnrollment->schoolClass->type,
                 'section'        => $displayEnrollment->section->name,
