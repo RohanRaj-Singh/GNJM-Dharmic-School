@@ -73,6 +73,64 @@ Route::get('/', fn () =>
     //     ]);
     // })->name('accountant.students.show');
 
+    /* Students index (B12 — data-driven division filter).
+     *
+     * Resolves every active class through DivisionTypeResolver and hands
+     * the page a `divisions` array so the filter bar can render one button
+     * per division the school actually has. A third+ class (Music, Tabla,
+     * …) is visible by construction — no hardcoded two-button bug.
+     */
+    Route::get('/students', function () {
+        $classes = SchoolClass::orderBy('name')->get();
+
+        // One entry per distinct division the resolver returns. Order is
+        // stable so the filter bar always renders in the same sequence.
+        $divisions = $classes
+            ->map(fn ($c) => DivisionTypeResolver::division(
+                $c->type ?? null,
+                $c->name ?? null,
+                $c->division ?? null
+            ))
+            ->unique()
+            ->values()
+            ->map(fn ($key) => ['key' => $key, 'title' => ucfirst($key)])
+            ->all();
+
+        $students = Student::with([
+            'enrollments' => fn ($q) => $q,
+            'enrollments.schoolClass',
+            'enrollments.section',
+        ])
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($student) => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'father_name' => $student->father_name,
+                'enrollments' => $student->enrollments->map(fn ($e) => [
+                    'id' => $e->id,
+                    'student_type' => $e->student_type,
+                    'school_class' => $e->schoolClass ? [
+                        'id' => $e->schoolClass->id,
+                        'name' => $e->schoolClass->name,
+                        'type' => $e->schoolClass->type,
+                        'division' => $e->schoolClass->division,
+                    ] : null,
+                    'section' => $e->section ? [
+                        'id' => $e->section->id,
+                        'name' => $e->section->name,
+                    ] : null,
+                ])->all(),
+            ])
+            ->all();
+
+        return Inertia::render('Accountant/Students', [
+            'students' => $students,
+            'divisions' => $divisions,
+        ]);
+    })->name('accountant.students.index');
+
     /* Fees */
     Route::get('/receive-fee', function () {
         $student = Student::with([

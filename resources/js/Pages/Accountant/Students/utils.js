@@ -5,7 +5,11 @@ export function normalizeText(value) {
 }
 
 export function classMatchesFilter(schoolClass, classFilter) {
-  return division(schoolClass?.type, schoolClass?.name) === classFilter;
+  // "all" is the no-filter sentinel — every class matches.
+  const filter = String(classFilter ?? "").trim().toLowerCase();
+  if (filter === "" || filter === "all") return true;
+
+  return division(schoolClass?.type, schoolClass?.name, schoolClass?.division) === filter;
 }
 
 export function buildStudentRows(students = [], { search, classFilter }) {
