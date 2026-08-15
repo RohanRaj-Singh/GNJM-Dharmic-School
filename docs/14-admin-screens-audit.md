@@ -83,29 +83,29 @@
 
 ## 2. Dead / Orphan Code
 
-### ⚠️ O1 — `Batches.jsx` is a frontend-only mockup, no backend
+### ✅ O1 — `Batches.jsx` was a frontend-only mockup, no backend
 
-**File:** `resources/js/Pages/Admin/Utilities/Batches.jsx` (169 lines).
+**File:** `resources/js/Pages/Admin/Utilities/Batches.jsx` (169 lines, **REMOVED B18**).
 
 - Header comment: "This is a visual prototype. All data is mock data. No backend integration yet."
-- Defines `MOCK_BATCHES` constant; renders UI from it.
+- Defined `MOCK_BATCHES` constant; rendered UI from it.
 - NOT linked from the sidebar or from `Admin/Utilities.jsx`.
 - No route registered.
 
-**Action:** Either delete or wire to a real `batches` table. Recommend **delete** unless a `batches` table migration is planned soon.
+**Resolution (B18):** Deleted. No `batches` table migration is planned; the prototype served its purpose and would have been misleading to keep.
 
 ---
 
-### ⚠️ O2 — `Admin/Students/Show.jsx` is legacy dead code
+### ✅ O2 — `Admin/Students/Show.jsx` was legacy dead code
 
-**File:** `resources/js/Pages/Admin/Students/Show.jsx` (55 lines).
+**File:** `resources/js/Pages/Admin/Students/Show.jsx` (55 lines, **REMOVED B18**).
 
-- Uses `SimpleLayout` (not `AdminLayout`).
-- Renders a single `<StudentReport>` component for a `student` prop and a `report` prop.
-- No `/admin/students/{id}` route is registered for it.
+- Used `SimpleLayout` (not `AdminLayout`).
+- Rendered a single `<StudentReport>` component for a `student` prop and a `report` prop.
+- No `/admin/students/{id}` route was registered for it.
 - The actual student-detail view is the **Student Report Center** (`/admin/student-report-center`).
 
-**Action:** Delete. It's a leftover from before V1 of Student Report Center.
+**Resolution (B18):** Deleted. Leftover from before V1 of Student Report Center.
 
 ---
 
@@ -202,9 +202,9 @@ If a class is added with `type='music'` and `division='music'`, the 2-arg return
 - `backup` → `admin.utilities.backup.index`
 - Bulk Student Upload / Bulk Student Edit — placeholders only, no link (cards render with no `href`).
 
-**Orphan pages NOT in sidebar nor Utilities landing:**
-- `Admin/Students/Show.jsx` (dead, uses SimpleLayout)
-- `Admin/Utilities/Batches.jsx` (mockup prototype)
+**Orphan pages (removed B18):**
+- ~~`Admin/Students/Show.jsx`~~ (dead, used `SimpleLayout`; removed)
+- ~~`Admin/Utilities/Batches.jsx`~~ (mockup prototype; removed)
 
 ---
 
@@ -228,11 +228,11 @@ Update three lines in `routes/admin.php`:
 
 Run `php artisan route:list --name=admin.divisions` before/after to confirm.
 
-### 🟡 Priority 3 — Delete orphan pages (O1, O2)
+### ✅ Priority 3 — Delete orphan pages (O1, O2) — RESOLVED
 
-- Delete `resources/js/Pages/Admin/Utilities/Batches.jsx`.
-- Delete `resources/js/Pages/Admin/Students/Show.jsx`.
-- Verify `grep -r "Batches\|Admin/Students/Show" resources/js app routes` returns no remaining references.
+- Deleted `resources/js/Pages/Admin/Utilities/Batches.jsx`.
+- Deleted `resources/js/Pages/Admin/Students/Show.jsx`.
+- Verified no remaining references in `resources/js`, `app`, or `routes`.
 
 ### 🔵 Priority 4 — Optional consistency fixes (B3, B4)
 
