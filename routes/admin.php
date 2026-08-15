@@ -337,9 +337,18 @@ Route::prefix('classes')->name('classes.')->group(function () {
             if (!empty($row['id'])) {
                 $existing = SchoolClass::find($row['id']);
                 if ($existing) {
+                    // Rename ONLY updates `name`. The `type` and `division`
+                    // columns (which determine which bucket the class sits
+                    // in — Gurmukhi vs Kirtan vs Music vs Tabla vs anything
+                    // else) stay frozen at their first-save values. We use
+                    // `$existing->type` unconditional (not `$row['type']`)
+                    // so a client cannot inject a different `type` on
+                    // rename and accidentally drag a class out of its
+                    // bucket mid-year. Pinned by
+                    // `tests/Feature/AdminClassDeleteAndRenameTest.php`.
                     $existing->update([
                         'name' => $row['name'],
-                        'type' => $row['type'] ?? $existing->type,
+                        'type' => $existing->type,
                     ]);
                 }
                 continue;
@@ -392,6 +401,24 @@ Route::prefix('classes')->name('classes.')->group(function () {
         }
         return back();
     })->name('save');
+
+    // Delete a class — refused if any student_sections row exists for it,
+    // active OR historical. Mirrors the section.delete closure below:
+    // protecting historical financial records (paid fees reference
+    // class_id) is more important than a typo-fix workflow. If no
+    // enrollments exist the class cascades cleanly to its sections and
+    // fee rate periods via the existing FK cascadeOnDelete constraints.
+    // Pinned by `tests/Feature/AdminClassDeleteAndRenameTest.php`.
+    Route::delete(
+        '/{class}',
+        fn(SchoolClass $class) =>
+            $class->studentSections()->exists()
+                ? response()->json(
+                    ['message' => 'Cannot delete: class has historical or active enrollments. Clean up enrollments first.'],
+                    422
+                )
+                : tap($class)->delete()
+    )->name('delete');
 
     Route::get('/{class}/fee-periods', [FeeRatePeriodController::class, 'classPeriods'])
         ->name('fee-periods.index');

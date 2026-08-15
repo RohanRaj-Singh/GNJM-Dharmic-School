@@ -244,6 +244,24 @@ export default function Index() {
           </button>
         ),
       },
+      {
+        // Delete column — only renders for saved rows. Unsaved inline
+        // rows are dropped simply by not clicking "Save Changes".
+        // The server enforces the actual gate (refuses 422 if any
+        // student_sections row exists); this button is just the
+        // affordance + window.confirm() + toast feedback. Mirrors the
+        // section.delete UI pattern at Admin/Sections/Index.jsx.
+        header: "Actions",
+        cell: ({ row }) =>
+          row.original.id ? (
+            <button
+              onClick={() => deleteClass(row.original)}
+              className="text-red-600 text-sm hover:underline"
+            >
+              Delete
+            </button>
+          ) : null,
+      },
     ],
     []
   );
@@ -339,6 +357,24 @@ export default function Index() {
       toast.error(msg || "Could not create class");
       setCreateModal((prev) => ({ ...prev, saving: false }));
     }
+  }
+
+  // Delete a class — matches the section.delete UI pattern
+  // (Admin/Sections/Index.jsx:265-277). The server is the source of
+  // truth for the "no enrollments" gate; we just confirm + surface
+  // any error message it returns.
+  function deleteClass(row) {
+    if (!confirm(`Delete class "${row.name}"? This cannot be undone.`)) return;
+
+    router.delete(`/admin/classes/${row.id}`, {
+      onSuccess: () => {
+        toast.success("Class deleted");
+        loadData();
+      },
+      onError: (err) => {
+        toast.error(err?.response?.data?.message || "Cannot delete class");
+      },
+    });
   }
 
   function saveChanges() {
