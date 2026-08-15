@@ -3,13 +3,18 @@ import SearchInput from "@/Components/SearchInput";
 import { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import useRoles from "@/Hooks/useRoles";
-import { division } from "@/utils/divisionType";
+import { division, divisionMeta } from "@/utils/divisionType";
 
 const getClassObj = (enrollment) => enrollment?.school_class ?? enrollment?.schoolClass ?? null;
 
-export default function StudentsIndex({ students = [] }) {
+export default function StudentsIndex({ students = [], divisions = [] }) {
     const [search, setSearch] = useState("");
-    const [classFilter, setClassFilter] = useState("gurmukhi");
+    // Default to the first division the school has configured (e.g. gurmukhi).
+    // A third+ class (Music, Tabla, …) appears here automatically because the
+    // backend ships the distinct division keys via `divisions` prop; no JSX
+    // change needed when a new class is added. The user can also opt out of
+    // filtering by switching to "All".
+    const [classFilter, setClassFilter] = useState("all");
 
     const { isAccountant } = useRoles();
 
@@ -19,38 +24,48 @@ export default function StudentsIndex({ students = [] }) {
 
     const visibleStudents = searchedStudents.filter((student) => {
         if (!isAccountant) return true;
+        if (classFilter === "all") return true;
         const enrollments = student.enrollments ?? [];
         return enrollments.some((e) => {
             const cls = getClassObj(e);
-            return division(cls?.type, cls?.name) === classFilter;
+            // 3-arg resolver so a class with explicit division='music' / 'tabla'
+            // matches the filter pill instead of falling through to 'gurmukhi'.
+            return division(cls?.type, cls?.name, cls?.division) === classFilter;
         });
     });
 
     return (
-        <AccountantLayout title="Students">
-            {isAccountant && (
-                <div className="flex gap-2 mb-4">
+        <AccountantLayout title="Students" divisions={divisions}>
+            {isAccountant && divisions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
                     <button
-                        onClick={() => setClassFilter("gurmukhi")}
-                        className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                            classFilter === "gurmukhi"
-                                ? "bg-blue-600 text-white"
-                                : "bg-white text-gray-700"
+                        onClick={() => setClassFilter("all")}
+                        className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
+                            classFilter === "all"
+                                ? "bg-slate-700 text-white border-slate-700"
+                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                         }`}
                     >
-                        Gurmukhi
+                        All
                     </button>
 
-                    <button
-                        onClick={() => setClassFilter("kirtan")}
-                        className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                            classFilter === "kirtan"
-                                ? "bg-purple-600 text-white"
-                                : "bg-white text-gray-700"
-                        }`}
-                    >
-                        Kirtan
-                    </button>
+                    {divisions.map((key) => {
+                        const meta = divisionMeta(key);
+                        const isActive = classFilter === key;
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => setClassFilter(key)}
+                                className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
+                                    isActive
+                                        ? `${meta.pillBg} ${meta.pillText} border-transparent`
+                                        : `${meta.bg} ${meta.text} border-gray-300 hover:${meta.bgHover}`
+                                }`}
+                            >
+                                {meta.title}
+                            </button>
+                        );
+                    })}
                 </div>
             )}
 
@@ -106,10 +121,11 @@ function StudentCard({ student, classFilter }) {
         ? enrollments.filter((e) => allowedSectionIds.includes(String(e.section_id)))
         : enrollments;
 
-    if (classFilter) {
+    if (classFilter && classFilter !== "all") {
         visibleEnrollments = visibleEnrollments.filter((e) => {
             const cls = e.school_class ?? e.schoolClass ?? null;
-            return division(cls?.type, cls?.name) === classFilter;
+            // 3-arg resolver — see root-level comment in this file.
+            return division(cls?.type, cls?.name, cls?.division) === classFilter;
         });
     }
 
@@ -141,16 +157,21 @@ function StudentCard({ student, classFilter }) {
                 {visibleEnrollments.map((e) => {
                     const cls = e.school_class ?? e.schoolClass ?? null;
                     const sec = e.section ?? null;
-                    const isKirtan = division(cls?.type, cls?.name) === "kirtan";
+                    // 3-arg resolver + divisionMeta palette so a third+ class
+                    // badge inherits a deterministic color (emerald/orange/teal/…)
+                    // instead of the legacy "purple when kirtan, gray otherwise"
+                    // 2-division contract.
+                    const divisionKey = division(
+                        cls?.type,
+                        cls?.name,
+                        cls?.division,
+                    );
+                    const meta = divisionMeta(divisionKey);
 
                     return (
                         <span
                             key={e.id ?? `${e.class_id}-${e.section_id}-${student.id}`}
-                            className={`px-2 py-1 rounded-full font-medium ${
-                                isKirtan
-                                    ? "bg-purple-100 text-purple-700"
-                                    : "bg-gray-100 text-gray-700"
-                            }`}
+                            className={`px-2 py-1 rounded-full font-medium ${meta.pillBg} ${meta.pillText}`}
                         >
                             {(cls?.name ?? "Class")} - {(sec?.name ?? "Section")}
                         </span>

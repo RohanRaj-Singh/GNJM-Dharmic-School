@@ -45,8 +45,27 @@ class StudentController extends Controller
                 'enrollments.section',
             ])->get();
 
+        // Distinct division keys across every class in the school. The
+        // frontend renders one filter pill per entry via divisionMeta()
+        // (resources/js/utils/divisionType.js) — a third+ class (Music,
+        // Tabla, …) inherits the deterministic palette with no JSX change
+        // here. Mirrors the /accountant/students closure at accountant.php
+        // and the explicit-first seam invariant in
+        // app/Support/DivisionTypeResolver.
+        $divisions = SchoolClass::query()
+            ->get()
+            ->map(fn (SchoolClass $c) => DivisionTypeResolver::division(
+                $c->type ?? null,
+                $c->name ?? null,
+                $c->division ?? null,
+            ))
+            ->unique()
+            ->values()
+            ->all();
+
         return Inertia::render('Students/Index', [
             'students' => $students,
+            'divisions' => $divisions,
         ]);
     }
 
@@ -148,9 +167,26 @@ class StudentController extends Controller
             ];
         })->values();
 
+        // Distinct division keys across every class in the school — drives
+        // the student Show tabs so a third+ class (Music, Tabla, …) renders
+        // a tab even if the student is not currently enrolled in it. The
+        // frontend intersects these with the student's enrollments to show
+        // the "Not enrolled in this class" placeholder for empty divisions.
+        $divisions = SchoolClass::query()
+            ->get()
+            ->map(fn (SchoolClass $c) => DivisionTypeResolver::division(
+                $c->type ?? null,
+                $c->name ?? null,
+                $c->division ?? null,
+            ))
+            ->unique()
+            ->values()
+            ->all();
+
         return Inertia::render('Students/Show', [
             'student' => $student,
             'summary' => $summary,
+            'divisions' => $divisions,
         ]);
     }
 

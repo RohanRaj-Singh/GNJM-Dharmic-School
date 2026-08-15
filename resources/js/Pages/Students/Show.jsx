@@ -10,64 +10,76 @@ const MONTHS = [
     "July", "August", "September", "October", "November", "December",
 ];
 
-export default function StudentShow({ student, summary = [] }) {
+export default function StudentShow({ student, summary = [], divisions = [] }) {
     const { isTeacher, isAccountant, isAdmin } = useRoles();
     const { auth } = usePage().props;
 
-    // Build the tab list dynamically from the summary items. The backend groups
-    // enrollments by canonical class_type_key (DivisionTypeResolver), so each
-    // item's key — for a third class as well as Gurmukhi/Kirtan — is one tab.
-    // The tab label + color come from divisionMeta; the Kirtan Sunday-only UI
-    // inside the tab is gated by item.class_type_key === 'kirtan' separately.
+    // Build tabs from `divisions` (every distinct division the school has
+    // configured — shipped by StudentController::show via the
+    // DivisionTypeResolver seam) so a third+ class (Music, Tabla, …) shows
+    // up as a tab even if the current student has no enrollment in it.
+    // Each tab maps back to a summary item by class_type_key; tabs without
+    // a match render a "Not enrolled in this class" placeholder so the
+    // user sees the full configured surface instead of a 2-tab illusion.
     const tabs = useMemo(() => {
-        const makeTab = (item, idx) => {
-            const meta = divisionMeta(item.class_type_key);
-            return {
-                key: item.class_type_key,
+        const summaryByKey = new Map();
+        summary.forEach((item, idx) => {
+            summaryByKey.set(item.class_type_key, { item, idx });
+        });
+
+        const allowedSectionNames = isTeacher
+            ? (auth?.user?.sections?.map((s) => s.name) ?? [])
+            : null;
+
+        // Build a de-duplicated ordered tab list. Prefer backend `divisions`
+        // order (stable); fall back to summary keys when the prop wasn't
+        // shipped (legacy payload shape).
+        const orderedKeys = divisions.length > 0
+            ? divisions
+            : Array.from(summaryByKey.keys());
+
+        const seen = new Set();
+        const built = [];
+
+        orderedKeys.forEach((key) => {
+            if (seen.has(key)) return;
+            const match = summaryByKey.get(key);
+            const meta = divisionMeta(key);
+
+            // Teacher access: skip divisions whose section is not in the
+            // teacher's owned sections. Without a summary item to inspect,
+            // a tab gets hidden unless division-level access policy says
+            // otherwise — current behaviour preserves the "section-gated"
+            // contract that the rest of the Students module already uses.
+            if (isTeacher && match) {
+                if (!allowedSectionNames.includes(match.item.section)) return;
+            }
+
+            seen.add(key);
+            built.push({
+                key,
                 label: meta.title,
                 accent: meta.accent,
                 pillBg: meta.pillBg,
                 pillText: meta.pillText,
-                index: idx,
-            };
-        };
-
-        if (isTeacher) {
-            const allowedSectionNames = auth?.user?.sections?.map((s) => s.name) ?? [];
-            const seen = new Set();
-            const tabs = [];
-            summary.forEach((item, idx) => {
-                if (!allowedSectionNames.includes(item.section)) return;
-                if (seen.has(item.class_type_key)) return;
-                seen.add(item.class_type_key);
-                tabs.push(makeTab(item, idx));
+                summaryIndex: match?.idx ?? -1,
+                hasItem: Boolean(match),
             });
-            return tabs;
-        }
+        });
 
-        if (isAccountant || isAdmin) {
-            const seen = new Set();
-            return summary
-                .map((item, idx) => {
-                    if (seen.has(item.class_type_key)) return null;
-                    seen.add(item.class_type_key);
-                    return makeTab(item, idx);
-                })
-                .filter(Boolean);
-        }
-
-        return [];
-    }, [summary, isTeacher, isAccountant, isAdmin, auth]);
+        return built;
+    }, [summary, divisions, isTeacher, auth]);
 
     const [activeTab, setActiveTab] = useState(0);
-    const activeItem = tabs.length > 0 ? summary[tabs[activeTab]?.index] : null;
+    const activeTabObj = tabs[Math.min(activeTab, Math.max(tabs.length - 1, 0))];
+    const activeItem = activeTabObj?.hasItem ? summary[activeTabObj.summaryIndex] : null;
 
-    // Fallback: render all summary items as individual cards when no tabs exist,
-    // preventing data from being hidden when the tab logic can't resolve types.
-    const renderFallback = tabs.length === 0 && summary.length > 0;
+    // Empty state: no divisions configured AND no enrollments — the
+    // per-student view has nothing to show.
+    const noTabsAtAll = tabs.length === 0;
 
     return (
-        <SimpleLayout title="Student Summary">
+        <SimpleLayout title="Student Summary" divisions={divisions}>
             <div className="space-y-5">
                 <div className="bg-white rounded-xl shadow p-5">
                     <h2 className="text-xl font-semibold text-gray-800">
@@ -86,50 +98,51 @@ export default function StudentShow({ student, summary = [] }) {
                     <ContactRow label="Mother Phone" number={student.mother_phone} />
                 </div>
 
-                {/* Tabs — only show when more than one division is present */}
+                {/* Tabs — render whenever more than one division is configured,
+                    regardless of enrollment. A single configured division still
+                    shows as a non-tabbed "active section" via the content
+                    below. */}
                 {tabs.length > 1 && (
-                    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                    <div className="flex flex-wrap gap-1 bg-gray-100 rounded-lg p-1">
                         {tabs.map((tab, idx) => (
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(idx)}
-                                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition ${
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition ${
                                     activeTab === idx
                                         ? `bg-white ${tab.accent} shadow`
                                         : "text-gray-500 hover:text-gray-700"
                                 }`}
                             >
                                 {tab.label}
+                                {!tab.hasItem && (
+                                    <span className="ml-1 text-[10px] text-gray-400 font-normal">
+                                        ·
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>
                 )}
 
-                {/* Active tab content (when tabs work) */}
-                {!renderFallback && activeItem ? (
-                    <TabContent
-                        item={activeItem}
-                        student={student}
-                        isKirtanTab={activeItem.class_type_key === "kirtan"}
-                        canViewFees={isAccountant || isAdmin}
-                    />
-                ) : null}
-
-                {/* Fallback: render each summary item when no tabs were resolved */}
-                {renderFallback ? summary.map((item, idx) => (
-                    <TabContent
-                        key={idx}
-                        item={item}
-                        student={student}
-                        isKirtanTab={item.class_type_key === "kirtan"}
-                        canViewFees={isAccountant || isAdmin}
-                    />
-                )) : null}
-
-                {!renderFallback && !activeItem && !(tabs.length > 0) && (
+                {/* Active tab content: real data if enrolled, "Not enrolled"
+                    placeholder if not. */}
+                {noTabsAtAll ? (
                     <div className="text-center text-gray-400 text-sm py-8">
                         No accessible records
                     </div>
+                ) : activeItem ? (
+                    <TabContent
+                        item={activeItem}
+                        student={student}
+                        divisionKey={activeTabObj.key}
+                        canViewFees={isAccountant || isAdmin}
+                    />
+                ) : (
+                    <NotEnrolledPlaceholder
+                        divisionKey={activeTabObj.key}
+                        student={student}
+                    />
                 )}
 
                 {/* Academic History */}
@@ -141,8 +154,29 @@ export default function StudentShow({ student, summary = [] }) {
     );
 }
 
+/* ── Empty state: student is not enrolled in the active division ── */
+function NotEnrolledPlaceholder({ divisionKey, student }) {
+    const meta = divisionMeta(divisionKey);
+    return (
+        <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
+            <div className="inline-flex flex-wrap gap-2 justify-center">
+                <span className={`text-xs px-3 py-1 rounded-full font-medium ${meta.pillBg} ${meta.pillText}`}>
+                    {meta.title}
+                </span>
+            </div>
+            <p className="text-gray-700 text-sm font-medium">
+                {student.name} is not enrolled in {meta.title}.
+            </p>
+            <p className="text-gray-400 text-xs">
+                No attendance, fee, or lesson records exist for this division yet.
+            </p>
+        </div>
+    );
+}
+
 /* ── Tab Content ── */
-function TabContent({ item, student, isKirtanTab, canViewFees }) {
+function TabContent({ item, student, divisionKey, canViewFees }) {
+    const meta = divisionMeta(divisionKey);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
@@ -183,7 +217,7 @@ function TabContent({ item, student, isKirtanTab, canViewFees }) {
             {/* Class & Section badge */}
             <div className="bg-white rounded-xl shadow p-5">
                 <div className="flex flex-wrap gap-2">
-                    <Pill bgClassName={divisionMeta(item.class_type_key).pillBg} textClassName={divisionMeta(item.class_type_key).pillText}>
+                    <Pill bgClassName={meta.pillBg} textClassName={meta.pillText}>
                         {item.class}
                     </Pill>
                     <Pill bgClassName="bg-gray-100" textClassName="text-gray-700">{item.section}</Pill>
@@ -220,9 +254,9 @@ function TabContent({ item, student, isKirtanTab, canViewFees }) {
                             <option key={y} value={y}>{y}</option>
                         ))}
                     </select>
-                    {isKirtanTab && (
-                        <span className="text-[11px] text-purple-600 font-medium bg-purple-50 px-2 py-1 rounded-full">
-                            Kirtan · Sundays only
+                    {meta.hasLessonNotes && (
+                        <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${meta.pillBg} ${meta.pillText}`}>
+                            {meta.title} · {meta.title === "Kirtan" ? "Sundays only" : "Lesson notes"}
                         </span>
                     )}
                 </div>
@@ -250,11 +284,11 @@ function TabContent({ item, student, isKirtanTab, canViewFees }) {
                                     className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center relative`}
                                     title={
                                         status
-                                            ? `${dateStr} - ${status}${isLessonLearned && isKirtanTab ? " (lesson learned)" : ""}`
+                                            ? `${dateStr} - ${status}${isLessonLearned && meta.hasLessonNotes ? " (lesson learned)" : ""}`
                                             : `${dateStr} - No record`
                                     }
                                 >
-                                    {isLessonLearned && isKirtanTab && (
+                                    {isLessonLearned && meta.hasLessonNotes && (
                                         <svg className="w-4 h-4 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                                         </svg>
@@ -275,8 +309,10 @@ function TabContent({ item, student, isKirtanTab, canViewFees }) {
                 )}
             </div>
 
-            {/* Lesson Notes — Kirtan only, shown below the calendar as a list */}
-            {isKirtanTab && (
+            {/* Lesson Notes — opt-in per division via meta.hasLessonNotes
+                (kirtan keeps `true`; any third+ division defaults to `false`
+                from divisionMeta — see utils/divisionType.js withDefaults()). */}
+            {meta.hasLessonNotes && (
                 <div className="bg-white rounded-xl shadow p-5">
                     <h3 className="text-md font-semibold text-gray-700 mb-3">Lesson Notes</h3>
                     {(() => {
@@ -287,7 +323,7 @@ function TabContent({ item, student, isKirtanTab, canViewFees }) {
                         return notes.length > 0 ? (
                             <div className="space-y-2">
                                 {notes.map((r, i) => (
-                                    <div key={i} className="border rounded-lg p-3 bg-purple-50/30">
+                                    <div key={i} className={`border rounded-lg p-3 ${meta.bg}/30`}>
                                         <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                                             <span className="font-medium">{r.date}</span>
                                             {r.lesson_learned && (
