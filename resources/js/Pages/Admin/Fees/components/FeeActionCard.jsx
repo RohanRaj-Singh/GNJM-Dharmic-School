@@ -32,7 +32,7 @@ export default function FeeActionCard({ fee, isPaid, onCollect, onDeCollect }) {
         <button
           type="button"
           onClick={() => onDeCollect(fee.id)}
-          className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start"
+          className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start min-h-[40px] sm:min-h-[36px] inline-flex items-center"
         >
           Un-collect
         </button>
@@ -40,7 +40,7 @@ export default function FeeActionCard({ fee, isPaid, onCollect, onDeCollect }) {
         <button
           type="button"
           onClick={() => onCollect(fee)}
-          className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start"
+          className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start min-h-[40px] sm:min-h-[36px] inline-flex items-center"
         >
           Collect
         </button>

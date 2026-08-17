@@ -176,7 +176,7 @@ export default function CustomFees() {
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded text-sm"
+          className="bg-blue-600 text-white px-4 py-2 rounded text-sm min-h-[40px] sm:min-h-[36px]"
         >
           + Assign Custom Fee
         </button>

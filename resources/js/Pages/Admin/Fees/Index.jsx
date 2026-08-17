@@ -102,6 +102,19 @@ export default function FeesIndex() {
     filters?.year,
   ]);
 
+  // Client-side summary tiles (Phase 2 / Change C). Computed from the
+  // already-fetched `data`; no extra server round-trip. Recomputes only
+  // when the rows themselves change.
+  const summary = useMemo(() => {
+    let totalUnpaid = 0;
+    let totalPaid = 0;
+    for (const row of data) {
+      totalUnpaid += Number(row.unpaid_amount) || 0;
+      totalPaid += Number(row.paid_amount) || 0;
+    }
+    return { totalUnpaid, totalPaid, studentCount: data.length };
+  }, [data]);
+
   useEffect(() => {
     fetch("/admin/classes/options")
       .then((r) => r.json())
@@ -356,7 +369,7 @@ export default function FeesIndex() {
               <button
                 type="button"
                 onClick={() => setExpandedId(isOpen ? null : row.id)}
-                className="text-blue-600 text-sm"
+                className="text-blue-600 text-sm px-2 py-1 min-h-[40px] sm:min-h-[36px] inline-flex items-center"
               >
                 {isOpen ? "Hide" : "View"}
               </button>
@@ -426,7 +439,7 @@ export default function FeesIndex() {
           type="button"
           onClick={generateMonthlyFees}
           disabled={isGeneratingMonthlyFees}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 min-h-[40px] sm:min-h-[36px]"
         >
           {isGeneratingMonthlyFees ? "Generating..." : "Generate Monthly Fees"}
         </button>
@@ -452,14 +465,14 @@ export default function FeesIndex() {
             <button
               type="button"
               onClick={useCurrentMonth}
-              className="rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 min-h-[40px] sm:min-h-[36px]"
             >
               This Month
             </button>
             <button
               type="button"
               onClick={resetFilters}
-              className="rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 min-h-[40px] sm:min-h-[36px]"
             >
               Reset Filters
             </button>
@@ -639,7 +652,7 @@ export default function FeesIndex() {
                   <button
                     type="button"
                     onClick={applyMonthFilters}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 min-h-[40px] sm:min-h-[36px]"
                   >
                     Apply Months
                   </button>
@@ -692,7 +705,7 @@ export default function FeesIndex() {
                 <button
                   type="button"
                   onClick={applyCollectionRangeFilters}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 min-h-[40px] sm:min-h-[36px]"
                 >
                   Apply Collection Range
                 </button>
@@ -742,13 +755,41 @@ export default function FeesIndex() {
                     setSearchInput("");
                     applySearchLive("");
                   }}
-                  className="rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 min-h-[40px] sm:min-h-[36px]"
                 >
                   Clear Search
                 </button>
               ) : null}
             </div>
           </FilterSection>
+        </div>
+
+        {/* Summary tiles — Phase 2 / Change C */}
+        <div className="mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-3">
+          <div className="rounded-lg bg-gray-50 px-3 py-2">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+              Total Unpaid
+            </div>
+            <div className="mt-0.5 text-base font-semibold text-red-600">
+              Rs {summary.totalUnpaid.toLocaleString("en-PK")}
+            </div>
+          </div>
+          <div className="rounded-lg bg-gray-50 px-3 py-2">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+              Total Paid
+            </div>
+            <div className="mt-0.5 text-base font-semibold text-green-600">
+              Rs {summary.totalPaid.toLocaleString("en-PK")}
+            </div>
+          </div>
+          <div className="rounded-lg bg-gray-50 px-3 py-2">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+              Students Shown
+            </div>
+            <div className="mt-0.5 text-base font-semibold text-gray-800">
+              {summary.studentCount}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -757,6 +798,7 @@ export default function FeesIndex() {
         columns={columns}
         renderExpandedRow={renderExpandedRow}
         expandedId={expandedId}
+        emptyMessage="No fees match the current filters."
         containerClassName="bg-white border rounded-lg overflow-x-auto"
         tableClassName="min-w-[1000px] text-sm"
         theadClassName="bg-gray-50 border-b"

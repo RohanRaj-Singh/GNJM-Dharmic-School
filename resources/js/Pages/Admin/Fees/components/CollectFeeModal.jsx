@@ -51,7 +51,7 @@ export default function CollectFeeModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 min-h-[40px] sm:min-h-[36px]"
           >
             Cancel
           </button>
@@ -59,7 +59,7 @@ export default function CollectFeeModal({
             type="button"
             onClick={onConfirm}
             disabled={!collectionDate}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60 min-h-[40px] sm:min-h-[36px]"
           >
             Confirm Collection
           </button>
