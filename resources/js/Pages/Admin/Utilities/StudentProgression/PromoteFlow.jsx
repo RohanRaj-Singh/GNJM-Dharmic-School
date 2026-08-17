@@ -195,7 +195,7 @@ export default function PromoteFlow({ student, students, classes, sections: prop
               <div key={label} className="flex items-center gap-2">
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                    i < step ? "bg-green-500 text-white" : i === step ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"
+                    i < step ? "bg-green-500 text-white" : i === step ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
                   }`}
                 >
                   {i < step ? "✓" : i + 1}
