@@ -38,7 +38,7 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 | Item | Status | Evidence / Notes |
 |---|---|---|
 | Extract student CRUD from `routes/*.php` closures | ✅ Done | `Admin\StudentController` — commits `bd96b7c` (bulk-update), `5fe25f1` (roster), `2a95e1c` (index/create/show). Routes now delegate, closures removed. |
-| Create `App\Services\StudentService` | ❌ Not done | Logic landed **in the controller**, not a service class. No `app/Services/StudentService.php` exists. Roadmap deliverable as written not produced. |
+| Create `App\Services\StudentService` | ✅ Done | `app/Services/StudentService.php` extracted from `Admin\StudentController`. Owns the bulk-upsert workhorse (R3 student-status sync + F3 fee canonical identity + status-machine guard), the shared roster query + JSON shape (`rosterRows` + `mapStudentRow`), the per-student enrollment-history mapping, the filtered options query, and the title-cased name normaliser. Controller reduced to HTTP-shape concerns: authz, request validation, `DB::transaction` wrap, Inertia/JSON response. The prior `static $sectionMap` per-request cache was moved per-call to eliminate the Octane static-leak footgun. Pinned by `tests/Unit/StudentServiceTest.php` (5 pure-logic cases) + the existing 5 feature tests still passing through the new seams. |
 | Feature tests for bulk-upsert | ✅ Done | `tests/Feature/StudentBulkStatusSyncTest.php`, `StudentAdminRoutesTest.php`, `StudentFrontRoutesTest.php`. |
 
 ### 1.2 AttendanceService
