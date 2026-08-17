@@ -420,13 +420,8 @@ export default function FeesIndex() {
 
   return (
     <AdminLayout title="Fees">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-4 py-3">
-        <div>
-          <h1 className="text-base font-semibold text-gray-800">Fees</h1>
-          <p className="text-sm text-gray-500">
-            If auto-generation misses a run, you can manually generate this month&apos;s fees here.
-          </p>
-        </div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-base font-semibold text-gray-800">Fees</h1>
         <button
           type="button"
           onClick={generateMonthlyFees}
