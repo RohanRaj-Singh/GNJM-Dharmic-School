@@ -5,6 +5,10 @@ import DataTable from "@/Components/DataTable";
 import toast from "react-hot-toast";
 import { generateMonthOptions } from "@/utils/helper";
 import { divisionMeta } from "@/utils/divisionType";
+import FilterSection from "./components/FilterSection";
+import FeeActionCard from "./components/FeeActionCard";
+import FeeGroupColumn from "./components/FeeGroupColumn";
+import CollectFeeModal from "./components/CollectFeeModal";
 
 function getTodayDateInput() {
   const now = new Date();
@@ -12,24 +16,6 @@ function getTodayDateInput() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function formatMonthLabel(value) {
-  if (!value) return "";
-  const date = new Date(`${value}-01`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("en-US", { month: "short", year: "numeric" });
-}
-
-function formatCollectionDate(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function getOrderedRange(startValue, endValue) {
@@ -48,198 +34,6 @@ function getOrderedRange(startValue, endValue) {
   };
 }
 
-function FilterSection({
-  title,
-  description,
-  isOpen,
-  onToggle,
-  badge,
-  children,
-}) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50/70">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
-      >
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
-            {badge ? (
-              <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-blue-100">
-                {badge}
-              </span>
-            ) : null}
-          </div>
-          {description ? (
-            <p className="mt-1 text-xs text-gray-500">{description}</p>
-          ) : null}
-        </div>
-        <span className="shrink-0 text-xs font-medium text-gray-500">
-          {isOpen ? "Hide" : "Show"}
-        </span>
-      </button>
-
-      {isOpen ? <div className="border-t bg-white px-4 py-4">{children}</div> : null}
-    </div>
-  );
-}
-
-function FeeActionCard({
-  fee,
-  isPaid,
-  onCollect,
-  onDeCollect,
-}) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded px-2 py-1.5 bg-white">
-      <div className="truncate min-w-0">
-        <div className="text-xs font-medium truncate">
-          {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title}
-        </div>
-        <div className="text-xs text-gray-500">Rs {fee.amount}</div>
-        {isPaid && fee.paid_at ? (
-          <div className="text-xs text-gray-500">
-            Collected on {formatCollectionDate(fee.paid_at)}
-          </div>
-        ) : null}
-      </div>
-
-      {isPaid ? (
-        <button
-          type="button"
-          onClick={() => onDeCollect(fee.id)}
-          className="text-yellow-700 bg-yellow-100 hover:bg-yellow-200 px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start"
-        >
-          Un-collect
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => onCollect(fee)}
-          className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap flex-shrink-0 self-start"
-        >
-          Collect
-        </button>
-      )}
-    </div>
-  );
-}
-
-function FeeGroupColumn({
-  title,
-  titleClassName,
-  unpaidFees,
-  paidFees,
-  onCollect,
-  onDeCollect,
-}) {
-  return (
-    <div className="border rounded-lg p-2 sm:p-3 bg-white">
-      <div className={`text-xs font-bold mb-2 uppercase tracking-wide ${titleClassName}`}>
-        {title}
-      </div>
-
-      <div className="mb-3">
-        <div className="text-xs font-semibold text-gray-600 mb-2">
-          Unpaid Fees
-        </div>
-        {unpaidFees.length === 0 ? (
-          <div className="text-xs text-gray-500">No unpaid fees.</div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-            {unpaidFees.map((fee) => (
-              <FeeActionCard
-                key={fee.id}
-                fee={fee}
-                isPaid={false}
-                onCollect={onCollect}
-                onDeCollect={onDeCollect}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <div className="text-xs font-semibold text-gray-600 mb-2">
-          Paid Fees
-        </div>
-        {paidFees.length === 0 ? (
-          <div className="text-xs text-gray-500">No paid fees.</div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-            {paidFees.map((fee) => (
-              <FeeActionCard
-                key={fee.id}
-                fee={fee}
-                isPaid={true}
-                onCollect={onCollect}
-                onDeCollect={onDeCollect}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CollectFeeModal({
-  fee,
-  collectionDate,
-  onCollectionDateChange,
-  onClose,
-  onConfirm,
-}) {
-  if (!fee) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-        <div className="border-b px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-800">Collect Fee</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {fee.type === "monthly" ? formatMonthLabel(fee.month) : fee.title} • Rs {fee.amount}
-          </p>
-        </div>
-
-        <div className="px-5 py-4 space-y-4">
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Collection Date
-            </label>
-            <input
-              type="date"
-              value={collectionDate}
-              onChange={(e) => onCollectionDateChange(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 border-t px-5 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={!collectionDate}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Confirm Collection
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function FeesIndex() {
   const { fees, filters } = usePage().props;
