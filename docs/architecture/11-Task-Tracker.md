@@ -46,7 +46,7 @@ Standing constraints throughout: **not a rewrite** (no JS→TS migration), no ov
 | Item | Status | Evidence / Notes |
 |---|---|---|
 | Extract absentee logic into `AbsenteeService` | ✅ Done | `app/Services/AbsenteeService.php` created; `AttendanceController` extracted — commit `8bf046f`. |
-| Extract `AttendanceStatus` enum for normalization | ⏳ Not verified | No enum found; normalization handled inside the service. |
+| Extract `AttendanceStatus` enum for normalization | ✅ Done | New `App\Enums\AttendanceStatus` backed string enum with 3 cases (Present/Absent/Leave). `AbsenteeService::normalizeStatus()` now delegates to `tryFromLegacy()` so the legacy single-letter-code mapping ('a'/'l'/'p') has a single source of truth, with graceful null-fallback preserved at the call site for forward-compat with future statuses. `AdminAttendanceController` mark-flow `$allowedStatuses` derives from `AttendanceStatus::values()`. Wide string-keyed aggregation sites (DashboardController / ReportController / StudentController `where('status', 'present')`) intentionally NOT migrated — different refactor, would add no type-safety value at the SQL SUM-CASE sites. Pinned by `tests/Unit/AttendanceStatusEnumTest.php` (7 cases). |
 
 ### 1.3 DivisionTypeResolver ⭐ (completed in full)
 

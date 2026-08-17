@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\AuditLog;
 use App\Models\Section;
+use App\Enums\AttendanceStatus;
 use App\Services\StudentReport\StudentReportCache;
 use App\Support\DivisionTypeResolver;
 use Carbon\Carbon;
@@ -171,7 +172,7 @@ public function save(Request $request)
         }
 
         $status = $payload['status'];
-        $allowedStatuses = ['present', 'absent', 'leave'];
+        $allowedStatuses = AttendanceStatus::values();
 
         if ($status === null) {
             Attendance::where([

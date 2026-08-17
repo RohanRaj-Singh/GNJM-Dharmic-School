@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AttendanceStatus;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
 
@@ -12,7 +13,9 @@ use Illuminate\Support\Carbon;
  * routes/attendance.php. The controller owns HTTP concerns (auth, request
  * filters, Inertia render); this service owns the business rules:
  *
- *   - status normalisation (legacy 'a'/'l'/'p' single-letter codes)
+ *   - status normalisation (legacy 'a'/'l'/'p' single-letter codes) —
+ *     now delegates to `App\Enums\AttendanceStatus::fromLegacy()` so the
+ *     mapping has a single source of truth (Sprint 1.2 closer).
  *   - valid-day rules from the class's configured attendance days (Stage B;
  *     Kirtan's Sunday-only legacy rule is the unconfigured fallback)
  *   - streak + category computation (absent_1/2/3+, leave_1/2+, clear)
@@ -30,17 +33,17 @@ class AbsenteeService
     /**
      * Normalise a raw attendance status value. Historical data contains
      * single-letter codes; the mark flow stores full words.
+     *
+     * Returns the canonical `->value` for known codes. For unknown
+     * values, falls back to the raw string unchanged so downstream
+     * collection->where('status', ...) filters continue to match the
+     * raw row — graceful forward-compat for future statuses.
+     *
+     * Single source of truth: `App\Enums\AttendanceStatus::tryFromLegacy()`.
      */
     public function normalizeStatus(string $raw): string
     {
-        $value = strtolower(trim($raw));
-
-        return match ($value) {
-            'a', 'absent'    => 'absent',
-            'l', 'leave'     => 'leave',
-            'p', 'present'   => 'present',
-            default          => $value,
-        };
+        return AttendanceStatus::tryFromLegacy($raw)?->value ?? $raw;
     }
 
     /**
@@ -113,7 +116,7 @@ class AbsenteeService
             $todayStatus = $todayAttendance ? $this->normalizeStatus($todayAttendance->status) : null;
 
             // If absent today, add to today category
-            if ($todayStatus === 'absent') {
+            if ($todayStatus === AttendanceStatus::Absent->value) {
                 $todayAbsentees[] = [
                     'id'        => $enrollment->student->id,
                     'name'      => $enrollment->student->name,
@@ -132,9 +135,9 @@ class AbsenteeService
 
             foreach ($attendance as $record) {
                 $status = $this->normalizeStatus($record->status);
-                if ($status === 'absent') {
+                if ($status === AttendanceStatus::Absent->value) {
                     $absentDates[] = $record->date;
-                } elseif ($status === 'leave') {
+                } elseif ($status === AttendanceStatus::Leave->value) {
                     $leaveDates[] = $record->date;
                 }
             }
@@ -148,7 +151,7 @@ class AbsenteeService
             $streak = 0;
             $streakStartDate = null;
 
-            if (in_array($status, ['absent', 'leave'], true)) {
+            if (in_array($status, [AttendanceStatus::Absent->value, AttendanceStatus::Leave->value], true)) {
                 foreach ($attendance as $record) {
                     if ($this->normalizeStatus($record->status) === $status) {
                         if ($streak === 0) {
@@ -161,9 +164,9 @@ class AbsenteeService
                 }
             }
 
-            if ($status === 'absent') {
+            if ($status === AttendanceStatus::Absent->value) {
                 $category = $streak >= 3 ? 'absent_3_plus' : ($streak === 2 ? 'absent_2' : 'absent_1');
-            } elseif ($status === 'leave') {
+            } elseif ($status === AttendanceStatus::Leave->value) {
                 $category = $streak >= 2 ? 'leave_2_plus' : 'leave_1';
             } else {
                 $category = 'clear';
