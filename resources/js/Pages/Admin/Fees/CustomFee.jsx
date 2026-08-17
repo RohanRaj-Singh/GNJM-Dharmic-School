@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 import DataTable from "@/Components/DataTable";
+import Modal from "@/Components/Modal";
 
 export default function CustomFees() {
   const { rows, sections } = usePage().props;
@@ -188,69 +189,72 @@ export default function CustomFees() {
         columns={columns}
         tableClassName="min-w-[900px] text-sm"
         theadClassName="bg-gray-50 border-b"
+        emptyMessage="No custom fees assigned yet."
       />
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-md p-5">
-            <h3 className="text-lg font-semibold mb-4">
-              Assign Custom Fee
-            </h3>
+      <Modal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        maxWidth="md"
+      >
+        <div className="p-5">
+          <h3 className="text-lg font-semibold mb-4">
+            Assign Custom Fee
+          </h3>
 
-            <div className="space-y-3">
-              <select
-                className="w-full border px-3 py-2 rounded"
-                value={form.section_id}
-                onChange={(e) =>
-                  setForm({ ...form, section_id: e.target.value })
-                }
-              >
-                <option value="">Select Section</option>
-                {sections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.class_name} — {s.name}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-3">
+            <select
+              className="w-full border px-3 py-2 rounded"
+              value={form.section_id}
+              onChange={(e) =>
+                setForm({ ...form, section_id: e.target.value })
+              }
+            >
+              <option value="">Select Section</option>
+              {sections.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.class_name} — {s.name}
+                </option>
+              ))}
+            </select>
 
-              <input
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Fee title"
-                value={form.title}
-                onChange={(e) =>
-                  setForm({ ...form, title: e.target.value })
-                }
-              />
+            <input
+              className="w-full border px-3 py-2 rounded"
+              placeholder="Fee title"
+              value={form.title}
+              onChange={(e) =>
+                setForm({ ...form, title: e.target.value })
+              }
+            />
 
-              <input
-                type="number"
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Amount"
-                value={form.amount}
-                onChange={(e) =>
-                  setForm({ ...form, amount: e.target.value })
-                }
-              />
-            </div>
+            <input
+              type="number"
+              className="w-full border px-3 py-2 rounded"
+              placeholder="Amount"
+              value={form.amount}
+              onChange={(e) =>
+                setForm({ ...form, amount: e.target.value })
+              }
+            />
+          </div>
 
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitNewFee}
-                className="bg-green-600 text-white px-4 py-2 rounded text-sm"
-              >
-                Assign
-              </button>
-            </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <button
+              onClick={() => setShowModal(false)}
+              className="px-4 py-2 text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={submitNewFee}
+              className="bg-green-600 text-white px-4 py-2 rounded text-sm"
+            >
+              Assign
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
     </AdminLayout>
   );
 }
