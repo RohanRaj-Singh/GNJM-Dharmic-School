@@ -25,7 +25,7 @@ class AdminAttendanceController extends Controller
     public function index()
     {
         return Inertia::render('Admin/Attendance/Index', [
-            'classes' => SchoolClass::select('id', 'name', 'type')
+            'classes' => SchoolClass::select('id', 'name', 'type', 'division')
                 ->orderBy('name')
                 ->get(),
         ]);

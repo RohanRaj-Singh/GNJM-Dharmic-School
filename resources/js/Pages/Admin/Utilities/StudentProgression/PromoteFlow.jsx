@@ -17,7 +17,12 @@ export default function PromoteFlow({ student, students, classes, sections: prop
     const types = new Set();
     selectedStudents.forEach((s) => {
       (s.enrollments || []).forEach((e) => {
-        if (e.classType || e.className) types.add(division(e.classType, e.className));
+        // 3-arg form: seam passthrough. Same data path as typeBadge /
+        // uniqueTypes in the parent — classDivision is now shipped from
+        // utilities.student-progression.data.
+        if (e.classType || e.className || e.classDivision) {
+          types.add(division(e.classType, e.className, e.classDivision));
+        }
       });
     });
     return Array.from(types);
@@ -39,7 +44,8 @@ export default function PromoteFlow({ student, students, classes, sections: prop
   const promotableEnrollments = useMemo(() => {
     if (!leadStudent?.enrollments?.length) return [];
     return leadStudent.enrollments.filter(
-      (e) => division(e.classType, e.className) === selectedType
+      // 3-arg form, mirror of availableTypes above.
+      (e) => division(e.classType, e.className, e.classDivision) === selectedType
     );
   }, [leadStudent, selectedType]);
 
@@ -47,7 +53,8 @@ export default function PromoteFlow({ student, students, classes, sections: prop
   const unchangedEnrollments = useMemo(() => {
     if (!leadStudent?.enrollments?.length) return [];
     return leadStudent.enrollments.filter(
-      (e) => division(e.classType, e.className) !== selectedType
+      // 3-arg form, mirror of availableTypes above.
+      (e) => division(e.classType, e.className, e.classDivision) !== selectedType
     );
   }, [leadStudent, selectedType]);
 
@@ -85,7 +92,11 @@ export default function PromoteFlow({ student, students, classes, sections: prop
 
   // Filter classes to only the selected type.
   const filteredClasses = useMemo(
-    () => classes.filter((c) => division(c.type, c.name) === selectedType),
+    // 3-arg form: classes prop comes from /admin/classes/options which now
+    // ships `division` (B3 fix shared across the admin UI). Without this,
+    // a class row with type='gurmukhi' + division='music' would be filtered
+    // out when "Music" was the selectedType.
+    () => classes.filter((c) => division(c.type, c.name, c.division) === selectedType),
     [classes, selectedType]
   );
 

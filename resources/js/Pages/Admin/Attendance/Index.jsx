@@ -109,7 +109,16 @@ export default function Index() {
     [classes, classId]
   );
 
-  const isKirtan = resolveIsKirtan(selectedClass?.type, selectedClass?.name);
+  // 3-arg form: pass classes.division through. The frontend re-fetches the
+  // class list from `/admin/classes/options` after mount; that endpoint now
+  // ships `division` (B3 fix) so the explicit-first seam in
+  // resolveIsKirtan can correctly classify a Music class as Music instead
+  // of collapsing it into the legacy 'gurmukhi' bucket.
+  const isKirtan = resolveIsKirtan(
+    selectedClass?.type,
+    selectedClass?.name,
+    selectedClass?.division,
+  );
 
   /* ---------------------------------------
    | Load classes (ONCE)

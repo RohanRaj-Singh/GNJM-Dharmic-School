@@ -96,7 +96,15 @@ export default function StudentProgression() {
   }, [fetchStudents]);
 
   const typeBadge = (enrollment) => {
-    const isKirtan = division(enrollment?.classType, enrollment?.className) === "kirtan";
+    // 3-arg form: pass classDivision so a Music class (type='gurmukhi' +
+    // division='music') resolves to 'music' instead of the legacy
+    // 'gurmukhi' bucket. B4 fix — promoted by the data-endpoint seam added
+    // in routes/admin.php.
+    const isKirtan = division(
+      enrollment?.classType,
+      enrollment?.className,
+      enrollment?.classDivision,
+    ) === "kirtan";
     return isKirtan
       ? <span className="text-[10px] bg-purple-100 text-purple-700 font-medium px-1.5 py-0.5 rounded-full">Kirtan</span>
       : <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded-full">Gurmukhi</span>;
@@ -115,7 +123,8 @@ export default function StudentProgression() {
   const uniqueTypes = (enrollments) => {
     const types = new Set();
     (enrollments || []).forEach((e) => {
-      types.add(division(e.classType, e.className));
+      // 3-arg form, mirrors typeBadge above.
+      types.add(division(e.classType, e.className, e.classDivision));
     });
     return Array.from(types);
   };

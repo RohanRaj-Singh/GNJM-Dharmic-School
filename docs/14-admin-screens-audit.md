@@ -127,29 +127,22 @@
 
 ### 🟡 Minor — gap, not a bug:
 
-### ⚠️ B3 — `Admin/Attendance/Index.jsx` line 112 + backend `AdminAttendanceController.php::index` line 28
+### ✅ B3 — `Admin/Attendance/Index.jsx` line 112 + backend `AdminAttendanceController.php::index` line 28 — **RESOLVED (Phase 4)**
 
 **Files:**
-- `resources/js/Pages/Admin/Attendance/Index.jsx:112`: `const isKirtan = resolveIsKirtan(selectedClass?.type, selectedClass?.name);` — 2-arg form.
-- `app/Http/Controllers/Admin/AdminAttendanceController.php:28`: `SchoolClass::select('id', 'name', 'type')` — doesn't ship `division`.
+- `resources/js/Pages/Admin/Attendance/Index.jsx:112` — now uses 3-arg `resolveIsKirtan(type, name, division)`.
+- `app/Http/Controllers/Admin/AdminAttendanceController.php:28` — now `SchoolClass::select('id', 'name', 'type', 'division')`.
+- Pin: `tests/Feature/AdminDivisionSeamContractTest::test_attendance_page_inertia_props_ship_division`.
 
-**Impact:** Negligible. `resolveIsKirtan(type, name)` was the original 2-arg form before the seam refactor. For the current data (Gurmukhi/Kirtan as the only two divisions, with `division` set explicitly), the 2-arg form happens to return the right value because:
-- `type='gurmukhi'` → "Kirtan = false" — correct regardless of division.
-- `type='kirtan'` → "Kirtan = true" — correct regardless of division.
-
-If a class is added with `type='music'` and `division='music'`, the 2-arg returns "false" for Kirtan (correct, Music ≠ Kirtan). The Kirtan-only "Lesson" column won't appear in the Music attendance grid, which is what we want. So the 2-arg form is **currently safe**.
-
-**Recommendation:** Ship `division` from the controller and use 3-arg form on the frontend for consistency with the bucket-lock invariant. **Low priority** — no functional bug today.
-
-### ⚠️ B4 — `Admin/Utilities/StudentProgression.jsx` line 99 + `routes/admin.php` line 222
+### ✅ B4 — `Admin/Utilities/StudentProgression.jsx` line 99 + `routes/admin.php` line 222 — **RESOLVED (Phase 4)**
 
 **Files:**
-- `resources/js/Pages/Admin/Utilities/StudentProgression.jsx:99`: `const isKirtan = division(enrollment?.classType, enrollment?.className) === "kirtan";` — 2-arg form.
-- `routes/admin.php:222`: `'classType' => $e->schoolClass->type,` — doesn't ship `classDivision`.
+- `resources/js/Pages/Admin/Utilities/StudentProgression.jsx:99,118` — now uses 3-arg `division(type, name, division)`.
+- `resources/js/Pages/Admin/Utilities/StudentProgression/PromoteFlow.jsx` lines 20, 42, 50, 88 — all 4 call sites converted to 3-arg form.
+- `routes/admin.php:222` — closure now ships `'classDivision' => $e->schoolClass->division`.
+- Pin: `tests/Feature/AdminDivisionSeamContractTest::test_student_progression_data_endpoint_ships_class_division`.
 
-**Impact:** Cosmetic. The `Kirtan` badge rendered in the Student Progression table is wrong for any third+ class (e.g. "Music" would badge as not-Kirtan, which is correct; but "Tabla" with `type='gurmukhi'` would also badge as not-Kirtan, also correct). Since this badge just sets a yellow ribbon for Kirtan classes, missing the badge on a third+ class isn't damaging.
-
-**Recommendation:** Ship `classDivision` from the closure + use 3-arg form on the frontend. **Low priority** — purely cosmetic.
+**Note (operational gotcha, not a bug):** The `/admin/classes/options` endpoint is the actual data source the Attendance + StudentProgression frontends re-fetch after mount (the Inertia-rendered `classes` prop on each page is shadowed by this fetch). Phase 4 added a duplicate `/options` registration to `routes/admin.php` — Laravel's `RouteCollection::add()` dedupes by URI+method, keeping only the LAST registration, so the first registration was silently overridden. Always `php artisan route:list | grep <uri>` after adding a route to confirm no duplicates exist; same for `/admin/sections/data` and `/admin/utilities/student-progression/data`.
 
 ---
 

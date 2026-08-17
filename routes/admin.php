@@ -220,6 +220,11 @@ Route::get('/utilities/student-progression/data', function (Request $request) {
             'classId' => $e->class_id,
             'className' => $e->schoolClass->name,
             'classType' => $e->schoolClass->type,
+            // Ship classes.division so the frontend can use the 3-arg
+            // DivisionTypeResolver (explicit-first seam). Without this, a
+            // Music class with type='gurmukhi' resolves to 'gurmukhi' on
+            // PromoteFlow + Student Progression and is invisible as Music.
+            'classDivision' => $e->schoolClass->division,
             'sectionId' => $e->section_id,
             'sectionName' => $e->section->name,
             'studentType' => $e->student_type,
@@ -331,7 +336,7 @@ Route::prefix('classes')->name('classes.')->group(function () {
     Route::get(
         '/options',
         fn() =>
-        SchoolClass::select('id', 'name')
+        SchoolClass::select('id', 'name', 'type', 'division')
             ->orderBy('name')
             ->get()
             // Defend against duplicate names (no DB unique constraint exists)
@@ -443,12 +448,6 @@ Route::prefix('classes')->name('classes.')->group(function () {
         ->name('fee-periods.update');
     Route::delete('/{class}/fee-periods/{period}', [FeeRatePeriodController::class, 'destroyForClass'])
         ->name('fee-periods.destroy');
-
-    Route::get(
-        '/options',
-        fn() =>
-        SchoolClass::select('id', 'name', 'type')->orderBy('name')->get()
-    )->name('options');
 });
 
 /* =========================================================
