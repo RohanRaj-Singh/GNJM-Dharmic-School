@@ -354,10 +354,6 @@ export default function FeesIndex() {
         ),
       },
       {
-        header: "Total",
-        cell: ({ row }) => `Rs ${row.original.total_amount}`,
-      },
-      {
         header: "Details",
         cell: ({ row }) => {
           const item = row.original;
