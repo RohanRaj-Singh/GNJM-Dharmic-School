@@ -24,6 +24,11 @@ export default function Modal({
         lg: 'sm:max-w-lg',
         xl: 'sm:max-w-xl',
         '2xl': 'sm:max-w-2xl',
+        '3xl': 'sm:max-w-3xl',
+        '4xl': 'sm:max-w-4xl',
+        '5xl': 'sm:max-w-5xl',
+        '6xl': 'sm:max-w-6xl',
+        '7xl': 'sm:max-w-7xl',
     }[maxWidth];
 
     return (
@@ -54,7 +59,7 @@ export default function Modal({
                     leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                 >
                     <DialogPanel
-                        className={`relative flex w-full transform flex-col overflow-hidden bg-white shadow-xl transition-all sm:mx-auto sm:mb-6 sm:w-auto sm:rounded-lg ${maxWidthClass} max-h-[92vh] rounded-t-2xl sm:max-h-[85vh]`}
+                        className={`relative flex w-full transform flex-col overflow-hidden bg-white shadow-xl transition-all sm:mx-auto sm:mb-6 sm:w-auto sm:rounded-lg ${maxWidthClass} max-h-[95vh] rounded-t-2xl sm:max-h-[88vh]`}
                     >
                         {children}
                     </DialogPanel>

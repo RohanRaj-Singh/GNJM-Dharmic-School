@@ -6,6 +6,22 @@ import EnrollmentFeesView from "./EnrollmentFeesView";
 import CollectFeeSheet from "./CollectFeeSheet";
 
 /**
+ * initialsFor — turn a student name into a 1-2 character avatar label.
+ *
+ * Handles single names (first letter only), multi-word names (first + last
+ * initial), and missing/empty names (returns a centered dot so the avatar
+ * still has a visible glyph).
+ */
+function initialsFor(name) {
+  if (!name) return "·";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "·";
+  const first = parts[0][0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase() || first.toUpperCase() || "·";
+}
+
+/**
  * StudentFeeSheet — the central workspace for managing a single student's
  * fees across all their current and historical enrollments.
  *
@@ -174,9 +190,15 @@ export default function StudentFeeSheet({ student, onClose }) {
   const currentLevel = history[history.length - 1]?.level ?? "enrollments";
 
   return (
-    <Modal show={!!student} onClose={onClose} maxWidth="lg">
+    <Modal show={!!student} onClose={onClose} maxWidth="7xl">
       <div className="border-b px-5 py-4 sm:px-6">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700 sm:h-12 sm:w-12"
+            aria-hidden="true"
+          >
+            {initialsFor(student.name)}
+          </div>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-base font-semibold text-gray-900">
               {student.name}
@@ -191,7 +213,7 @@ export default function StudentFeeSheet({ student, onClose }) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="-mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            className="-mr-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

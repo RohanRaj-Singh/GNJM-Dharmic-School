@@ -91,7 +91,7 @@ export default function CollectFeeSheet({
       : null;
 
   return (
-    <Modal show={!!fee} onClose={onClose} maxWidth="md">
+    <Modal show={!!fee} onClose={onClose} maxWidth="5xl">
       <div className="border-b px-5 py-4 sm:px-6">
         <h2 className="text-base font-semibold text-gray-800">Collect Fee</h2>
         {student ? (
@@ -105,31 +105,30 @@ export default function CollectFeeSheet({
       </div>
 
       <div className="space-y-4 px-5 py-5 sm:px-6">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-              Period
+        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-white p-4 ring-1 ring-blue-100">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                {feeTypeLabel}
+              </div>
+              <div className="mt-0.5 text-lg font-semibold text-gray-900">
+                {feePeriod}
+              </div>
+              {enrollmentLabel ? (
+                <div className="mt-0.5 truncate text-xs text-gray-600">
+                  {enrollmentLabel}
+                </div>
+              ) : null}
             </div>
-            <div className="mt-0.5 font-medium text-gray-900">
-              {feePeriod}
+            <div className="shrink-0 text-right">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Amount
+              </div>
+              <div className="mt-0.5 text-xl font-bold text-gray-900">
+                <span className="text-sm font-medium text-gray-500">Rs </span>
+                {Number(fee.amount || 0).toLocaleString("en-PK")}
+              </div>
             </div>
-          </div>
-          <div>
-            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-              Type
-            </div>
-            <div className="mt-0.5 font-medium text-gray-900">
-              {feeTypeLabel}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-            Amount
-          </div>
-          <div className="mt-0.5 text-2xl font-semibold text-gray-900">
-            Rs {Number(fee.amount || 0).toLocaleString("en-PK")}
           </div>
         </div>
 
@@ -140,16 +139,31 @@ export default function CollectFeeSheet({
           >
             Collection Date
           </label>
-          <input
-            id="collect-fee-date"
-            type="date"
-            value={collectionDate}
-            onChange={(e) => setCollectionDate(e.target.value)}
-            disabled={submitting}
-            className="mt-1.5 w-full rounded-lg border px-3 py-3 text-sm disabled:bg-gray-50"
-          />
+          <div className="relative mt-1.5">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.75 2a.75.75 0 01.75.75V4h7V2.75a.75.75 0 011.5 0V4h.25A2.75 2.75 0 0118 6.75v8.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25v-8.5A2.75 2.75 0 014.75 4H5V2.75A.75.75 0 015.75 2zM3.5 8.5v6.75c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25V8.5h-13z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <input
+              id="collect-fee-date"
+              type="date"
+              value={collectionDate}
+              onChange={(e) => setCollectionDate(e.target.value)}
+              disabled={submitting}
+              className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50"
+            />
+          </div>
           {collectionDate ? (
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1.5 text-xs text-gray-500">
               {formatCollectionDate(collectionDate)}
             </p>
           ) : null}
@@ -161,7 +175,7 @@ export default function CollectFeeSheet({
           type="button"
           onClick={onClose}
           disabled={submitting}
-          className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-white disabled:opacity-60 min-h-[44px]"
+          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-white disabled:opacity-60 min-h-[44px]"
         >
           Cancel
         </button>
@@ -169,9 +183,28 @@ export default function CollectFeeSheet({
           type="button"
           onClick={handleConfirm}
           disabled={!collectionDate || submitting}
-          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60 min-h-[44px]"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60 min-h-[44px]"
         >
-          {submitting ? "Collecting…" : "Collect"}
+          {submitting ? (
+            "Collecting…"
+          ) : (
+            <>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+                className="h-4 w-4"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Collect
+            </>
+          )}
         </button>
       </div>
     </Modal>

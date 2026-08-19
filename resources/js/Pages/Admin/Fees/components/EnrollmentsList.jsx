@@ -85,8 +85,23 @@ export default function EnrollmentsList({ fees, onSelect, loading = false }) {
 
   if (current.length === 0 && previous.length === 0) {
     return (
-      <div className="rounded-lg bg-gray-50 px-4 py-8 text-center">
-        <p className="text-sm font-medium text-gray-700">No fees found</p>
+      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-10 text-center">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+            className="h-5 w-5"
+          >
+            <path
+              fillRule="evenodd"
+              d="M2 4.75A2.75 2.75 0 014.75 2h10.5A2.75 2.75 0 0118 4.75v10.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25V4.75zM4.75 3.5c-.69 0-1.25.56-1.25 1.25v.318l6 3.27 6-3.27V4.75c0-.69-.56-1.25-1.25-1.25H4.75zM3.5 6.957l5.61 3.06a.75.75 0 00.78 0L16.5 6.957v8.293c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25V6.957z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+        <p className="mt-3 text-sm font-medium text-gray-700">No fees found</p>
         <p className="mt-1 text-xs text-gray-500">
           This student has no fees recorded yet.
         </p>
@@ -109,7 +124,7 @@ export default function EnrollmentsList({ fees, onSelect, loading = false }) {
             : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
         }`}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span
@@ -131,12 +146,88 @@ export default function EnrollmentsList({ fees, onSelect, loading = false }) {
               </div>
             ) : null}
           </div>
+        </div>
+
+        <div className="mt-3.5 flex items-end justify-between gap-3 text-sm">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <div
+              className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                enrollment.unpaid > 0
+                  ? muted
+                    ? "bg-gray-200 text-gray-600"
+                    : "bg-red-100 text-red-700"
+                  : "bg-green-100 text-green-700"
+              }`}
+              aria-hidden="true"
+            >
+              {enrollment.unpaid > 0 ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .2.08.39.22.53l3 3a.75.75 0 101.06-1.06L10.75 9.69V5z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.172 7.707 8.879a1 1 0 10-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+            </div>
+            <div>
+              {enrollment.unpaid > 0 ? (
+                <>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    Unpaid
+                  </div>
+                  <div
+                    className={`mt-0.5 text-lg font-semibold leading-none ${
+                      muted ? "text-gray-700" : "text-red-700"
+                    }`}
+                  >
+                    Rs {fmt(enrollment.unpaid)}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    {enrollment.unpaidCount} fee{enrollment.unpaidCount === 1 ? "" : "s"} due
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    Balance
+                  </div>
+                  <div className="mt-0.5 text-lg font-semibold leading-none text-green-700">
+                    All paid
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    {enrollment.paidCount} collected
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
-            className="h-5 w-5 shrink-0 text-gray-400 transition group-hover:text-blue-600"
+            className="h-5 w-5 shrink-0 text-gray-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600"
           >
             <path
               fillRule="evenodd"
@@ -144,49 +235,6 @@ export default function EnrollmentsList({ fees, onSelect, loading = false }) {
               clipRule="evenodd"
             />
           </svg>
-        </div>
-
-        <div className="mt-3 flex items-end justify-between gap-3 text-sm">
-          <div>
-            {enrollment.unpaid > 0 ? (
-              <>
-                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                  Unpaid
-                </div>
-                <div
-                  className={`mt-0.5 text-base font-semibold ${
-                    muted ? "text-gray-700" : "text-red-700"
-                  }`}
-                >
-                  Rs {fmt(enrollment.unpaid)}
-                </div>
-                <div className="mt-0.5 text-xs text-gray-500">
-                  {enrollment.unpaidCount} fees due
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                  Balance
-                </div>
-                <div className="mt-0.5 text-base font-medium text-green-700">
-                  All paid
-                </div>
-                <div className="mt-0.5 text-xs text-gray-500">
-                  {enrollment.paidCount} fees collected
-                </div>
-              </>
-            )}
-          </div>
-          <span
-            className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium ${
-              muted
-                ? "bg-gray-100 text-gray-600 group-hover:bg-gray-200"
-                : "bg-blue-50 text-blue-700 group-hover:bg-blue-100"
-            }`}
-          >
-            Open
-          </span>
         </div>
       </button>
     );
@@ -199,7 +247,7 @@ export default function EnrollmentsList({ fees, onSelect, loading = false }) {
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
             Current Enrollments
           </h3>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {current.map((e) => renderRow(e, "current"))}
           </div>
         </section>
@@ -210,7 +258,7 @@ export default function EnrollmentsList({ fees, onSelect, loading = false }) {
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
             Previous Enrollments
           </h3>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {previous.map((e) => renderRow(e, "previous"))}
           </div>
         </section>
