@@ -552,6 +552,12 @@ Route::prefix('fees')->name('fees.')->group(function () {
 
     Route::get('/', [FeesController::class, 'index'])->name('index');
     Route::post('/generate-monthly', [FeesController::class, 'generateMonthlyFees'])->name('generate-monthly');
+
+    // Per-student fee detail for the Fees redesign Student Fee Sheet (Tier 2).
+    // Phase 4 (audit §E). Must be declared BEFORE the /{fee}/* routes so the
+    // literal `/students/` segment wins over generic model binding.
+    Route::get('/students/{student}/fees', [FeesController::class, 'studentFees'])->name('student.fees');
+
     Route::post('/{fee}/collect', [FeesController::class, 'collect'])->name('collect');
     Route::post('/{fee}/de-collect', [FeesController::class, 'deCollect'])->name('deCollect');
 

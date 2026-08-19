@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 
 import DataTable from "@/Components/DataTable";
 import Modal from "@/Components/Modal";
+import ConfirmDialog from "@/Components/ConfirmDialog";
 
 export default function CustomFees() {
   const { rows, sections } = usePage().props;
@@ -18,6 +19,9 @@ export default function CustomFees() {
     title: "",
     amount: "",
   });
+
+  /* ---------------- Confirm dialog (Phase 4 cleanup / Change E) ---------------- */
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   /* ---------------- Helpers ---------------- */
   function updateCell(rowIndex, key, value) {
@@ -47,17 +51,8 @@ export default function CustomFees() {
   }
 
   function deleteSectionFee(row) {
-    if (!confirm("Delete this custom fee for entire section?")) return;
-
-    router.delete(route("admin.fees.custom.destroy.section"), {
-      data: {
-        section_id: row.section_id,
-        title: row.title,
-        amount: row.amount,
-      },
-      preserveScroll: true,
-      onSuccess: () => toast.success("Custom fee deleted"),
-    });
+    // Phase 4 cleanup / Change E: replaced window.confirm with shared ConfirmDialog.
+    setPendingDelete(row);
   }
 
   function submitNewFee() {

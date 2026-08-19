@@ -17,7 +17,13 @@ createInertiaApp({
   resolve: (name) =>
     resolvePageComponent(
       `./Pages/${name}.jsx`,
-      import.meta.glob('./Pages/**/*.jsx')
+      // Exclude the __prototypes__ design-doc sandbox from the page registry —
+      // it ships design previews that should never be served as production
+      // routes. The dir is preserved on disk for future design review.
+      import.meta.glob([
+        './Pages/**/*.jsx',
+        '!./Pages/**/__prototypes__/**',
+      ])
     ),
 
   setup({ el, App, props }) {

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fees UX Prototype — Phase 1</title>
+    <!-- Tailwind via the project's CSS pipeline -->
+    <link rel="stylesheet" href="../../../../../css/app.css" />
+  </head>
+  <body class="bg-gray-50">
+    <div id="prototype-root"></div>
+    <script type="module">
+      import { createRoot } from "react-dom/client";
+      import { createElement } from "react";
+      import FeesUxPrototype from "./FeesUxPrototype.jsx";
+
+      const host = document.getElementById("prototype-root");
+      createRoot(host).render(createElement(FeesUxPrototype));
+    </script>
+  </body>
+</html>

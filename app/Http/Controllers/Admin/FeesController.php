@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\GenerateMonthlyFeeAction;
 use App\Models\AuditLog;
 use App\Models\Fee;
+use App\Models\Student;
 use App\Services\StudentReport\StudentReportCache;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -217,6 +218,11 @@ class FeesController extends Controller
             'fees' => $items->map(function ($f) {
                 return [
                     'id'         => $f->id,
+                    // Additive Phase 4 (audit §D): per-fee student_section_id
+                    // lets the Sheet's "View previous enrollments" tab route
+                    // back to the originating enrollment. Non-breaking —
+                    // existing consumers reading `id` / `month` are unaffected.
+                    'student_section_id' => $f->student_section_id,
                     'type'       => $f->type,
                     'month'      => $f->month,
                     'title'      => $f->title,
@@ -249,6 +255,107 @@ class FeesController extends Controller
         ]),
     ]);
 }
+
+    /**
+     * Per-student fee detail for the Fees redesign Student Fee Sheet (Tier 2).
+     *
+     * Returns every fee row belonging to one student — current and historical —
+     * so the modal Sheet can render the full per-fee breakdown without
+     * paging the Index payload. Mirrors the Index mapper's join pattern so the
+     * division_key and section_name derivation match what the parent page
+     * already shows.
+     *
+     * Authorization: FeePolicy::viewAny (admin + accountant). Teachers hit 403;
+     * the per-student scope is admin-only by design (Sprint 3.1).
+     *
+     * No caching (Phase 3 §E default): opened on-demand, row count is small
+     * (~12 per student). Reuses the same StudentReportCache invalidation
+     * pattern on the write paths.
+     */
+    public function studentFees(Student $student)
+    {
+        $this->authorize('viewAny', Fee::class);
+
+        $fees = Fee::query()
+            ->where('fees.student_id', $student->id)
+            ->join('student_sections as orig_enrollment', 'fees.student_section_id', '=', 'orig_enrollment.id')
+            ->join('classes as orig_class', 'orig_enrollment.class_id', '=', 'orig_class.id')
+            ->leftJoinSub(
+                DB::table('student_sections')
+                    ->select('student_id', 'class_id', DB::raw('MIN(id) as id'))
+                    ->where('status', StudentSection::STATUS_ACTIVE)
+                    ->whereNull('transferred_at')
+                    ->groupBy('student_id', 'class_id'),
+                'current_active',
+                function ($join) {
+                    $join->on('current_active.student_id', '=', 'fees.student_id')
+                        ->on('current_active.class_id', '=', 'orig_enrollment.class_id');
+                }
+            )
+            ->leftJoin('student_sections as current_enrollment', 'current_active.id', '=', 'current_enrollment.id')
+            ->leftJoin('sections as current_section', 'current_enrollment.section_id', '=', 'current_section.id')
+            ->leftJoin('sections as orig_section', 'orig_enrollment.section_id', '=', 'orig_section.id')
+            ->leftJoin('payments', function ($join) {
+                $join->on('payments.fee_id', '=', 'fees.id')
+                     ->whereNull('payments.deleted_at');
+            })
+            ->select([
+                'fees.id',
+                'fees.student_id',
+                'fees.student_section_id',
+                'fees.type',
+                'fees.month',
+                'fees.title',
+                'fees.amount',
+                'fees.is_locked',
+                'fees.created_at',
+                // Resolved division rides along with the explicit-division seam
+                // so a third+ class (music, tabla) is its own key — never
+                // collapses into the gurmukhi default.
+                'orig_class.type as class_type',
+                'orig_class.division as class_division',
+                'orig_class.name as class_name',
+                // is_current_enrollment drives the "Active / Historical" tab
+                // in the Sheet. Derived at the row level so a fee whose
+                // enrollment has been promoted away still appears (with
+                // is_current_enrollment=false) rather than being hidden.
+                DB::raw('(orig_enrollment.status = ? AND orig_enrollment.transferred_at IS NULL) as is_current_enrollment'),
+                // Historical fees must keep their ORIGINAL section (the section
+                // they were created for) even when the student has since moved
+                // on. Current fees get the current section within the same class,
+                // falling back to the original only when no current enrollment
+                // exists in that class.
+                DB::raw('CASE WHEN (orig_enrollment.status = ? AND orig_enrollment.transferred_at IS NULL) THEN COALESCE(current_section.name, orig_section.name) ELSE orig_section.name END as section_name'),
+                'payments.id as payment_id',
+                'payments.paid_at',
+                'payments.amount_paid as payment_amount',
+            ])
+            ->addBinding(StudentSection::STATUS_ACTIVE, 'select')
+            ->addBinding(StudentSection::STATUS_ACTIVE, 'select')
+            ->orderBy('fees.created_at', 'desc')
+            ->get()
+            ->map(function ($fee) {
+                $fee->is_current_enrollment = (bool) $fee->is_current_enrollment;
+                $fee->is_paid = $fee->payment_id !== null;
+                $fee->division_key = DivisionTypeResolver::division(
+                    $fee->class_type ?? null,
+                    $fee->class_name ?? null,
+                    $fee->class_division ?? null,
+                );
+                unset($fee->payment_id, $fee->class_type, $fee->class_division);
+                return $fee;
+            })
+            ->values();
+
+        return response()->json([
+            'student' => [
+                'id' => $student->id,
+                'name' => $student->name,
+                'father_name' => $student->father_name,
+            ],
+            'fees' => $fees,
+        ]);
+    }
 
     public function generateMonthlyFees()
     {
