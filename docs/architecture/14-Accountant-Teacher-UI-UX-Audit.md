@@ -192,6 +192,8 @@ export default AttendanceDashboard;
 **Verdict**
 - ⚪ **Not linked from anywhere visible in the SimpleLayout or accountant dashboard.** Either link to it from the Students page ("View Fees" button per student) or delete.
 
+**Status (2026-08-20):** **RESOLVED — deleted.** The "delete" option was chosen. The per-student flow lives at `Accountant/ReceiveFee.jsx` (via `GET /accountant/receive-fee`). File + empty `Fees/` directory removed. See `16-Accountant-Real-Data-Validation-Report.md` F-2026-08-19-A.
+
 ---
 
 ## 3. Per-Page Audit — Teacher Screens
@@ -453,6 +455,8 @@ Three issues of the same shape:
 - `Accountant/Fees/Index.jsx` — file exists, no nav links to it
 
 **The fix**: a CI lint that runs `php artisan route:list` and greps each Inertia page's path to confirm a route exists. Or, lighter: add a `phpunit` feature test that boots every Inertia component and asserts it can resolve. Both are out of scope for this audit but should be a Stage C follow-up.
+
+**Status (2026-08-20):** One of the listed orphans has been resolved — `Accountant/Fees/Index.jsx` deleted (commit `chore(accountant): delete orphan Fees/Index.jsx`). The pin test `test_no_accountant_route_renders_orphan_fees_page` continues to pass.
 
 ### 7.4 The division color legend
 

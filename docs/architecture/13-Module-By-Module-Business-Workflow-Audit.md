@@ -165,9 +165,10 @@ For every module: **Screens**, **Backend**, **Frontend**, **Business Workflow**,
 
 **Screens**
 - `GET /admin/fees` (admin `Admin/Fees/Index.jsx`).
-- `GET /accountant/fees` (`Accountant/Fees/Index.jsx`).
-- `POST /accountant/fees/receive` (`Accountant/ReceiveFee.jsx`).
+- `POST /accountant/receive-fee` (`Accountant/ReceiveFee.jsx`).
 - `GET /accountant/late-fees` (`Accountant/LateFees.jsx`).
+
+> **Note (2026-08-20):** `Accountant/Fees/Index.jsx` was an orphan — no route ever rendered it. The per-student flow lives entirely inside `Accountant/ReceiveFee.jsx`. The orphan file has been deleted (see `16-Accountant-Real-Data-Validation-Report.md` F-2026-08-19-A "RESOLVED").
 
 **Backend**
 - `MonthlyFeeResolver` (per-class default + section override) is the seam.

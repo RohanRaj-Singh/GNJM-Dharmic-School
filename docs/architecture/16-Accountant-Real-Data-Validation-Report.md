@@ -105,6 +105,7 @@ These are the load-bearing invariants the F3 redesign pinned. All hold against l
 - **Impact:** Dead code in the bundle (Vite includes it because the glob walks `Pages/**/*.jsx`). Increases bundle size and confuses new contributors who find the file and assume there's a missing route.
 - **Fix:** Delete the file (4.1 KB), or wire it up to a route. Recommendation: **delete**, because the work was superseded by the fees redesign (Stage B16) which moved the per-student view to `Accountant/ReceiveFee.jsx`.
 - **Pinned by:** `test_no_accountant_route_renders_orphan_fees_page`.
+- **Status (2026-08-20):** **RESOLVED.** File deleted (commit `chore(accountant): delete orphan Fees/Index.jsx`). The empty `Fees/` directory was also removed. The pin test continues to pass — it asserts no route file references the orphan, which is now true.
 
 ## 6. State-mutation audit
 
@@ -128,7 +129,7 @@ These are the load-bearing invariants the F3 redesign pinned. All hold against l
 The Accountant role is **safe to ship**. All read paths, write paths, permission gates, and data invariants pass against live data with no permanent state mutation.
 
 **Action items (P3 only):**
-1. Delete `resources/js/Pages/Accountant/Fees/Index.jsx` (or wire it up).
+1. ~~Delete `resources/js/Pages/Accountant/Fees/Index.jsx` (or wire it up).~~ **Done (2026-08-20).** File + empty `Fees/` directory deleted.
 2. (Optional, cosmetic) Name the dashboard route `accountant.dashboard`.
 
 **Not blocking** — the Accountant can perform every day-to-day business workflow today (collect fees, view student lists, drill into student centers, view attendance, run late-fees reports) without any data-loss risk.
