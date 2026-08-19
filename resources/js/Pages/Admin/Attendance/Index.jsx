@@ -11,6 +11,10 @@ import { isKirtan as resolveIsKirtan } from "@/utils/divisionType";
 | - Lesson Learned ONLY for Kirtan
 | - Grid must never break
 | - Defensive rendering everywhere
+|
+| CSRF: axios auto-sends X-XSRF-TOKEN from the XSRF-TOKEN cookie set by
+| Laravel's session middleware. Do not read <meta name="csrf-token"> or
+| inject manual headers.
 */
 
 export default function Index() {
@@ -55,14 +59,12 @@ export default function Index() {
       if (savedDraft) {
         const parsed = JSON.parse(savedDraft);
         if (Object.keys(parsed).length > 0) {
-          console.log('[Attendance] Restored draft from localStorage:', parsed);
           setDraft(parsed);
         }
       }
       if (savedLesson) {
         const parsed = JSON.parse(savedLesson);
         if (Object.keys(parsed).length > 0) {
-          console.log('[Attendance] Restored lesson draft from localStorage');
           setDraftLesson(parsed);
         }
       }
@@ -220,12 +222,9 @@ export default function Index() {
   }
 
   /* ---------------------------------------
-   | Save attendance
+   | Save attendance (via axios — auto CSRF)
    --------------------------------------- */
   function saveAttendance() {
-    // DEBUG: Log isKirtan value at save time to diagnose stale closure
-    console.log('[Attendance Save] isKirtan:', isKirtan, 'classId:', classId, 'selectedClass:', selectedClass);
-
     setLoading(true);
 
     const payload = Object.entries(draft)
@@ -242,81 +241,14 @@ export default function Index() {
       })
       .filter(Boolean);
 
-    // DEBUG: Log payload to diagnose what's being sent
-    console.log('[Attendance Save] Payload:', JSON.stringify({ section_id: sectionId, year, month: parseInt(month), records: payload }, null, 2));
-
-    // Helper to get CSRF token - tries meta tag first, then cookie
-    const getCsrfToken = () => {
-      // Try meta tag first
-      const metaEl = document.querySelector('meta[name="csrf-token"]');
-      const metaToken = metaEl?.getAttribute('content');
-      if (metaToken) {
-        console.log('[CSRF] From meta:', metaToken.substring(0, 20) + '...');
-        return metaToken;
-      }
-
-      // Fallback to cookie (Laravel sets XSRF-TOKEN cookie)
-      const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-      if (cookieMatch) {
-        const cookieToken = decodeURIComponent(cookieMatch[1]);
-        console.log('[CSRF] From cookie:', cookieToken.substring(0, 20) + '...');
-        return cookieToken;
-      }
-
-      console.error('[CSRF] Token NOT found! Meta exists:', !!metaEl, '| Cookies:', document.cookie);
-      return '';
-    };
-
-    const csrfToken = getCsrfToken();
-
-    if (!csrfToken) {
-      const errorMsg = 'CSRF token not found. Please refresh the page and try again.';
-      console.error('[Attendance Save] ERROR:', errorMsg);
-      toast.error(errorMsg);
-      setLoading(false);
-      return;
-    }
-
-    fetch("/admin/attendance/save", {
-      method: "POST",
-      credentials: "same-origin", // Ensure cookies are sent with request
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-TOKEN": csrfToken,
-      },
-      body: JSON.stringify({
+    window.axios
+      .post("/admin/attendance/save", {
         section_id: sectionId,
         year,
         month: parseInt(month),
         records: payload,
-      }),
-    })
-      .then(r => {
-        console.log('[Attendance Save] Response status:', r.status, r.statusText);
-
-        if (r.status === 419) {
-          // CSRF token mismatch - show clear error
-          const errorMsg = 'Session expired or CSRF token mismatch. Please refresh the page and try again.';
-          console.error('[Attendance Save] 419 Error - CSRF token mismatch. This usually means:', {
-            reason: 'The session has expired or the CSRF token is invalid',
-            solution: 'Refresh the page to get a new CSRF token',
-            csrfTokenFound: !!csrfToken,
-            csrfTokenPreview: csrfToken ? csrfToken.substring(0, 20) + '...' : 'N/A',
-          });
-          throw new Error(errorMsg);
-        }
-
-        if (!r.ok) {
-          return r.json().catch(() => ({})).then((err) => {
-            console.error('[Attendance Save] API Error:', err);
-            throw new Error(err?.message || `Server error: ${r.status} ${r.statusText}`);
-          });
-        }
-        return r.json();
       })
-      .then((data) => {
-        console.log('[Attendance Save] Success! Response:', data);
-        // Clear localStorage after successful save
+      .then(() => {
         clearDraftFromStorage();
         toast.success("Attendance saved successfully!");
         setDraft({});
@@ -329,8 +261,19 @@ export default function Index() {
       })
       .then(setGrid)
       .catch((err) => {
-        console.error('[Attendance Save] FINAL ERROR:', err.message);
-        toast.error(err.message || "Failed to save attendance. Please try again.");
+        const status = err?.response?.status;
+        if (status === 419) {
+          toast.error(
+            "Session expired or CSRF token mismatch. Please refresh the page and try again.",
+            { duration: 8000, id: "attendance-csrf" }
+          );
+        } else {
+          toast.error(
+            err?.response?.data?.message ||
+              err.message ||
+              "Failed to save attendance. Please try again."
+          );
+        }
       })
       .finally(() => setLoading(false));
   }

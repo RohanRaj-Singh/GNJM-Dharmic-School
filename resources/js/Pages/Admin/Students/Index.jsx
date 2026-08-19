@@ -16,9 +16,6 @@ const safeUUID = () =>
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-function csrf() {
-  return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ?? "";
-}
 function effectiveStatus(student) {
   const enrollments = student.enrollments || [];
   if (enrollments.length === 0) return student.status || "active";
@@ -207,30 +204,24 @@ export default function Index() {
   const handleBulkDeleteConfirm = useCallback(() => {
     if (selectedIds.size === 0) return;
     setDeleting(true);
-    fetch("/admin/students/bulk-delete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-TOKEN": csrf(),
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ student_ids: Array.from(selectedIds) }),
-    })
-      .then(async (r) => {
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(data.message || "Delete failed");
-        return data;
-      })
-      .then((data) => {
+    window.axios
+      .post(
+        "/admin/students/bulk-delete",
+        { student_ids: Array.from(selectedIds) },
+        { headers: { "Content-Type": "application/json", Accept: "application/json" } }
+      )
+      .then(({ data }) => {
         setStudents((prev) => prev.filter((s) => !selectedIds.has(s.id)));
         setSelectedIds(new Set());
         setDeleting(false);
         setDeleteDone(true);
         toast.success(`${data.deleted} student(s) deleted`);
       })
-      .catch((e) => {
+      .catch((err) => {
         setDeleting(false);
-        toast.error(e.message || "Failed to delete students");
+        toast.error(
+          err?.response?.data?.message || err.message || "Failed to delete students"
+        );
       });
   }, [selectedIds]);
 

@@ -26,27 +26,35 @@ import {
 const CONFIRMATION_TEXT = "RESTORE DATABASE";
 const BASE = "/admin/utilities/backup";
 
-function csrf() {
-  return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ?? "";
-}
-
+/**
+ * Thin axios-backed wrapper around /admin/utilities/backup/* endpoints.
+ *
+ * Call sites use the same signature as the previous fetch-based helper:
+ *   api("/overview")                  → GET
+ *   api("/create", { method: "POST" }) → POST with no body
+ *   api(`/${id}/restore`, { method: "POST" }) → POST with no body
+ *
+ * XSRF/CSRF is handled by axios automatically (XSRF-TOKEN cookie → X-XSRF-TOKEN
+ * header on every non-GET request), so no manual token reads are needed.
+ */
 function api(path, options = {}) {
   const url = `${BASE}${path}`;
+  const method = (options.method || "GET").toUpperCase();
   const headers = { Accept: "application/json", ...options.headers };
-  if (options.method && options.method !== "GET") {
-    headers["X-CSRF-TOKEN"] = csrf();
-  }
-  if (options.json) {
-    headers["Content-Type"] = "application/json";
-    options.body = JSON.stringify(options.json);
-    delete options.json;
-  }
-  return fetch(url, { ...options, headers })
-    .then(async (r) => {
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.message || `Request failed (${r.status})`);
-      return data;
-    });
+
+  const request$ = method === "GET" || method === "DELETE"
+    ? window.axios.request({ url, method, headers })
+    : window.axios.request({
+        url,
+        method,
+        headers,
+        data: options.body || undefined,
+      });
+
+  return request$.then(({ data }) => data).catch((err) => {
+    const msg = err?.response?.data?.message;
+    throw new Error(msg || `Request failed (${err?.response?.status ?? "network"})`);
+  });
 }
 
 function formatBytes(bytes) {

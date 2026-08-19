@@ -1,11 +1,8 @@
 import { Head } from "@inertiajs/react";
 import { router } from "@inertiajs/react";
 import { usePage } from "@inertiajs/react";
-import { useState, useEffect, useRef } from "react";
-import TabSessionTimeout from "@/Components/TabSessionTimeout";
+import { useState, useEffect } from "react";
 import { divisionMeta } from "@/utils/divisionType";
-
-const PROTECTED_HISTORY_KEY = "gnjm.protected.history";
 
 /**
  * SimpleLayout - Layout for teacher/accountant mobile views
@@ -39,11 +36,9 @@ export default function SimpleLayout({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [pendingNav, setPendingNav] = useState(null);
   const [isNavigating, setIsNavigating] = useState(false);
-  const sentinelActiveRef = useRef(false);
 
   const showNavConfirm = pendingNav !== null;
   const shouldConfirmLeave = showLeavePageDialog && (alwaysConfirmLeave || hasUnsavedChanges);
-  const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
   const role = auth?.user?.role ?? null;
 
   const resolvedHomeRoute = (() => {
@@ -53,41 +48,6 @@ export default function SimpleLayout({
     if (role === "admin") return "/admin/dashboard";
     return "/";
   })();
-
-  const readProtectedHistory = () => {
-    try {
-      const raw = window.sessionStorage.getItem(PROTECTED_HISTORY_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const writeProtectedHistory = (stack) => {
-    window.sessionStorage.setItem(PROTECTED_HISTORY_KEY, JSON.stringify(stack));
-  };
-
-  const ensureCurrentPathTracked = () => {
-    if (!currentPath) return [];
-    const stack = readProtectedHistory();
-    if (stack[stack.length - 1] !== currentPath) {
-      const nextStack = [...stack, currentPath];
-      writeProtectedHistory(nextStack);
-      return nextStack;
-    }
-    return stack;
-  };
-
-  const goToPreviousProtectedPage = () => {
-    const stack = readProtectedHistory();
-    if (stack.length <= 1) return false;
-    const nextStack = stack.slice(0, -1);
-    const previousPath = nextStack[nextStack.length - 1];
-    writeProtectedHistory(nextStack);
-    router.visit(previousPath);
-    return true;
-  };
 
   const navigateToBackRoute = () => {
     if (backRoute) {
@@ -101,12 +61,6 @@ export default function SimpleLayout({
     router.visit(resolvedHomeRoute);
   };
 
-  const navigateBackFromStack = () => {
-    if (goToPreviousProtectedPage()) return true;
-    if (navigateToBackRoute()) return true;
-    return false;
-  };
-
   const handleBack = (e) => {
     if (e) {
       e.preventDefault();
@@ -115,10 +69,8 @@ export default function SimpleLayout({
     if (showNavConfirm || isNavigating) return;
     if (shouldConfirmLeave) {
       setPendingNav({ type: 'back' });
-    } else {
-      if (!navigateBackFromStack()) {
-        handleLogoutClick(e);
-      }
+    } else if (!navigateToBackRoute()) {
+      handleLogoutClick(e);
     }
   };
 
@@ -142,7 +94,7 @@ export default function SimpleLayout({
     setPendingNav(null);
     setTimeout(() => {
       if (nextNav?.type === 'back') {
-        if (!navigateBackFromStack()) {
+        if (!navigateToBackRoute()) {
           handleLogoutClick();
         }
       } else if (nextNav?.type === 'home') {
@@ -169,7 +121,6 @@ export default function SimpleLayout({
 
   // Actually perform logout
   const handleLogout = () => {
-    window.sessionStorage.removeItem(PROTECTED_HISTORY_KEY);
     if (onLogout) {
       onLogout();
     } else {
@@ -187,20 +138,6 @@ export default function SimpleLayout({
   const handleCancelLogout = () => {
     setShowLogoutConfirm(false);
   };
-
-  // History management
-  useEffect(() => {
-    ensureCurrentPathTracked();
-    const handlePopState = () => {
-      const stack = readProtectedHistory();
-      if (stack.length > 1) {
-        const nextStack = stack.slice(0, -1);
-        writeProtectedHistory(nextStack);
-      }
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [currentPath]);
 
   useEffect(() => {
     if (pendingNav && showLeavePageDialog) {
@@ -302,8 +239,6 @@ export default function SimpleLayout({
           </button>
         </div>
       </div>
-
-      <TabSessionTimeout />
     </div>
   );
 }

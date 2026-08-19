@@ -1,20 +1,17 @@
 import { Head, Link, router } from "@inertiajs/react";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import SidebarGroup from "@/Components/SidebarGroup";
 import Logo from "../../images/logo.png";
 import LogoutModal from "@/Components/LogoutModal";
-import TabSessionTimeout from "@/Components/TabSessionTimeout";
-
-const PROTECTED_HISTORY_KEY = "gnjm.protected.history";
 
 /**
  * AdminLayout - Main layout for admin dashboard
- * 
- * Features:
- * - Browser back button interception for logout confirmation
- * - Cross-page protection (works on all admin routes)
- * - Proper session handling
- * 
+ *
+ * Renders sidebar + header + content area, plus a LogoutModal that
+ * confirms before sending POST /logout. Browser back-button is
+ * delegated to the platform; in-page navigation is delegated to
+ * Inertia (which already manages its own history stack).
+ *
  * @param {string} title - Page title
  * @param {React.ReactNode} children - Page content
  */
@@ -23,60 +20,8 @@ export default function AdminLayout({ title, children }) {
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const logoutButtonRef = useState(() => ({ current: null }))[0];
-  const sentinelActiveRef = useRef(false);
-
-  // Public routes that don't require logout modal
-  const publicRoutes = ['/login', '/register', '/forgot-password', '/'];
-
-  const isPublicRoute = (path) => {
-    return publicRoutes.some(route => path === route || path.startsWith(route + '/'));
-  };
-
-  const getCurrentRoute = () => {
-    return window.location.pathname;
-  };
-
-  const readProtectedHistory = () => {
-    try {
-      const raw = window.sessionStorage.getItem(PROTECTED_HISTORY_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const writeProtectedHistory = (stack) => {
-    window.sessionStorage.setItem(PROTECTED_HISTORY_KEY, JSON.stringify(stack));
-  };
-
-  const ensureCurrentPathTracked = () => {
-    const currentPath = getCurrentRoute();
-    if (!currentPath || isPublicRoute(currentPath)) return;
-
-    const stack = readProtectedHistory();
-    if (stack[stack.length - 1] !== currentPath) {
-      writeProtectedHistory([...stack, currentPath]);
-    }
-  };
-
-  const goToPreviousProtectedPage = () => {
-    const stack = readProtectedHistory();
-
-    if (stack.length <= 1) {
-      return false;
-    }
-
-    const nextStack = stack.slice(0, -1);
-    const previousPath = nextStack[nextStack.length - 1];
-    writeProtectedHistory(nextStack);
-    router.visit(previousPath);
-    return true;
-  };
 
   const handleLogout = useCallback(() => {
-    window.sessionStorage.removeItem(PROTECTED_HISTORY_KEY);
-
     router.post("/logout", {}, {
       replace: true,
       preserveScroll: false,
@@ -90,13 +35,6 @@ export default function AdminLayout({ title, children }) {
   }, []);
 
   const openLogoutModal = useCallback(() => {
-    const currentRoute = getCurrentRoute();
-    
-    // Don't show modal if already on a public route
-    if (isPublicRoute(currentRoute)) {
-      return;
-    }
-    
     setShowLogoutModal(true);
   }, []);
 
@@ -106,46 +44,6 @@ export default function AdminLayout({ title, children }) {
       logoutButtonRef.current.focus();
     }
   }, [logoutButtonRef]);
-
-  useEffect(() => {
-    const currentRoute = getCurrentRoute();
-    ensureCurrentPathTracked();
-
-    if (isPublicRoute(currentRoute)) {
-      sentinelActiveRef.current = false;
-      return;
-    }
-
-    if (!sentinelActiveRef.current) {
-      window.history.pushState({ protectedRouteGuard: true }, "", window.location.href);
-      sentinelActiveRef.current = true;
-    }
-
-    const handlePopState = () => {
-      if (showLogoutModal) {
-        window.history.pushState({ protectedRouteGuard: true }, "", window.location.href);
-        return;
-      }
-
-      const route = getCurrentRoute();
-
-      if (isPublicRoute(route)) {
-        return;
-      }
-
-      window.history.pushState({ protectedRouteGuard: true }, "", window.location.href);
-      if (!goToPreviousProtectedPage()) {
-        setShowLogoutModal(true);
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-      sentinelActiveRef.current = false;
-    };
-  }, [showLogoutModal]);
 
   return (
     <div className="min-h-screen flex bg-gray-100">
@@ -254,10 +152,7 @@ export default function AdminLayout({ title, children }) {
         confirmLabel="Logout"
         cancelLabel="Cancel"
         closeButtonRef={logoutButtonRef}
-        preventBackButton={true}
       />
-
-      <TabSessionTimeout />
     </div>
   );
 }

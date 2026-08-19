@@ -1,10 +1,10 @@
-import { useForm, usePage } from "@inertiajs/react";
+import { useForm, usePage, router } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 import Logo from "../../../images/logo.png";
 import LogoutModal from "../../Components/LogoutModal";
 
 export default function Login({ user, returnTo }) {
-  const { data, setData, post, processing, errors, reset } = useForm({
+  const { data, setData, post, processing, errors } = useForm({
     login: "",
     password: "",
     remember: false,
@@ -28,16 +28,14 @@ export default function Login({ user, returnTo }) {
   };
 
   const handleLogoutConfirm = () => {
-    post("/logout", {
-      onSuccess: () => {
-        window.location.href = "/";
-      },
+    router.post("/logout", {}, {
+      onSuccess: () => router.visit("/"),
+      onError: () => router.visit("/"),
     });
   };
 
   const handleLogoutCancel = () => {
-    const redirectUrl = returnTo || getRedirectUrl(user?.role);
-    window.location.href = redirectUrl;
+    router.visit(returnTo || getRedirectUrl(user?.role));
   };
 
   function submit(e) {
@@ -46,8 +44,7 @@ export default function Login({ user, returnTo }) {
     post(targetUrl, {
       onFinish: () => {
         if (!errors.login && !errors.password) {
-          const redirectUrl = returnTo || getRedirectUrl(data.role || "accountant");
-          window.location.href = redirectUrl;
+          router.visit(returnTo || getRedirectUrl(user?.role || "accountant"));
         }
       }
     });

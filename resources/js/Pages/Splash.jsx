@@ -1,11 +1,11 @@
-import { useForm, usePage } from "@inertiajs/react";
+import { useForm, usePage, router } from "@inertiajs/react";
 import { useState, useEffect } from "react";
 import Logo from "../../images/logo.png";
 import LogoutModal from "@/Components/LogoutModal";
 
 /**
  * Splash - Login page component
- * 
+ *
  * If user is already logged in, shows a modal asking if they want to:
  * - Logout and login as different user
  * - Stay on current session
@@ -27,27 +27,20 @@ export default function Splash({ user }) {
     }
   }, [user]);
 
-  const handleLogoutAndSwitch = async () => {
-    try {
-      // Post to logout
-      await window.axios.post('/logout');
-      // Reload to show fresh login
-      window.location.reload();
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Force reload anyway
-      window.location.reload();
-    }
+  const handleLogoutAndSwitch = () => {
+    router.post("/logout", {}, {
+      onSuccess: () => window.location.replace("/"),
+      onError: () => window.location.replace("/"),
+    });
   };
 
   const handleStayOnCurrentSession = () => {
-    // Redirect to user's dashboard based on role
     const routes = {
-      admin: '/admin/dashboard',
-      accountant: '/accountant',
-      teacher: '/teacher',
+      admin: "/admin/dashboard",
+      accountant: "/accountant",
+      teacher: "/teacher",
     };
-    window.location.href = routes[user?.role] || '/';
+    router.visit(routes[user?.role] || "/");
   };
 
   function submit(e) {

@@ -6,34 +6,31 @@ import MultiSelect from "@/Components/MultiSelect";
 import toast from "react-hot-toast";
 import { Trash2, Key } from "lucide-react";
 
-function csrf() {
-  return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ?? "";
+function errorFromAxios(err, fallbackStatus = 0) {
+  const data = err?.response?.data || {};
+  if (data.errors) return Object.values(data.errors).flat().join("; ");
+  if (data.message) return data.message;
+  return `Server error (${err?.response?.status ?? fallbackStatus})`;
 }
 
 async function apiPost(url, body) {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrf(), Accept: "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg = data.errors
-      ? Object.values(data.errors).flat().join("; ")
-      : data.message || `Server error (${res.status})`;
-    throw new Error(msg);
+  try {
+    const { data } = await window.axios.post(url, body, {
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+    });
+    return data;
+  } catch (err) {
+    throw new Error(errorFromAxios(err));
   }
-  return data;
 }
 
 async function apiDelete(url) {
-  const res = await fetch(url, {
-    method: "DELETE",
-    headers: { Accept: "application/json", "X-CSRF-TOKEN": csrf() },
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || `Server error (${res.status})`);
-  return data;
+  try {
+    const { data } = await window.axios.delete(url, { headers: { Accept: "application/json" } });
+    return data;
+  } catch (err) {
+    throw new Error(errorFromAxios(err));
+  }
 }
 
 export default function Index() {
