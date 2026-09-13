@@ -54,7 +54,13 @@ export default function SimpleLayout({
       router.visit(backRoute);
       return true;
     }
-    return false;
+    // No explicit back route — walk the browser's own navigation stack
+    // instead of jumping to the role home route. This preserves the
+    // accountant's previous page (e.g. Students → Receive Fee → Back should
+    // return to Students, not /accountant). history.back() is a no-op when
+    // there is nothing to go back to (fresh load).
+    window.history.back();
+    return true;
   };
 
   const navigateToHome = () => {
