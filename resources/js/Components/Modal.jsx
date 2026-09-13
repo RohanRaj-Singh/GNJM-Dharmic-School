@@ -61,7 +61,9 @@ export default function Modal({
                     <DialogPanel
                         className={`relative flex w-full transform flex-col overflow-hidden bg-white shadow-xl transition-all sm:mx-auto sm:mb-6 sm:w-auto sm:rounded-lg ${maxWidthClass} max-h-[95vh] rounded-t-2xl sm:max-h-[88vh]`}
                     >
-                        {children}
+                        <div className="overflow-y-auto flex-1">
+                            {children}
+                        </div>
                     </DialogPanel>
                 </TransitionChild>
             </Dialog>

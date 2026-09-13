@@ -35,12 +35,13 @@ export default function Index() {
     String(today.getMonth() + 1).padStart(2, "0")
   );
 
-  const [grid, setGrid] = useState(null);
-  const [draft, setDraft] = useState({});
-  const [draftLesson, setDraftLesson] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [studentColWidth, setStudentColWidth] = useState(0);
-  const studentHeaderRef = useRef(null);
+const [grid, setGrid] = useState(null);
+    const [draft, setDraft] = useState({});
+    const [draftLesson, setDraftLesson] = useState({});
+    const [loading, setLoading] = useState(false);
+    const [studentColWidth, setStudentColWidth] = useState(0);
+    const [search, setSearch] = useState("");
+    const studentHeaderRef = useRef(null);
 
   /* ---------------------------------------
    | Draft persistence helpers (localStorage)
@@ -103,24 +104,37 @@ export default function Index() {
     localStorage.removeItem(key + '_lesson');
   };
 
-  /* ---------------------------------------
-   | Derived
-   --------------------------------------- */
-  const selectedClass = useMemo(
-    () => classes.find((c) => String(c.id) === String(classId)),
-    [classes, classId]
-  );
+/* ---------------------------------------
+    | Derived
+    --------------------------------------- */
+    const selectedClass = useMemo(
+        () => classes.find((c) => String(c.id) === String(classId)),
+        [classes, classId]
+    );
 
-  // 3-arg form: pass classes.division through. The frontend re-fetches the
-  // class list from `/admin/classes/options` after mount; that endpoint now
-  // ships `division` (B3 fix) so the explicit-first seam in
-  // resolveIsKirtan can correctly classify a Music class as Music instead
-  // of collapsing it into the legacy 'gurmukhi' bucket.
-  const isKirtan = resolveIsKirtan(
-    selectedClass?.type,
-    selectedClass?.name,
-    selectedClass?.division,
-  );
+    // 3-arg form: pass classes.division through. The frontend re-fetches the
+    // class list from `/admin/classes/options` after mount; that endpoint now
+    // ships `division` (B3 fix) so the explicit-first seam in
+    // resolveIsKirtan can correctly classify a Music class as Music instead
+    // of collapsing it into the legacy 'gurmukhi' bucket.
+    const isKirtan = resolveIsKirtan(
+        selectedClass?.type,
+        selectedClass?.name,
+        selectedClass?.division,
+    );
+
+    // Client-side name/father-name filter (Bug B2). Applied to the grid
+    // students before rendering so the grid never shows rows that don't
+    // match.
+    const visibleStudents = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return students;
+        return students.filter(
+            (s) =>
+                (s.name || "").toLowerCase().includes(q) ||
+                (s.father_name || "").toLowerCase().includes(q)
+        );
+    }, [students, search]);
 
   /* ---------------------------------------
    | Load classes (ONCE)
@@ -337,6 +351,14 @@ export default function Index() {
           className="border px-3 py-2 rounded text-sm"
         />
 
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search student or father name..."
+          className="border px-3 py-2 rounded text-sm flex-1 min-w-[200px]"
+        />
+
         {grid && (
           <button
             onClick={saveAttendance}
@@ -387,7 +409,7 @@ export default function Index() {
           </thead>
 
           <tbody>
-            {students.map(student => (
+            {visibleStudents.map(student => (
               <tr key={student.id} className="border-b">
                 <td className="px-3 py-2 sticky left-0 bg-white z-10 font-medium whitespace-nowrap">
                   {student.name}
@@ -463,13 +485,15 @@ export default function Index() {
               </tr>
             ))}
 
-            {!students.length && (
+            {!visibleStudents.length && (
               <tr>
                 <td
                   colSpan={days.length + 2}
                   className="px-4 py-6 text-center text-gray-500"
                 >
-                  No students found in this section
+                  {students.length && !visibleStudents.length
+                    ? "No students match your search"
+                    : "No students found in this section"}
                 </td>
               </tr>
             )}

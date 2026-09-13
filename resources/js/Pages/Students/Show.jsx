@@ -185,16 +185,28 @@ function TabContent({ item, student, divisionKey, canViewFees }) {
         return Array.from({ length: 5 }, (_, i) => y - 2 + i);
     }, []);
 
-    const monthDays = useMemo(() => {
-        const totalDays = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-        return Array.from({ length: totalDays }, (_, i) =>
-            new Date(selectedYear, selectedMonth, i + 1)
-        );
-    }, [selectedYear, selectedMonth]);
+const monthDays = useMemo(() => {
+            const totalDays = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+            return Array.from({ length: totalDays }, (_, i) =>
+                new Date(selectedYear, selectedMonth, i + 1)
+            );
+        }, [selectedYear, selectedMonth]);
+
+        // Day-of-week (0=Sunday..6=Saturday) the 1st of the month falls on.
+        // Used to pad the calendar grid so dates line up under the right
+        // weekday column (Bug A1).
+        const startDayOffset = new Date(selectedYear, selectedMonth, 1).getDay();
 
     const toDateKey = (value) => {
         if (!value) return "";
+        // Parse a YYYY-MM-DD string as a *local* date so the grid cell key
+        // matches the rendered day regardless of the runtime timezone.
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value).slice(0, 10));
+        if (m) {
+            return `${m[1]}-${m[2]}-${m[3]}`;
+        }
         const d = new Date(value);
+        if (isNaN(d.getTime())) return "";
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     };
 
@@ -264,6 +276,9 @@ function TabContent({ item, student, divisionKey, canViewFees }) {
                 <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs">
                     {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
                         <div key={d} className="text-[10px] text-gray-400 font-medium py-1">{d}</div>
+                    ))}
+                    {Array.from({ length: startDayOffset }).map((_, i) => (
+                        <div key={`pad-${i}`} className="hidden sm:block" aria-hidden />
                     ))}
                     {monthDays.map((day, i) => {
                         const dateStr = toDateKey(day);

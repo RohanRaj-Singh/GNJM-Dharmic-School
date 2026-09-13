@@ -1,6 +1,6 @@
 import AdminLayout from "@/Layouts/AdminLayout";
 import { router } from "@inertiajs/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 import DataTable from "@/Components/DataTable";
@@ -15,9 +15,9 @@ import DataTable from "@/Components/DataTable";
  * stored explicitly on `classes.division` so DivisionTypeResolver picks the
  * right bucket regardless of the legacy `type` heuristic.
  *
- * The two creation paths coexist:
- *   - inline "+ Add Class" row: minimal default config (Mon-Sat, no fees)
- *   - modal "+ New Class": full Stage B config the user picks explicitly
+ * The single creation path is the "+ New Class" modal (full Stage B config
+ * the user picks explicitly). See docs/bugs-9-13-26.md (Bug B3) — the old
+ * inline "+ Add Class" row was removed as a redundant affordance.
  */
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -64,8 +64,6 @@ export default function Index() {
     ...DEFAULT_CREATE_STATE(),
   });
 
-  const newRowRef = useRef(null);
-
   function loadData() {
     fetch("/admin/classes/data")
       .then((r) => r.json())
@@ -79,10 +77,8 @@ export default function Index() {
   }
 
   function TextCell({ row, column, autoFocus = false }) {
-    const ref = autoFocus ? newRowRef : null;
     return (
       <input
-        ref={ref}
         defaultValue={row.original[column.id] ?? ""}
         className="w-full px-2 py-1 border rounded text-sm"
         onBlur={(e) => updateCell(row.index, column.id, e.target.value)}
@@ -217,8 +213,8 @@ export default function Index() {
       {
         accessorKey: "name",
         header: "Class Name",
-        cell: ({ row, column }) => (
-          <TextCell row={row} column={column} autoFocus={row.original.__isNew} />
+        cell: ({ row }) => (
+          <TextCell row={row} column={{ id: "name" }} />
         ),
       },
       {
@@ -265,22 +261,6 @@ export default function Index() {
     ],
     []
   );
-
-  function addNewRow() {
-    const newRow = {
-      id: null,
-      __tempId: crypto.randomUUID(),
-      name: "",
-      default_monthly_fee: 0,
-      sections_count: 0,
-      __isNew: true,
-    };
-
-    setData((prev) => [newRow, ...prev]);
-    requestAnimationFrame(() => {
-      newRowRef.current?.focus();
-    });
-  }
 
   function openCreateModal() {
     setCreateModal({ open: true, saving: false, ...DEFAULT_CREATE_STATE() });
@@ -407,10 +387,6 @@ export default function Index() {
         />
 
         <div className="flex gap-2">
-          <button onClick={addNewRow} className="px-4 py-2 bg-blue-600 text-white rounded">
-            + Add Class
-          </button>
-
           <button onClick={openCreateModal} className="px-4 py-2 bg-indigo-600 text-white rounded">
             + New Class
           </button>
@@ -426,7 +402,7 @@ export default function Index() {
         columns={columns}
         sortable
         pagination
-        getRowId={(row) => (row.id ? `class-${row.id}` : row.__tempId)}
+        getRowId={(row) => String(row.id ?? `new-${row.name}`)}
         globalFilter={globalFilter}
         onGlobalFilterChange={setGlobalFilter}
         globalFilterFn="includesString"

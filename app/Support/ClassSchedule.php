@@ -63,7 +63,11 @@ final class ClassSchedule
             return $explicit;
         }
 
-        return ! DivisionTypeResolver::isKirtan($classType, $className, $explicitDivision);
+        // Legacy fallback: an unconfigured class participates in monthly fee
+        // generation by default. Kirtan's "no monthly fee" rule is now an
+        // explicit opt-out (set via the Classes "New Class" modal), not a
+        // name-based inference — see docs/bugs-9-13-26.md (Bug A2).
+        return true;
     }
 
     public static function isAttendanceDay(
