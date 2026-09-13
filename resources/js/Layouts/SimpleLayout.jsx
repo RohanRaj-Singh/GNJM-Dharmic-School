@@ -70,7 +70,10 @@ export default function SimpleLayout({
     if (shouldConfirmLeave) {
       setPendingNav({ type: 'back' });
     } else if (!navigateToBackRoute()) {
-      handleLogoutClick(e);
+      // No explicit back route — fall back to the role home route
+      // instead of treating "back" as logout (Bug: back button was
+      // triggering logout when backRoute was null).
+      navigateToHome();
     }
   };
 
@@ -95,7 +98,7 @@ export default function SimpleLayout({
     setTimeout(() => {
       if (nextNav?.type === 'back') {
         if (!navigateToBackRoute()) {
-          handleLogoutClick();
+          navigateToHome();
         }
       } else if (nextNav?.type === 'home') {
         navigateToHome();
