@@ -18,9 +18,14 @@ export default function StudentsIndex({ students = [], divisions = [] }) {
 
     const { isAccountant } = useRoles();
 
-    const searchedStudents = (students ?? []).filter((s) =>
-        String(s?.name ?? "").toLowerCase().includes(search.toLowerCase())
-    );
+    const searchedStudents = (students ?? []).filter((s) => {
+        const term = String(search ?? "").toLowerCase();
+        if (!term) return true;
+        return (
+            String(s?.name ?? "").toLowerCase().includes(term) ||
+            String(s?.father_name ?? "").toLowerCase().includes(term)
+        );
+    });
 
     const visibleStudents = searchedStudents.filter((student) => {
         if (!isAccountant) return true;
@@ -82,7 +87,7 @@ export default function StudentsIndex({ students = [], divisions = [] }) {
                 <SearchInput
                     value={search}
                     onChange={setSearch}
-                    placeholder="Search student..."
+                    placeholder="Search student or father..."
                     className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring"
                 />
 

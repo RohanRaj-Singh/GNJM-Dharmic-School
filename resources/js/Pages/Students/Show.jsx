@@ -276,7 +276,7 @@ const monthDays = useMemo(() => {
                 {/* Horizontal scroll on mobile keeps the full month visible
                     while preserving the 7-column alignment. */}
                 <div className="overflow-x-auto">
-                <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs min-w-[28rem]">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs">
                     {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
                         <div key={d} className="text-[10px] text-gray-400 font-medium py-1">{d}</div>
                     ))}
