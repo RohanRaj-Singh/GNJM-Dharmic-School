@@ -123,19 +123,6 @@ const [grid, setGrid] = useState(null);
         selectedClass?.division,
     );
 
-    // Client-side name/father-name filter (Bug B2). Applied to the grid
-    // students before rendering so the grid never shows rows that don't
-    // match.
-    const visibleStudents = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        if (!q) return students;
-        return students.filter(
-            (s) =>
-                (s.name || "").toLowerCase().includes(q) ||
-                (s.father_name || "").toLowerCase().includes(q)
-        );
-    }, [students, search]);
-
   /* ---------------------------------------
    | Load classes (ONCE)
    --------------------------------------- */
@@ -292,11 +279,24 @@ const [grid, setGrid] = useState(null);
       .finally(() => setLoading(false));
   }
 
-  /* ---------------------------------------
-   | Render helpers
-   --------------------------------------- */
-  const days = grid?.days ?? [];
-  const students = grid?.students ?? [];
+/* ---------------------------------------
+    | Render helpers
+    --------------------------------------- */
+    const days = grid?.days ?? [];
+    const students = grid?.students ?? [];
+
+    // Client-side name/father-name filter (Bug B2). Declared here — after
+    // `students` — so the useMemo callback does not hit the temporal dead
+    // zone ("Cannot access 'S' before initialization").
+    const visibleStudents = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return students;
+        return students.filter(
+            (s) =>
+                (s.name || "").toLowerCase().includes(q) ||
+                (s.father_name || "").toLowerCase().includes(q)
+        );
+    }, [students, search]);
 
   useEffect(() => {
     const updateWidth = () => {
