@@ -273,12 +273,20 @@ const monthDays = useMemo(() => {
                     )}
                 </div>
 
-                <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs">
+                {/* Horizontal scroll on mobile keeps the full month visible
+                    while preserving the 7-column alignment. */}
+                <div className="overflow-x-auto">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs min-w-[28rem]">
                     {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
                         <div key={d} className="text-[10px] text-gray-400 font-medium py-1">{d}</div>
                     ))}
                     {Array.from({ length: startDayOffset }).map((_, i) => (
-                        <div key={`pad-${i}`} className="hidden sm:block" aria-hidden />
+                        // Keep the placeholder visible at every breakpoint so the
+                        // 7-column grid never collapses and dates stay aligned
+                        // under their weekday headers on mobile too. Using
+                        // opacity-0 instead of `hidden` preserves the grid cell
+                        // (Bug: responsive grid misaligned dates).
+                        <div key={`pad-${i}`} className="opacity-0" aria-hidden />
                     ))}
                     {monthDays.map((day, i) => {
                         const dateStr = toDateKey(day);
@@ -322,6 +330,7 @@ const monthDays = useMemo(() => {
                         No records for {MONTHS[selectedMonth]} {selectedYear}
                     </p>
                 )}
+                </div>
             </div>
 
             {/* Lesson Notes — opt-in per division via meta.hasLessonNotes
