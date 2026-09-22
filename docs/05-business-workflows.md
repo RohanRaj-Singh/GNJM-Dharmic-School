@@ -25,6 +25,13 @@ Step-by-step traces. Each step cites the file/line range an agent should open to
    - If `paid`: resolve current month amount via `MonthlyFeeResolver`, `firstOrCreate` the monthly `fees` row.
 3. Returns `back()->with('success', 'Students updated')`.
 
+### 5.1.3 Student hard delete (admin)
+1. Single: `DELETE /admin/students/{student}` → `Admin\StudentController::destroy`. Bulk: `POST /admin/students/bulk-delete`.
+2. Both run inside `DB::transaction`. Bulk loads models and deletes one-by-one so `Student::deleting` fires (mass `whereIn()->delete()` skips events).
+3. `Student::deleting` removes in order: `fees` (payments cascade), `attendance`, `student_sections`, then the student; also `StudentReportCache::forget`.
+4. DB safety net: migration `2026_09_22_000001_cascade_fees_and_attendance_on_student_delete` changes `fees.student_id` / `attendance.student_id` from RESTRICT → `ON DELETE CASCADE` (fixes SQLSTATE 23000 / `fees_student_id_foreign` 1451).
+5. Tests: `tests/Feature/StudentDeleteCascadeTest.php`.
+
 ## 5.2 Monthly Fee Generation (system / admin)
 
 **Triggers:** `php artisan fees:generate-monthly` or `POST /admin/fees/generate-monthly` (which shells out to the same command).
@@ -107,6 +114,22 @@ File: `app/Http/Controllers/Admin/PendingFeesController.php`. UI: `Admin/Utiliti
    - For each desired month, resolves the amount, creates the `fees` row if missing, updates amount if different (and unpaid).
    - Removes any **unpaid** monthly fees outside the desired set.
    - Special case: `months = 0` deletes **all** unpaid monthly fees.
+
+## 5.6a Multi-Class Fee Correction (admin — Gurmukhi + Kirtan)
+
+File: `app/Http/Controllers/Admin/MultiClassFeeCorrectionController.php`. UI: `Admin/Utilities/MultiClassFeeCorrection.jsx`. Helper: `app/Services/PendingMonthsGenerator.php`.
+
+**Business condition:** for a student with active enrollments in both Gurmukhi and Kirtan, the **Kirtan enrollment is the affected stream**; Gurmukhi is **reference-only**. The Admin reviews and explicitly confirms the Kirtan pending months — the system does **not** auto-repair every identified student, and this is not a general-purpose fee editor.
+
+1. Admin opens `/admin/utilities/multi-class-fee-correction`.
+2. `GET .../candidates` lists students with active Gurmukhi + Kirtan enrollments (classified via `DivisionTypeResolver`, not name-only). Each pair returns `reference` (Gurmukhi) and `target` (Kirtan) enrollment payloads with fee-month counts.
+3. UI labels: `✓ Gurmukhi — reference enrollment` (read-only) and `⚠ Kirtan — correction target` (editable pending-months input only).
+4. `POST .../preview` returns desired months and will-create / will-delete-unpaid diffs for the **target** `student_section_id` only.
+5. `POST .../apply` accepts **only** `{ student_section_id, pending_months }` — never `student_id`.
+6. **Server-side guards:** target class must resolve as Kirtan; student must have an active Gurmukhi sibling; payment lock on the target; `pending_months > 0` requires paid enrollment + `SchoolClass::chargesMonthlyFee()`.
+7. Mutation runs in one transaction: update `assumed_pending_months`, regenerate unpaid monthly fees for that enrollment only (floored at `started_at`), write `AuditLog` action `fee.pending_months_corrected`. Sibling Gurmukhi fee rows are never written.
+
+Tests: `tests/Feature/MultiClassFeeCorrectionTest.php` (sibling isolation: Kirtan 2→5 leaves Gurmukhi at exactly 5 with an identical fee-row snapshot).
 
 ## 5.7 Attendance Recording (Teacher / Accountant)
 

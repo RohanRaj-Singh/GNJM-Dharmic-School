@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\{
     BackupController,
     FeesController,
     FeeRatePeriodController,
+    MultiClassFeeCorrectionController,
     ReportController,
     StudentController,
     StudentReportCenterController,
@@ -96,6 +97,28 @@ Route::patch(
     [PendingFeesController::class, 'bulkUpdate']
 )->name('utilities.pending-fees.bulk');
 
+// Multi-class fee correction — Gurmukhi reference / Kirtan target only.
+// Mutations are keyed by student_section_id (Kirtan enrollment), never student_id.
+Route::get(
+    '/utilities/multi-class-fee-correction',
+    [MultiClassFeeCorrectionController::class, 'index']
+)->name('utilities.multi-class-fee-correction');
+
+Route::get(
+    '/utilities/multi-class-fee-correction/candidates',
+    [MultiClassFeeCorrectionController::class, 'candidates']
+)->name('utilities.multi-class-fee-correction.candidates');
+
+Route::post(
+    '/utilities/multi-class-fee-correction/preview',
+    [MultiClassFeeCorrectionController::class, 'preview']
+)->name('utilities.multi-class-fee-correction.preview');
+
+Route::post(
+    '/utilities/multi-class-fee-correction/apply',
+    [MultiClassFeeCorrectionController::class, 'apply']
+)->name('utilities.multi-class-fee-correction.apply');
+
 // Student Status Management (enrollment-level)
 Route::get(
     '/utilities/student-status',
@@ -172,6 +195,7 @@ Route::prefix('utilities/backup')->name('utilities.backup.')->group(function () 
     Route::get('/overview', [BackupController::class, 'overview'])->name('overview');
     Route::get('/history', [BackupController::class, 'history'])->name('history');
     Route::post('/create', [BackupController::class, 'create'])->name('create');
+    Route::post('/upload', [BackupController::class, 'upload'])->name('upload');
     Route::get('/{id}/download', [BackupController::class, 'download'])->name('download');
     Route::post('/{id}/restore', [BackupController::class, 'restore'])->name('restore');
     Route::delete('/{id}', [BackupController::class, 'destroy'])->name('destroy');

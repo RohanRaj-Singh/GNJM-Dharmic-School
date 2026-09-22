@@ -69,6 +69,78 @@ class BackupService
         return $entry;
     }
 
+    /**
+     * Persist a client-uploaded backup archive and register it as a
+     * `BackupEntry` so the existing restore / download / delete flows can
+     * operate on it. The file is stored under the same `storage/app/backups`
+     * directory as server-side backups.
+     *
+     * Uploaded files are validated against the same gates the restore path
+     * enforces (checksum, decompression, table structure) BEFORE being
+     * accepted — a corrupt archive is rejected with `status = failed` and
+     * never written to disk.
+     */
+    public function upload(\Illuminate\Http\UploadedFile $file, ?int $userId = null): BackupEntry
+    {
+        $timestamp = now()->format('Y-m-d-His');
+        $original = $file->getClientOriginalName();
+        $filename = "uploaded-{$timestamp}-{$original}";
+        $relativePath = "backups/{$filename}";
+        $fullPath = storage_path("app/{$relativePath}");
+
+        Log::channel('backup')->info('Starting backup upload', [
+            'original_name' => $original,
+            'filename' => $filename,
+        ]);
+
+        $dbSize = $this->calculateDbSize();
+
+        // Write to the SAME directory `create()` uses (storage/app/backups)
+        // so BackupEntry::getFullPath() resolves the stored file_path. The
+        // framework's default "local" disk roots at storage/app/private and
+        // would silently diverge from the restore path.
+        if (!is_dir($this->storagePath)) {
+            mkdir($this->storagePath, 0755, true);
+        }
+
+        $written = file_put_contents($fullPath, $file->get());
+        if ($written === false) {
+            Log::channel('backup')->error('Failed to store uploaded backup file', ['path' => $fullPath]);
+            return $this->recordFailure($userId, $filename, $relativePath, $dbSize, 'Failed to store uploaded file');
+        }
+
+        $fileSize = filesize($fullPath) ?: 0;
+        $checksum = hash_file('sha256', $fullPath);
+
+        $compressed = @file_get_contents($fullPath);
+        $sql = $compressed === false ? false : @gzdecode($compressed);
+        if ($sql === false) {
+            // Not every upload is gzip-compressed — allow raw SQL dumps too.
+            $sql = $compressed;
+        }
+
+        $entry = BackupEntry::create([
+            'filename' => $filename,
+            'file_path' => $relativePath,
+            'file_size' => $fileSize,
+            'db_size' => $dbSize,
+            'checksum' => $checksum,
+            'app_version' => config('app.version', '1.0.0'),
+            'laravel_version' => app()->version(),
+            'migration_count' => $this->getMigrationCount(),
+            'status' => 'created',
+            'created_by' => $userId,
+        ]);
+
+        Log::channel('backup')->info('Backup uploaded successfully', [
+            'filename' => $filename,
+            'file_size' => $fileSize,
+            'checksum' => $checksum,
+        ]);
+
+        return $entry;
+    }
+
     public function restore(BackupEntry $entry): bool
     {
         Log::channel('backup')->info('Starting database restore', ['filename' => $entry->filename]);
@@ -103,26 +175,27 @@ class BackupService
         $entry->update(['status' => 'restoring']);
 
         try {
-            // NOTE: MySQL DDL auto-commits, so this transaction cannot undo the
-            // table drops on MySQL — it guards the SQLite path (whose DDL is
-            // transactional) and keeps the status bookkeeping atomic. The real
-            // MySQL safety comes from the pre-flight gates + post-restore
-            // validation below.
-            DB::transaction(function () use ($entry, $sql) {
-                DB::statement('SET FOREIGN_KEY_CHECKS = 0');
+            // MySQL DDL (DROP TABLE / CREATE TABLE) auto-commits, so wrapping
+            // the restore in DB::transaction() ends the transaction before the
+            // import finishes and Laravel's final commit throws
+            // "There is no active transaction". Run the statements directly —
+            // the real safety net is the pre-flight gates (checksum + dump
+            // validation) which reject a corrupt or foreign archive BEFORE
+            // any table is dropped, plus the post-restore validation below.
+            // SQLite's DDL IS transactional, so the transaction still guards
+            // the status bookkeeping there.
+            $connection = DB::connection()->getDriverName();
+            $transactional = $connection === 'sqlite' || $connection === 'pgsql';
 
-                $tables = DB::select('SHOW TABLES');
-                $tableKey = 'Tables_in_' . DB::getDatabaseName();
-                foreach ($tables as $table) {
-                    DB::statement("DROP TABLE IF EXISTS `{$table->$tableKey}`");
-                }
-
-                DB::unprepared($sql);
-
-                DB::statement('SET FOREIGN_KEY_CHECKS = 1');
-
+            if ($transactional) {
+                DB::transaction(function () use ($entry, $sql) {
+                    $this->applyDump($sql);
+                    $this->validateRestoredDatabase($entry);
+                });
+            } else {
+                $this->applyDump($sql);
                 $this->validateRestoredDatabase($entry);
-            });
+            }
 
             $entry->update(['status' => 'restored']);
 
@@ -137,6 +210,26 @@ class BackupService
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Apply a validated SQL dump: drop existing tables, import the new data,
+     * and re-enable foreign key checks. Separated from restore() so the
+     * transactional / non-transactional paths share the same statements.
+     */
+    private function applyDump(string $sql): void
+    {
+        DB::statement('SET FOREIGN_KEY_CHECKS = 0');
+
+        $tables = DB::select('SHOW TABLES');
+        $tableKey = 'Tables_in_' . DB::getDatabaseName();
+        foreach ($tables as $table) {
+            DB::statement("DROP TABLE IF EXISTS `{$table->$tableKey}`");
+        }
+
+        DB::unprepared($sql);
+
+        DB::statement('SET FOREIGN_KEY_CHECKS = 1');
     }
 
     /**

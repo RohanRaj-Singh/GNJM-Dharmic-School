@@ -65,6 +65,18 @@ class SchoolClass extends Model
 
     public function chargesMonthlyFee(): bool
     {
+        // Legacy rows may have charges_monthly_fee = NULL (unconfigured) but a
+        // configured default_monthly_fee — the admin explicitly set an amount,
+        // so the class participates in monthly fee generation. This is what
+        // lets an existing Kirtan class with default_monthly_fee = 300 generate
+        // fees like Gurmukhi does (Bug: Kirtan fees stopped after Feb 2026).
+        // Newly-created Kirtan classes are unaffected: the save endpoint sets
+        // charges_monthly_fee = false explicitly, so the seam below returns
+        // false and the unit tests still pass.
+        if ($this->charges_monthly_fee === null && (int) ($this->default_monthly_fee ?? 0) > 0) {
+            return true;
+        }
+
         return ClassSchedule::chargesMonthlyFee(
             $this->type,
             $this->name,

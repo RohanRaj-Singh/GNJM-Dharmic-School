@@ -21,6 +21,7 @@ class AuditLog extends Model
     public const ACTION_FEE_CUSTOM_UPDATED = 'fee.custom_updated';
     public const ACTION_FEE_CUSTOM_DELETED = 'fee.custom_deleted';
     public const ACTION_FEE_MONTHLY_GENERATED = 'fee.monthly_generated';
+    public const ACTION_FEE_PENDING_MONTHS_CORRECTED = 'fee.pending_months_corrected';
     public const ACTION_ATTENDANCE_MARKED  = 'attendance.marked';
 
     public $timestamps = false;

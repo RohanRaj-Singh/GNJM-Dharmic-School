@@ -13,12 +13,13 @@ use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 /**
- * Pins the monthly-fee generation run (Sprint 5.1) so the consolidation behind
- * MonthlyFeeService / GenerateMonthlyFeeAction does not change its behavior:
- *   - paid, active, non-Kirtan students get a monthly fee for the current month
- *   - Kirtan students are skipped
+ * Pins the monthly-fee generation run so each class generates its own fee
+ * independently:
+ *   - paid, active students get a monthly fee per enrollment
+ *   - Kirtan students get their own fees (not skipped)
  *   - free students are skipped and their unpaid monthly fees are cleared
- *   - an existing fee for the month (on any enrollment) is never duplicated
+ *   - an existing fee for the same enrollment+month is never duplicated
+ *   - multi-class students get multiple fees (one per class)
  */
 class MonthlyFeesGenerationTest extends TestCase
 {
@@ -52,7 +53,9 @@ class MonthlyFeesGenerationTest extends TestCase
 
         return [
             'gurmukhi' => $gurmukhi,
+            'kirtan' => $kirtan,
             'sectionG' => $sectionG,
+            'sectionK' => $sectionK,
             'paidGurmukhi' => $student('Paid Gurmukhi', 'paid', $gurmukhi, $sectionG),
             'freeGurmukhi' => $student('Free Gurmukhi', 'free', $gurmukhi, $sectionG),
             'paidKirtan' => $student('Paid Kirtan', 'paid', $kirtan, $sectionK),
@@ -89,7 +92,7 @@ class MonthlyFeesGenerationTest extends TestCase
             ->count();
     }
 
-    public function test_generates_fees_for_eligible_students_and_skips_kirtan_and_free(): void
+    public function test_generates_fees_for_all_eligible_enrollments(): void
     {
         $data = $this->seedData();
 
@@ -107,8 +110,56 @@ class MonthlyFeesGenerationTest extends TestCase
         // Free Gurmukhi → no fee.
         $this->assertSame(0, $this->monthlyFeesFor($data['freeGurmukhi']['student']->id));
 
-        // Paid Kirtan → skipped.
-        $this->assertSame(0, $this->monthlyFeesFor($data['paidKirtan']['student']->id));
+        // Paid Kirtan → fee created (not skipped anymore).
+        $this->assertSame(1, $this->monthlyFeesFor($data['paidKirtan']['student']->id));
+        $kFee = Fee::where('student_id', $data['paidKirtan']['student']->id)
+            ->where('type', 'monthly')
+            ->where('month', $this->currentMonth())
+            ->firstOrFail();
+        $this->assertSame(100, $kFee->amount);
+    }
+
+    public function test_multi_class_student_gets_two_fees(): void
+    {
+        $data = $this->seedData();
+
+        // Create a student enrolled in both Gurmukhi and Kirtan
+        $multiStudent = Student::create([
+            'name' => 'Multi Class',
+            'father_name' => 'Father of Multi',
+            'status' => Student::STATUS_ACTIVE,
+        ]);
+        $enrollG = StudentSection::create([
+            'student_id' => $multiStudent->id,
+            'class_id' => $data['gurmukhi']->id,
+            'section_id' => $data['sectionG']->id,
+            'student_type' => 'paid',
+            'status' => StudentSection::STATUS_ACTIVE,
+            'started_at' => now(),
+        ]);
+        $enrollK = StudentSection::create([
+            'student_id' => $multiStudent->id,
+            'class_id' => $data['kirtan']->id,
+            'section_id' => $data['sectionK']->id,
+            'student_type' => 'paid',
+            'status' => StudentSection::STATUS_ACTIVE,
+            'started_at' => now(),
+        ]);
+
+        Artisan::call('fees:generate-monthly');
+
+        // Multi-class student gets TWO fees — one per enrollment.
+        $this->assertSame(2, $this->monthlyFeesFor($multiStudent->id));
+
+        $gFee = Fee::where('student_section_id', $enrollG->id)
+            ->where('month', $this->currentMonth())->first();
+        $kFee = Fee::where('student_section_id', $enrollK->id)
+            ->where('month', $this->currentMonth())->first();
+
+        $this->assertNotNull($gFee);
+        $this->assertNotNull($kFee);
+        $this->assertSame(100, $gFee->amount);
+        $this->assertSame(100, $kFee->amount);
     }
 
     public function test_free_student_unpaid_monthly_fees_are_cleared(): void
@@ -130,7 +181,7 @@ class MonthlyFeesGenerationTest extends TestCase
         $this->assertSame(0, $this->monthlyFeesFor($student->id));
     }
 
-    public function test_existing_monthly_fee_is_not_duplicated(): void
+    public function test_existing_enrollment_fee_is_not_duplicated(): void
     {
         $data = $this->seedData();
         $student = $data['paidGurmukhi']['student'];

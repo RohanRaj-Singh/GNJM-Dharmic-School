@@ -17,8 +17,7 @@ use Illuminate\Validation\ValidationException;
  * Owns:
  *   - bulkUpsert — the roster editor's transactional write path. Owns
  *     the (student + enrollments + monthly fee) cascade, the status-
- *     machine guard (R3), and the (student_id, type, month) canonical
- *     fee identity (F3).
+ *     machine guard (R3), and per-enrollment monthly fee billing.
  *   - rosterRows — the shared query + JSON-shape used by admin/Index
  *     and admin/data. Single mapping function so the two consumers
  *     can never drift.
@@ -175,8 +174,7 @@ class StudentService
                 }
 
                 // ---- 5. Upsert monthly fee ----
-                // Keyed by (student_id, type, month) so changing section/class
-                // doesn't create a duplicate fee for the same month (F3).
+                // Per-enrollment billing: each class generates its own monthly fee.
                 $this->monthlyFeeService->upsertForMonth($enrollment, $today);
             }
 

@@ -221,10 +221,7 @@ class StudentController extends Controller
         ]);
 
         if ($validated['student_type'] === 'paid') {
-            // Canonical identity: fees belong to the student, not the enrollment (F3).
-            // Keying by student_id (not student_section_id) means a mid-month section
-            // change reuses the existing monthly fee instead of creating a duplicate
-            // that the unique index (student_id, type, month) would reject.
+            // Per-enrollment billing: each class generates its own monthly fee.
             $this->monthlyFeeService->upsertForMonth($enrollment, now(config('app.timezone'))->format('Y-m'));
         }
 

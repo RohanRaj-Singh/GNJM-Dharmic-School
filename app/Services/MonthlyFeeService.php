@@ -7,16 +7,16 @@ use App\Models\StudentSection;
 use Carbon\Carbon;
 
 /**
- * Single monthly-fee write path (Sprint 5.1).
+ * Single monthly-fee write path.
  *
- * Every monthly fee in the app is keyed by the canonical (F3) identity
- * (student_id, type='monthly', month) — the student, not the enrollment — so a
- * section/class change never creates a duplicate the unique index would reject.
- * This service owns that write: resolve the amount via MonthlyFeeResolver, then
- * firstOrCreate on the canonical key. The CLI command (fees:generate-monthly),
- * the admin "Generate Monthly Fees" button, the roster bulk-update, and new
- * student creation all route through here; the full current-month run lives in
- * generateForMonth().
+ * Each class generates its own monthly fee independently — keyed by
+ * (student_section_id, type='monthly', month) — the enrollment, not the
+ * student. A student enrolled in both Gurmukhi and Kirtan gets two separate
+ * fees per month. This service owns that write: resolve the amount via
+ * MonthlyFeeResolver, then firstOrCreate on the per-enrollment key. The CLI
+ * command (fees:generate-monthly), the admin "Generate Monthly Fees" button,
+ * the roster bulk-update, and new student creation all route through here;
+ * the full current-month run lives in generateForMonth().
  */
 class MonthlyFeeService
 {
@@ -26,8 +26,8 @@ class MonthlyFeeService
 
     /**
      * Resolve the monthly fee for an enrollment in a given month and write it
-     * under the canonical (student_id, type, month) key. Returns the fee, or
-     * null when the resolved amount is <= 0 (free student / no rate).
+     * under the per-enrollment key (student_section_id, type, month). Returns
+     * the fee, or null when the resolved amount is <= 0 (free student / no rate).
      */
     public function upsertForMonth(
         StudentSection $enrollment,
@@ -41,14 +41,14 @@ class MonthlyFeeService
 
         return Fee::firstOrCreate(
             [
-                'student_id' => $enrollment->student_id,
-                'type'       => 'monthly',
-                'month'      => $month instanceof Carbon ? $month->format('Y-m') : (string) $month,
+                'student_section_id' => $enrollment->id,
+                'type'               => 'monthly',
+                'month'              => $month instanceof Carbon ? $month->format('Y-m') : (string) $month,
             ],
             [
-                'student_section_id' => $enrollment->id,
-                'title'              => $title,
-                'amount'             => $amount,
+                'student_id' => $enrollment->student_id,
+                'title'      => $title,
+                'amount'     => $amount,
             ]
         );
     }
@@ -67,12 +67,13 @@ class MonthlyFeeService
     /**
      * Generate monthly fees for a month across all active enrollments — the
      * "generate monthly fees" run shared by the CLI command and the admin
-     * button. Free enrollments get their unpaid monthly fees cleared, classes
-     * that do not charge monthly fees are skipped (Kirtan's legacy exclusion is
-     * the unconfigured fallback), and a fee that already exists for the student
-     * that month (on any enrollment) is never duplicated. Returns the ids of
-     * every student whose fees may have changed so callers can invalidate
-     * report caches.
+     * button. Each class generates its own fee independently: a student in
+     * both Gurmukhi and Kirtan gets two separate fees for the same month.
+     * Free enrollments get their unpaid monthly fees cleared, classes that
+     * do not charge monthly fees are skipped, and a fee that already exists
+     * for this specific enrollment in this month is never duplicated. Returns
+     * the ids of every student whose fees may have changed so callers can
+     * invalidate report caches.
      */
     public function generateForMonth(Carbon|string $month): array
     {
@@ -92,16 +93,14 @@ class MonthlyFeeService
                 continue;
             }
 
-            // Skip classes that do not charge monthly fees. Kirtan's legacy
-            // exclusion is the unconfigured fallback (ClassSchedule seam); a
-            // configured class opts in/out explicitly.
+            // Skip classes that do not charge monthly fees.
             if (!$enrollment->schoolClass->chargesMonthlyFee()) {
                 continue;
             }
 
-            // The fee may already exist for this student this month (on any
-            // enrollment) — do not create a duplicate the unique index rejects.
-            $exists = Fee::where('student_id', $enrollment->student_id)
+            // The fee may already exist for this specific enrollment this month
+            // — do not create a duplicate the unique index rejects.
+            $exists = Fee::where('student_section_id', $enrollment->id)
                 ->where('type', 'monthly')
                 ->where('month', $monthKey)
                 ->exists();

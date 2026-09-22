@@ -33,6 +33,14 @@ export default function Utilities() {
         />
 
         <UtilityCard
+          emoji="🎯"
+          title="Multi-Class Fee Correction"
+          description="Review Gurmukhi + Kirtan students — correct Kirtan pending months only"
+          href="/admin/utilities/multi-class-fee-correction"
+          badge="New"
+        />
+
+        <UtilityCard
           emoji="🔄"
           title="Student Status"
           description="Activate or deactivate enrollments in bulk"

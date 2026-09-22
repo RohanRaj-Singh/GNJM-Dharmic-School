@@ -85,6 +85,7 @@ class AdminPageSmokeTest extends TestCase
             'dashboard' => ['admin.dashboard', [], 'Admin/Dashboard'],
             'utilities' => ['admin.utilities', [], 'Admin/Utilities'],
             'utilities pending-fees' => ['admin.utilities.pending-fees', [], 'Admin/Utilities/PendingFeesSetup'],
+            'utilities multi-class-fee-correction' => ['admin.utilities.multi-class-fee-correction', [], 'Admin/Utilities/MultiClassFeeCorrection'],
             'utilities student-status' => ['admin.utilities.student-status', [], 'Admin/Utilities/StudentStatus'],
             'utilities student-progression' => ['admin.utilities.student-progression', [], 'Admin/Utilities/StudentProgression'],
             'utilities master-directory' => ['admin.utilities.master-directory', [], 'Admin/Utilities/MasterDirectory'],

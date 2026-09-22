@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StudentReport\StudentReportCache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,6 +23,22 @@ class Student extends Model
         'status',
         'batch_id',
     ];
+
+    /**
+     * Hard-delete order for FK safety: fees (payments cascade from fees),
+     * attendance, enrollments, then the student row. Mirrors the
+     * cascadeOnDelete FKs so single and bulk deletes behave the same.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (Student $student) {
+            Fee::where('student_id', $student->id)->delete();
+            Attendance::where('student_id', $student->id)->delete();
+            $student->enrollments()->delete();
+
+            app(StudentReportCache::class)->forget((int) $student->id);
+        });
+    }
 
     public function enrollments(): HasMany
     {

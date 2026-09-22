@@ -127,6 +127,65 @@ class BackupController extends Controller
         }
     }
 
+    /**
+     * Upload a backup file from the client. The uploaded archive is stored
+     * alongside server-side backups and registered as a `BackupEntry` so it
+     * can be restored, downloaded, or deleted through the existing flows.
+     */
+    public function upload(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('create', BackupEntry::class);
+
+        $request->validate([
+            'backup_file' => [
+                'required',
+                'file',
+                'mimes:sql,gz,zip',
+                'max:51200', // 50 MB
+            ],
+        ]);
+
+        try {
+            $entry = $this->backupService->upload(
+                $request->file('backup_file'),
+                auth()->id()
+            );
+
+            if ($entry->status === 'failed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Backup upload failed. Check logs for details.',
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Backup uploaded successfully.',
+                'backup' => [
+                    'id' => $entry->id,
+                    'filename' => $entry->filename,
+                    'created_at' => $entry->created_at?->format('M d, Y h:i A'),
+                    'created_by' => auth()->user()?->name ?? 'System',
+                    'db_size' => $this->formatBytes($entry->db_size),
+                    'backup_size' => $this->formatBytes($entry->file_size),
+                    'status' => $entry->status,
+                    'app_version' => $entry->app_version,
+                    'laravel_version' => $entry->laravel_version,
+                    'migration_count' => $entry->migration_count,
+                    'checksum' => substr($entry->checksum, 0, 12) . '...',
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::channel('backup')->error('Backup upload exception', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Upload failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function compatibility(int $id): \Illuminate\Http\JsonResponse
     {
         $entry = BackupEntry::findOrFail($id);

@@ -63,11 +63,15 @@ final class ClassSchedule
             return $explicit;
         }
 
-        // Legacy fallback: an unconfigured class participates in monthly fee
-        // generation by default. Kirtan's "no monthly fee" rule is now an
-        // explicit opt-out (set via the Classes "New Class" modal), not a
-        // name-based inference — see docs/bugs-9-13-26.md (Bug A2).
-        return true;
+        // Legacy fallback: Kirtan is excluded from monthly fees by default
+        // (real business rule — Sunday-only class, no monthly charge). Every
+        // other class participates. A class opts out explicitly via the
+        // Classes "New Class" modal (charges_monthly_fee = false) or opts in
+        // the same way. The one exception is a legacy row that has
+        // charges_monthly_fee = NULL *and* a configured default_monthly_fee —
+        // that case is handled by SchoolClass::chargesMonthlyFee(), which is
+        // the gate MonthlyFeeService::generateForMonth() actually calls.
+        return !DivisionTypeResolver::isKirtan($classType, $className, $explicitDivision);
     }
 
     public static function isAttendanceDay(

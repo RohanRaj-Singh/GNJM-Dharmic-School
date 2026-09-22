@@ -128,6 +128,10 @@ class StudentController extends Controller
 
     /**
      * Delete a single student (hard delete).
+     *
+     * Dependents (fees → payments, attendance, enrollments) are removed by
+     * Student::deleting + cascade FKs — see migration
+     * 2026_09_22_000001_cascade_fees_and_attendance_on_student_delete.
      */
     public function destroy(Student $student)
     {
@@ -139,6 +143,10 @@ class StudentController extends Controller
 
     /**
      * Delete multiple students in one transaction.
+     *
+     * Loads models and deletes one-by-one so Student::deleting runs for each
+     * (mass `whereIn()->delete()` skips model events and previously hit
+     * fees_student_id_foreign RESTRICT).
      */
     public function bulkDelete(Request $request)
     {
@@ -150,7 +158,9 @@ class StudentController extends Controller
         ]);
 
         DB::transaction(function () use ($request) {
-            Student::whereIn('id', $request->student_ids)->delete();
+            Student::whereIn('id', $request->student_ids)
+                ->get()
+                ->each(fn (Student $student) => $student->delete());
         });
 
         return response()->json([

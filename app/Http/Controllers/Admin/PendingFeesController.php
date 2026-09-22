@@ -230,19 +230,16 @@ class PendingFeesController extends Controller
             }
 
             if ($amount > 0) {
-                // Canonical identity (F3): key by (student_id, type, month), not the
-                // enrollment. A monthly fee owed for this month may already live on a
-                // historical enrollment (e.g. after a section change); reusing it keeps
-                // it collectible there and avoids a duplicate the unique index would
-                // reject.
+                // Per-enrollment billing: key by (student_section_id, type, month).
+                // Each class generates its own monthly fee independently.
                 Fee::firstOrCreate(
                     [
-                        'student_id' => $studentSection->student_id,
+                        'student_section_id' => $studentSection->id,
                         'type' => 'monthly',
                         'month' => $month,
                     ],
                     [
-                        'student_section_id' => $studentSection->id,
+                        'student_id' => $studentSection->student_id,
                         'amount' => $amount,
                     ]
                 );

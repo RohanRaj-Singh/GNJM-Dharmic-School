@@ -21,6 +21,7 @@ import {
   Check,
   AlertCircle,
   Loader,
+  Upload,
 } from "lucide-react";
 
 const CONFIRMATION_TEXT = "RESTORE DATABASE";
@@ -108,10 +109,18 @@ export default function Backup() {
   const [restoreDone, setRestoreDone] = useState(false);
   const [compatibilityWarnings, setCompatibilityWarnings] = useState([]);
 
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteDone, setDeleteDone] = useState(false);
+const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteDone, setDeleteDone] = useState(false);
+
+    const [uploadOpen, setUploadOpen] = useState(false);
+    const [uploadFile, setUploadFile] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadDone, setUploadDone] = useState(false);
+    const [uploadedBackup, setUploadedBackup] = useState(null);
+    const [uploadError, setUploadError] = useState("");
+    const fileInputRef = useRef(null);
 
   const createTimerRef = useRef(null);
   const restoreTimerRef = useRef(null);
@@ -314,6 +323,55 @@ export default function Backup() {
     window.open(`${BASE}/${backup.id}/download`, "_blank");
   };
 
+  const handleUploadClick = () => {
+    setUploadFile(null);
+    setUploadError("");
+    setUploadDone(false);
+    setUploadedBackup(null);
+    setUploadOpen(true);
+  };
+
+  const handleUploadSubmit = () => {
+    if (!uploadFile) return;
+    setUploading(true);
+    setUploadError("");
+
+    const form = new FormData();
+    form.append("backup_file", uploadFile);
+
+    window.axios
+      .post(`${BASE}/upload`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then(({ data }) => {
+        if (data.success) {
+          setUploadedBackup(data.backup);
+          setUploadDone(true);
+          setBackups((prev) => [data.backup, ...prev]);
+          setOverview((prev) => ({
+            ...prev,
+            last_backup: data.backup.created_at,
+            backup_count: (prev?.backup_count || 0) + 1,
+          }));
+          toast.success("Backup uploaded successfully");
+        } else {
+          setUploadError(data.message || "Upload failed");
+        }
+      })
+      .catch((e) => {
+        setUploadError(e?.response?.data?.message || e.message || "Upload failed");
+      })
+      .finally(() => setUploading(false));
+  };
+
+  const handleCloseUpload = () => {
+    setUploadOpen(false);
+    setUploadFile(null);
+    setUploadError("");
+    setUploadDone(false);
+    setUploadedBackup(null);
+  };
+
   const hasBackups = backups.length > 0;
 
   if (pageLoading) {
@@ -364,6 +422,14 @@ export default function Backup() {
             >
               <Save className="w-4 h-4" />
               Create Backup
+            </button>
+            <button
+              onClick={handleUploadClick}
+              disabled={creating}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-slate-700 hover:bg-slate-800 transition-colors disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" />
+              Upload Backup
             </button>
             <button
               onClick={refresh}
@@ -709,6 +775,107 @@ export default function Backup() {
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300 transition-colors"
                   >
                     {deleting ? <><Loader className="w-4 h-4 animate-spin" /> Deleting...</> : <><Trash2 className="w-4 h-4" /> Delete</>}
+                  </button>
+                </div>
+              </div>
+)}
+      </div>
+    </div>
+  )}
+
+      {/* Upload Backup Dialog */}
+      {uploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={handleCloseUpload}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            {uploadDone ? (
+              <div className="p-6 space-y-5">
+                <div className="text-center">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+                    <CheckCircle className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-gray-800">Backup Uploaded Successfully</h2>
+                  <p className="text-sm text-gray-500 mt-1">Your backup is ready to restore.</p>
+                </div>
+                {uploadedBackup && (
+                  <div className="bg-gray-50 rounded-lg border p-4 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Filename</span>
+                      <span className="font-mono text-xs text-gray-800">{uploadedBackup.filename}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Size</span>
+                      <span className="text-gray-800">{uploadedBackup.backup_size}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Uploaded</span>
+                      <span className="text-gray-800">{uploadedBackup.created_at}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => uploadedBackup && handleDownload(uploadedBackup)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+                    <Download className="w-4 h-4" /> Download
+                  </button>
+                  <button onClick={handleCloseUpload} className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">Close</button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-800">Upload Backup</h2>
+                  <button onClick={handleCloseUpload} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                </div>
+
+                <p className="text-sm text-gray-500">
+                  Select a backup archive (.sql, .gz, or .zip) created on another instance. The file is validated before it is accepted.
+                </p>
+
+                {uploadError && (
+                  <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{uploadError}</span>
+                  </div>
+                )}
+
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    uploadFile ? "border-blue-300 bg-blue-50" : "border-gray-300 hover:border-gray-400"
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".sql,.gz,.zip"
+                    className="hidden"
+                    onChange={(e) => {
+                      setUploadFile(e.target.files?.[0] || null);
+                      setUploadError("");
+                    }}
+                  />
+                  {uploadFile ? (
+                    <>
+                      <FileArchive className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                      <p className="text-sm font-medium text-gray-800 truncate max-w-[240px]">{uploadFile.name}</p>
+                      <p className="text-xs text-gray-500">{formatBytes(uploadFile.size)}</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Click to select a backup file</p>
+                      <p className="text-xs text-gray-400 mt-1">.sql, .gz, or .zip — max 50 MB</p>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <button onClick={handleCloseUpload} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-white border hover:bg-gray-50 transition-colors">Cancel</button>
+                  <button
+                    onClick={handleUploadSubmit}
+                    disabled={!uploadFile || uploading}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white bg-slate-700 hover:bg-slate-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {uploading ? <><Loader className="w-4 h-4 animate-spin" /> Uploading...</> : <><Upload className="w-4 h-4" /> Upload</>}
                   </button>
                 </div>
               </div>
