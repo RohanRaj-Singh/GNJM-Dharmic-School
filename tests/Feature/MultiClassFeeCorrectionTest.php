@@ -41,6 +41,13 @@ class MultiClassFeeCorrectionTest extends TestCase
     {
         parent::setUp();
 
+        // These tests assert fee-correction *business logic*, not CSRF
+        // security (that is covered separately in SecurityTest). The test
+        // environment cannot share a session token between csrf_token() and
+        // the dispatched request, so CSRF verification is disabled here to
+        // keep the logic tests runnable without weakening production security.
+        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+
         $this->admin = User::factory()->create([
             'role' => 'admin',
             'username' => 'admin_multiclass_fix',
@@ -300,24 +307,48 @@ class MultiClassFeeCorrectionTest extends TestCase
         $this->assertSame('Gurmukhi', $pair['reference']['class_name']);
     }
 
-    public function test_kirtan_payment_lock_blocks_correction_but_gurmukhi_payment_does_not(): void
+    public function test_paid_history_kirtan_is_editable_and_value_is_capped_to_unpaid_tail(): void
     {
-        $this->createMonthlyFees($this->enrollmentK, $this->trailingMonths(2), 300);
-        $kirtanFee = Fee::where('student_section_id', $this->enrollmentK->id)->first();
+        // Kirtan has 5 fee months; pay the fee from 3 months ago, so the unpaid
+        // tail after the last paid month is 3 months.
+        $this->createMonthlyFees($this->enrollmentK, $this->trailingMonths(5), 300);
+        $paidMonth = $this->trailingMonths(5)[3]; // 3 months ago
+        $paidFee = Fee::where('student_section_id', $this->enrollmentK->id)
+            ->where('month', $paidMonth)
+            ->first();
         Payment::create([
-            'fee_id' => $kirtanFee->id,
+            'fee_id' => $paidFee->id,
             'amount_paid' => 300,
             'paid_at' => now(),
         ]);
 
+        $gBefore = $this->feeSnapshot($this->enrollmentG);
+
+        // A value greater than the unpaid tail (<= 3) is silently clamped to 3
+        // instead of being rejected — the payment "lock" is intentionally gone.
         $this->actingAs($this->admin)
             ->postJson(route('admin.utilities.multi-class-fee-correction.apply'), [
                 'student_section_id' => $this->enrollmentK->id,
-                'pending_months' => 5,
+                'pending_months' => 10,
             ])
-            ->assertStatus(422);
+            ->assertOk()
+            ->assertJsonPath('reference_unchanged', true);
 
-        // Reset: move payment to Gurmukhi only — Kirtan apply must succeed.
+        $this->assertSame(3, (int) $this->enrollmentK->fresh()->assumed_pending_months);
+        // Gurmukhi reference never modified.
+        $this->assertSame($gBefore, $this->feeSnapshot($this->enrollmentG));
+
+        // A value within the unpaid tail (<= 3) is applied as typed, not clamped.
+        $this->actingAs($this->admin)
+            ->postJson(route('admin.utilities.multi-class-fee-correction.apply'), [
+                'student_section_id' => $this->enrollmentK->id,
+                'pending_months' => 2,
+            ])
+            ->assertOk();
+
+        $this->assertSame(2, (int) $this->enrollmentK->fresh()->assumed_pending_months);
+
+        // A Gurmukhi payment history does not block Kirtan edits either.
         Payment::query()->delete();
         $this->createMonthlyFees($this->enrollmentG, $this->trailingMonths(3), 400);
         $gFee = Fee::where('student_section_id', $this->enrollmentG->id)->first();
@@ -332,11 +363,10 @@ class MultiClassFeeCorrectionTest extends TestCase
                 'student_section_id' => $this->enrollmentK->id,
                 'pending_months' => 4,
             ])
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonPath('reference_unchanged', true);
 
-        $this->assertCount(4, $this->monthsFor($this->enrollmentK));
-        // Gurmukhi still has its 3 fee rows (one paid) — unchanged count.
-        $this->assertCount(3, $this->monthsFor($this->enrollmentG));
+        $this->assertSame(4, (int) $this->enrollmentK->fresh()->assumed_pending_months);
     }
 
     public function test_non_charging_kirtan_class_rejects_positive_pending_months(): void
@@ -413,6 +443,44 @@ class MultiClassFeeCorrectionTest extends TestCase
         $this->assertSame($this->student->id, $log->payload['student_id']);
     }
 
+    public function test_single_apply_audit_has_no_bulk_flag_but_bulk_apply_does(): void
+    {
+        [$g, $k] = $this->makePair("Audit Flag Kid");
+        $this->createMonthlyFees($g, $this->trailingMonths(5), 400);
+        $this->createMonthlyFees($k, $this->trailingMonths(2), 300);
+
+        // Single apply — payload must NOT carry a misleading `bulk` flag.
+        $this->actingAs($this->admin)
+            ->postJson(route("admin.utilities.multi-class-fee-correction.apply"), [
+                "student_section_id" => $k->id,
+                "pending_months" => 5,
+            ])
+            ->assertOk();
+
+        $singleLog = AuditLog::where("action", AuditLog::ACTION_FEE_PENDING_MONTHS_CORRECTED)
+            ->where("auditable_id", $k->id)
+            ->latest("id")
+            ->first();
+        $this->assertFalse(array_key_exists("bulk", $singleLog->payload));
+        $this->assertSame(5, $singleLog->payload["pending_months"]);
+
+        // Bulk apply — each row's payload MUST be tagged `bulk => true`.
+        $this->actingAs($this->admin)
+            ->postJson(route("admin.utilities.multi-class-fee-correction.bulk-apply"), [
+                "corrections" => [
+                    ["student_section_id" => $k->id, "pending_months" => 3],
+                ],
+            ])
+            ->assertOk();
+
+        $bulkLog = AuditLog::where("action", AuditLog::ACTION_FEE_PENDING_MONTHS_CORRECTED)
+            ->where("auditable_id", $k->id)
+            ->latest("id")
+            ->first();
+        $this->assertTrue($bulkLog->payload["bulk"] ?? false);
+        $this->assertSame(3, $bulkLog->payload["pending_months"]);
+    }
+
     public function test_non_admin_cannot_apply_correction(): void
     {
         $this->createMonthlyFees($this->enrollmentK, $this->trailingMonths(2), 300);
@@ -440,5 +508,175 @@ class MultiClassFeeCorrectionTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/Utilities/MultiClassFeeCorrection'));
+    }
+
+    /** @return array{StudentSection,StudentSection} [gurmukhiEnrollment, kirtanEnrollment] */
+    private function makePair(string $name = 'Bulk Kid'): array
+    {
+        $student = Student::create([
+            'name' => $name,
+            'father_name' => 'Patel',
+            'status' => Student::STATUS_ACTIVE,
+        ]);
+
+        $g = StudentSection::create([
+            'student_id' => $student->id,
+            'class_id' => $this->gurmukhi->id,
+            'section_id' => $this->sectionG->id,
+            'student_type' => 'paid',
+            'status' => StudentSection::STATUS_ACTIVE,
+            'started_at' => now()->subMonths(10)->startOfMonth(),
+        ]);
+        $k = StudentSection::create([
+            'student_id' => $student->id,
+            'class_id' => $this->kirtan->id,
+            'section_id' => $this->sectionK->id,
+            'student_type' => 'paid',
+            'status' => StudentSection::STATUS_ACTIVE,
+            'started_at' => now()->subMonths(10)->startOfMonth(),
+        ]);
+
+        return [$g, $k];
+    }
+
+    public function test_bulk_apply_corrects_multiple_students_atomic(): void
+    {
+        [$g1, $k1] = $this->makePair('Bulk Kid One');
+        [$g2, $k2] = $this->makePair('Bulk Kid Two');
+
+        $this->createMonthlyFees($g1, $this->trailingMonths(5), 400);
+        $this->createMonthlyFees($k1, $this->trailingMonths(2), 300);
+        $this->createMonthlyFees($g2, $this->trailingMonths(5), 400);
+        $this->createMonthlyFees($k2, $this->trailingMonths(1), 300);
+
+        $g1Before = $this->feeSnapshot($g1);
+        $g2Before = $this->feeSnapshot($g2);
+
+        $this->actingAs($this->admin)
+            ->postJson(route('admin.utilities.multi-class-fee-correction.bulk-apply'), [
+                'corrections' => [
+                    ['student_section_id' => $k1->id, 'pending_months' => 5],
+                    ['student_section_id' => $k2->id, 'pending_months' => 4],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('reference_unchanged', true);
+
+        $this->assertSame(5, count($this->monthsFor($k1)));
+        $this->assertSame(4, count($this->monthsFor($k2)));
+        $this->assertSame($g1Before, $this->feeSnapshot($g1));
+        $this->assertSame($g2Before, $this->feeSnapshot($g2));
+    }
+
+    public function test_bulk_apply_rejects_whole_batch_when_any_invalid(): void
+    {
+        [$g1, $k1] = $this->makePair('Valid Kid');
+        $this->createMonthlyFees($k1, $this->trailingMonths(2), 300);
+
+        // The second row targets the Gurmukhi enrollment → must be rejected,
+        // and the valid first row must NOT be applied either (atomic).
+        $this->actingAs($this->admin)
+            ->postJson(route('admin.utilities.multi-class-fee-correction.bulk-apply'), [
+                'corrections' => [
+                    ['student_section_id' => $k1->id, 'pending_months' => 5],
+                    ['student_section_id' => $g1->id, 'pending_months' => 5],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('reference_unchanged', null);
+
+        // Atomic: nothing changed.
+        $this->assertCount(2, $this->monthsFor($k1));
+    }
+
+    public function test_bulk_apply_skips_unchanged_rows(): void
+    {
+        [$g1, $k1] = $this->makePair('Unchanged Kid');
+        [$g2, $k2] = $this->makePair('Changed Kid');
+
+        $this->createMonthlyFees($k1, $this->trailingMonths(2), 300);
+        $this->createMonthlyFees($k2, $this->trailingMonths(2), 300);
+
+        // k1 left at its current assumed_pending_months (2 → unchanged, skipped)
+        // k2 changed 2 → 5.
+        $this->actingAs($this->admin)
+            ->postJson(route('admin.utilities.multi-class-fee-correction.bulk-apply'), [
+                'corrections' => [
+                    ['student_section_id' => $k1->id, 'pending_months' => 2],
+                    ['student_section_id' => $k2->id, 'pending_months' => 5],
+                ],
+            ])
+            ->assertOk();
+
+        $this->assertCount(2, $this->monthsFor($k1));
+        $this->assertCount(5, $this->monthsFor($k2));
+    }
+
+    public function test_bulk_apply_writes_audit_log_for_each(): void
+    {
+        [$g1, $k1] = $this->makePair('Audit Kid One');
+        [$g2, $k2] = $this->makePair('Audit Kid Two');
+        $this->createMonthlyFees($k1, $this->trailingMonths(2), 300);
+        $this->createMonthlyFees($k2, $this->trailingMonths(1), 300);
+
+        $this->actingAs($this->admin)
+            ->postJson(route('admin.utilities.multi-class-fee-correction.bulk-apply'), [
+                'corrections' => [
+                    ['student_section_id' => $k1->id, 'pending_months' => 4],
+                    ['student_section_id' => $k2->id, 'pending_months' => 3],
+                ],
+            ])
+            ->assertOk();
+
+        $logs = AuditLog::where('action', AuditLog::ACTION_FEE_PENDING_MONTHS_CORRECTED)
+            ->where('auditable_id', $k1->id)
+            ->orWhere('auditable_id', $k2->id)
+            ->get();
+        $this->assertSame(2, $logs->count());
+    }
+
+    public function test_bulk_apply_clamps_value_for_paid_history_student(): void
+    {
+        [$g, $k] = $this->makePair("Clamp Bulk Kid");
+        $this->createMonthlyFees($g, $this->trailingMonths(5), 400);
+        $this->createMonthlyFees($k, $this->trailingMonths(5), 300);
+
+        // Pay the Kirtan fee from 3 months ago → unpaid tail = 3.
+        $paidFee = Fee::where("student_section_id", $k->id)
+            ->where("month", $this->trailingMonths(5)[3])
+            ->first();
+        Payment::create([
+            "fee_id" => $paidFee->id,
+            "amount_paid" => 300,
+            "paid_at" => now(),
+        ]);
+
+        $this->actingAs($this->admin)
+            ->postJson(route("admin.utilities.multi-class-fee-correction.bulk-apply"), [
+                "corrections" => [
+                    ["student_section_id" => $k->id, "pending_months" => 12],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath("applied.0.pending_months", 3);
+
+        // Silently clamped to months-since-last-paid on the stored enrollment.
+        $this->assertSame(3, (int) $k->fresh()->assumed_pending_months);
+    }
+
+    public function test_bulk_apply_non_admin_cannot_apply(): void
+    {
+        [$g1, $k1] = $this->makePair('No Access Kid');
+        $this->createMonthlyFees($k1, $this->trailingMonths(2), 300);
+
+        $this->actingAs($this->accountant)
+            ->postJson(route('admin.utilities.multi-class-fee-correction.bulk-apply'), [
+                'corrections' => [
+                    ['student_section_id' => $k1->id, 'pending_months' => 5],
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertCount(2, $this->monthsFor($k1));
     }
 }

@@ -119,6 +119,11 @@ Route::post(
     [MultiClassFeeCorrectionController::class, 'apply']
 )->name('utilities.multi-class-fee-correction.apply');
 
+Route::post(
+    '/utilities/multi-class-fee-correction/bulk-apply',
+    [MultiClassFeeCorrectionController::class, 'bulkApply']
+)->name('utilities.multi-class-fee-correction.bulk-apply');
+
 // Student Status Management (enrollment-level)
 Route::get(
     '/utilities/student-status',

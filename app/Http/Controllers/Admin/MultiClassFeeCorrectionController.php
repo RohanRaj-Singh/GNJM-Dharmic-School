@@ -60,6 +60,10 @@ class MultiClassFeeCorrectionController extends Controller
             return response()->json(['message' => $error], 422);
         }
 
+        // Clamp to the unpaid tail (months strictly after the last paid month)
+        // so the preview reflects the value that will actually be applied.
+        $months = $this->capMonths($enrollment, $months);
+
         $existing = $this->monthlyFeeMonths($enrollment);
         $desired = $this->generator->desiredMonths($months, $this->startFloor($enrollment));
         $existingSet = array_flip($existing);
@@ -95,37 +99,142 @@ class MultiClassFeeCorrectionController extends Controller
             return response()->json(['message' => $error], 422);
         }
 
-        $before = $this->monthlyFeeMonths($enrollment);
-        $siblingBefore = $this->siblingSnapshot($enrollment);
-
-        DB::transaction(function () use ($enrollment, $months, $before) {
-            $enrollment->update(['assumed_pending_months' => $months]);
-            $this->generator->generate($enrollment, $months, $this->startFloor($enrollment));
-
-            AuditLog::record(
-                AuditLog::ACTION_FEE_PENDING_MONTHS_CORRECTED,
-                $enrollment,
-                [
-                    'student_section_id' => $enrollment->id,
-                    'student_id' => $enrollment->student_id,
-                    'pending_months' => $months,
-                    'before_months' => $before,
-                    'after_months' => $this->monthlyFeeMonths($enrollment),
-                ],
-            );
-        });
-
-        $after = $this->monthlyFeeMonths($enrollment);
-        $siblingAfter = $this->siblingSnapshot($enrollment);
+        $result = $this->applyOne($enrollment, $months);
 
         return response()->json([
             'message' => 'Kirtan pending months corrected.',
             'target' => $this->enrollmentPayload($enrollment->refresh()),
             'reference' => $this->referencePayload($enrollment),
-            'existing_months' => $after,
-            'before_months' => $before,
-            'reference_unchanged' => $siblingBefore === $siblingAfter,
+            'existing_months' => $result['after'],
+            'before_months' => $result['before'],
+            'reference_unchanged' => $result['reference_unchanged'],
         ]);
+    }
+
+    /**
+     * Apply pending-months corrections for many Kirtan enrollments in a single
+     * transaction. Each row is re-validated server-side before mutation; if any
+     * correction is invalid the whole batch is rejected (422) so the admin can
+     * review and fix, then retry. Gurmukhi reference enrollments are never
+     * touched — only the supplied Kirtan student_section_id values are mutated.
+     */
+    public function bulkApply(Request $request)
+    {
+        $data = $request->validate([
+            'corrections' => ['required', 'array', 'min:1'],
+            'corrections.*.student_section_id' => ['required', 'integer', 'exists:student_sections,id'],
+            'corrections.*.pending_months' => ['required', 'integer', 'min:0', 'max:255'],
+        ]);
+
+        $corrections = [];
+        $errors = [];
+
+        foreach ($data['corrections'] as $row) {
+            $enrollment = $this->loadTarget((int) $row['student_section_id']);
+            $months = (int) $row['pending_months'];
+
+            // Skip silently if the edit was reverted to the original value.
+            if ($months === (int) ($enrollment->assumed_pending_months ?? 0)) {
+                continue;
+            }
+
+            $error = $this->validateCorrection($enrollment, $months);
+            if ($error !== null) {
+                $errors[] = [
+                    'student_section_id' => $enrollment->id,
+                    'student_name' => $enrollment->student?->name,
+                    'error' => $error,
+                ];
+                continue;
+            }
+
+            $corrections[] = [$enrollment, $months];
+        }
+
+        if (!empty($errors)) {
+            return response()->json([
+                'message' => sprintf(
+                    '%d correction(s) failed validation — none were applied.',
+                    count($errors)
+                ),
+                'errors' => $errors,
+            ], 422);
+        }
+
+        // Nothing left to do after skipping unchanged rows.
+        if (empty($corrections)) {
+            return response()->json([
+                'message' => 'No pending changes to apply.',
+                'applied' => [],
+                'reference_unchanged' => true,
+            ]);
+        }
+
+        $results = [];
+
+        DB::transaction(function () use ($corrections, &$results) {
+            foreach ($corrections as [$enrollment, $months]) {
+                $results[] = $this->applyOne($enrollment, $months, true);
+            }
+        });
+
+        $referenceUnchanged = collect($results)->every(fn ($r) => $r['reference_unchanged']);
+
+        return response()->json([
+            'message' => sprintf('%d student(s) corrected.', count($results)),
+            'applied' => $results,
+            'reference_unchanged' => $referenceUnchanged,
+        ]);
+    }
+
+     /**
+      * Shared mutation helper. Performs the update + audit log and returns
+      * before/after months plus a sibling-isolation check, so the caller can
+      * decide how to report. The caller MUST wrap this in a DB::transaction
+      * when atomicity across multiple corrections is required. When $isBulk
+      * is true the audit payload is tagged `bulk => true` to distinguish a
+      * batch correction from a single-student apply (preserving the original
+      * single-apply audit shape exactly).
+      */
+    private function applyOne(StudentSection $enrollment, int $months, bool $isBulk = false): array
+    {
+        $months = $this->capMonths($enrollment, $months);
+
+        $before = $this->monthlyFeeMonths($enrollment);
+        $siblingBefore = $this->siblingSnapshot($enrollment);
+
+        $enrollment->update(['assumed_pending_months' => $months]);
+        $this->generator->generate($enrollment, $months, $this->startFloor($enrollment));
+
+        $after = $this->monthlyFeeMonths($enrollment);
+        $siblingAfter = $this->siblingSnapshot($enrollment);
+
+        $payload = [
+            'student_section_id' => $enrollment->id,
+            'student_id' => $enrollment->student_id,
+            'pending_months' => $months,
+            'before_months' => $before,
+            'after_months' => $after,
+        ];
+
+        if ($isBulk) {
+            $payload['bulk'] = true;
+        }
+
+        AuditLog::record(
+            AuditLog::ACTION_FEE_PENDING_MONTHS_CORRECTED,
+            $enrollment,
+            $payload
+        );
+
+        return [
+            'target' => $this->enrollmentPayload($enrollment->refresh()),
+            'reference' => $this->referencePayload($enrollment),
+            'before' => $before,
+            'after' => $after,
+            'pending_months' => $months,
+            'reference_unchanged' => $siblingBefore === $siblingAfter,
+        ];
     }
 
     /** @return list<array<string, mixed>> */
@@ -232,16 +341,13 @@ class MultiClassFeeCorrectionController extends Controller
                     && DivisionTypeResolver::isGurmukhi($c->type, $c->name, $c->division);
             });
 
+        // NOTE: the previous "locked after fee collection" guard is intentionally
+        // removed. Admins may now correct Kirtan pending months even when a
+        // student has a paid history; capMonths() clamps the value in
+        // preview()/applyOne() so the trailing window never re-manages months
+        // that are already paid. (Gurmukhi is still never a valid target.)
         if (!$hasGurmukhiSibling) {
             return 'Student must have an active Gurmukhi reference enrollment.';
-        }
-
-        $hasPayments = Fee::where('student_section_id', $target->id)
-            ->whereHas('payments', fn ($q) => $q->whereNull('deleted_at'))
-            ->exists();
-
-        if ($hasPayments) {
-            return 'Pending months are locked after fee collection.';
         }
 
         if ($months > 0) {
@@ -254,6 +360,41 @@ class MultiClassFeeCorrectionController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Clamp a requested pending-months count so it can never reach into months
+     * that are already paid. When a Kirtan enrollment has a paid history, the
+     * trailing "pending" window may only cover months strictly AFTER the last
+     * paid month — otherwise we'd be re-managing settled months (paid fees are
+     * never deleted by the generator, but claiming pending status for
+     * already-paid or pre-payment months is ambiguous). With no paid history the
+     * requested value is returned unchanged.
+     */
+    private function capMonths(StudentSection $enrollment, int $months): int
+    {
+        if ($months <= 0) {
+            return $months;
+        }
+
+        $lastPaidMonth = Fee::where('student_section_id', $enrollment->id)
+            ->where('type', 'monthly')
+            ->whereNotNull('month')
+            ->whereHas('payments', fn ($q) => $q->whereNull('deleted_at'))
+            ->max('month');
+
+        if ($lastPaidMonth === null) {
+            return $months;
+        }
+
+        $lastPaid = Carbon::parse($lastPaidMonth . '-01', config('app.timezone'))
+            ->startOfMonth();
+        $now = Carbon::now(config('app.timezone'))->startOfMonth();
+        // diffInMonths(other) is negative when $other lies in the past, so measure
+        // elapsed months from the last paid month toward now and clamp at 0.
+        $monthsSinceLastPaid = max(0, $lastPaid->diffInMonths($now));
+
+        return min($months, $monthsSinceLastPaid);
     }
 
     /** @return list<string> */

@@ -1,0 +1,2041 @@
+# Command Code import report
+
+/import is a best-effort migration: items that could not be imported were
+skipped and are listed below with reasons so you can move them manually.
+Nothing in your original setup was modified.
+
+Totals: 341 imported, 334 already present, 0 not supported, 0 failed.
+
+## Claude Code
+
+- [Imported] skill adaptyv
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/adaptyv
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/adaptyv
+- [Imported] skill add-app-clip
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/add-app-clip
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/add-app-clip
+- [Imported] skill aeon
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/aeon
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/aeon
+- [Imported] skill algorithmic-art
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/algorithmic-art
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/algorithmic-art
+- [Imported] skill anndata
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/anndata
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/anndata
+- [Imported] skill arboreto
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/arboreto
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/arboreto
+- [Imported] skill astropy
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/astropy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/astropy
+- [Imported] skill autoskill
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/autoskill
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/autoskill
+- [Imported] skill banner-design
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/banner-design
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/banner-design
+- [Imported] skill benchling-integration
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/benchling-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/benchling-integration
+- [Imported] skill bgpt-paper-search
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/bgpt-paper-search
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/bgpt-paper-search
+- [Imported] skill bids
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/bids
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/bids
+- [Imported] skill biopython
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/biopython
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/biopython
+- [Imported] skill bioservices
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/bioservices
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/bioservices
+- [Imported] skill brainstorming
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/brainstorming
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/brainstorming
+- [Imported] skill brand
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/brand
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/brand
+- [Imported] skill brand-guidelines
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/brand-guidelines
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/brand-guidelines
+- [Imported] skill building-native-ui
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/building-native-ui
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/building-native-ui
+- [Imported] skill bulk-rnaseq
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/bulk-rnaseq
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/bulk-rnaseq
+- [Imported] skill canvas-design
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/canvas-design
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/canvas-design
+- [Imported] skill cavecrew
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/cavecrew
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/cavecrew
+- [Imported] skill caveman
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/caveman
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman
+- [Imported] skill caveman-commit
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/caveman-commit
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-commit
+- [Imported] skill caveman-compress
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/caveman-compress
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-compress
+- [Imported] skill caveman-help
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/caveman-help
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-help
+- [Imported] skill caveman-review
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/caveman-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-review
+- [Imported] skill caveman-stats
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/caveman-stats
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-stats
+- [Imported] skill cellxgene-census
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/cellxgene-census
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/cellxgene-census
+- [Imported] skill cirq
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/cirq
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/cirq
+- [Imported] skill citation-management
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/citation-management
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/citation-management
+- [Imported] skill claude-api
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/claude-api
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/claude-api
+- [Imported] skill clinical-decision-support
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/clinical-decision-support
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/clinical-decision-support
+- [Imported] skill clinical-reports
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/clinical-reports
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/clinical-reports
+- [Imported] skill cobrapy
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/cobrapy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/cobrapy
+- [Imported] skill consciousness-council
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/consciousness-council
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/consciousness-council
+- [Imported] skill dask
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/dask
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/dask
+- [Imported] skill database-lookup
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/database-lookup
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/database-lookup
+- [Imported] skill datamol
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/datamol
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/datamol
+- [Imported] skill deepchem
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/deepchem
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/deepchem
+- [Imported] skill deeptools
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/deeptools
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/deeptools
+- [Imported] skill depmap
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/depmap
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/depmap
+- [Imported] skill design
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/design
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/design
+- [Imported] skill design-system
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/design-system
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/design-system
+- [Imported] skill dhdna-profiler
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/dhdna-profiler
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/dhdna-profiler
+- [Imported] skill diffdock
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/diffdock
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/diffdock
+- [Imported] skill dispatching-parallel-agents
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/dispatching-parallel-agents
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/dispatching-parallel-agents
+- [Imported] skill dnanexus-integration
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/dnanexus-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/dnanexus-integration
+- [Imported] skill doc-coauthoring
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/doc-coauthoring
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/doc-coauthoring
+- [Imported] skill docx
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/docx
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/docx
+- [Imported] skill eas-update-insights
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/eas-update-insights
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/eas-update-insights
+- [Imported] skill esm
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/esm
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/esm
+- [Imported] skill etetoolkit
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/etetoolkit
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/etetoolkit
+- [Imported] skill exa-search
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/exa-search
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/exa-search
+- [Imported] skill executing-plans
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/executing-plans
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/executing-plans
+- [Imported] skill exploratory-data-analysis
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/exploratory-data-analysis
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/exploratory-data-analysis
+- [Imported] skill expo-api-routes
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-api-routes
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-api-routes
+- [Imported] skill expo-brownfield
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-brownfield
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-brownfield
+- [Imported] skill expo-cicd-workflows
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-cicd-workflows
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-cicd-workflows
+- [Imported] skill expo-deployment
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-deployment
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-deployment
+- [Imported] skill expo-dev-client
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-dev-client
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-dev-client
+- [Imported] skill expo-module
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-module
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-module
+- [Imported] skill expo-observe
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-observe
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-observe
+- [Imported] skill expo-tailwind-setup
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-tailwind-setup
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-tailwind-setup
+- [Imported] skill expo-ui-jetpack-compose
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-ui-jetpack-compose
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-ui-jetpack-compose
+- [Imported] skill expo-ui-swift-ui
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/expo-ui-swift-ui
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-ui-swift-ui
+- [Imported] skill finishing-a-development-branch
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/finishing-a-development-branch
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/finishing-a-development-branch
+- [Imported] skill flowio
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/flowio
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/flowio
+- [Imported] skill fluidsim
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/fluidsim
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/fluidsim
+- [Imported] skill frontend-design
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/frontend-design
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/frontend-design
+- [Imported] skill generate-image
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/generate-image
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/generate-image
+- [Imported] skill geniml
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/geniml
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/geniml
+- [Imported] skill geomaster
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/geomaster
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/geomaster
+- [Imported] skill geopandas
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/geopandas
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/geopandas
+- [Imported] skill get-available-resources
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/get-available-resources
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/get-available-resources
+- [Imported] skill gget
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/gget
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/gget
+- [Imported] skill ginkgo-cloud-lab
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/ginkgo-cloud-lab
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/ginkgo-cloud-lab
+- [Imported] skill glycoengineering
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/glycoengineering
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/glycoengineering
+- [Imported] skill graphify
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/graphify
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/graphify
+- [Imported] skill gtars
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/gtars
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/gtars
+- [Imported] skill histolab
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/histolab
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/histolab
+- [Imported] skill hugging-science
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/hugging-science
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/hugging-science
+- [Imported] skill hypogenic
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/hypogenic
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/hypogenic
+- [Imported] skill hypothesis-generation
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/hypothesis-generation
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/hypothesis-generation
+- [Imported] skill imaging-data-commons
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/imaging-data-commons
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/imaging-data-commons
+- [Imported] skill infographics
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/infographics
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/infographics
+- [Imported] skill internal-comms
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/internal-comms
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/internal-comms
+- [Imported] skill iso-13485-certification
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/iso-13485-certification
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/iso-13485-certification
+- [Imported] skill labarchive-integration
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/labarchive-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/labarchive-integration
+- [Imported] skill lamindb
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/lamindb
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/lamindb
+- [Imported] skill latchbio-integration
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/latchbio-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/latchbio-integration
+- [Imported] skill latex-posters
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/latex-posters
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/latex-posters
+- [Imported] skill liteparse
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/liteparse
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/liteparse
+- [Imported] skill literature-review
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/literature-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/literature-review
+- [Imported] skill markdown-mermaid-writing
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/markdown-mermaid-writing
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/markdown-mermaid-writing
+- [Imported] skill market-research-reports
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/market-research-reports
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/market-research-reports
+- [Imported] skill markitdown
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/markitdown
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/markitdown
+- [Imported] skill matchms
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/matchms
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/matchms
+- [Imported] skill matlab
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/matlab
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/matlab
+- [Imported] skill matplotlib
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/matplotlib
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/matplotlib
+- [Imported] skill mcp-builder
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/mcp-builder
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/mcp-builder
+- [Imported] skill medchem
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/medchem
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/medchem
+- [Imported] skill modal
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/modal
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/modal
+- [Imported] skill molecular-dynamics
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/molecular-dynamics
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/molecular-dynamics
+- [Imported] skill molfeat
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/molfeat
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/molfeat
+- [Imported] skill native-data-fetching
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/native-data-fetching
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/native-data-fetching
+- [Imported] skill networkx
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/networkx
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/networkx
+- [Imported] skill neurokit2
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/neurokit2
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/neurokit2
+- [Imported] skill neuropixels-analysis
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/neuropixels-analysis
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/neuropixels-analysis
+- [Imported] skill nextflow
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/nextflow
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/nextflow
+- [Imported] skill omero-integration
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/omero-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/omero-integration
+- [Imported] skill open-notebook
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/open-notebook
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/open-notebook
+- [Imported] skill opentrons-integration
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/opentrons-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/opentrons-integration
+- [Imported] skill optimize-for-gpu
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/optimize-for-gpu
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/optimize-for-gpu
+- [Imported] skill pacsomatic
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pacsomatic
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pacsomatic
+- [Imported] skill paper-lookup
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/paper-lookup
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/paper-lookup
+- [Imported] skill paperzilla
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/paperzilla
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/paperzilla
+- [Imported] skill parallel-web
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/parallel-web
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/parallel-web
+- [Imported] skill pathml
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pathml
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pathml
+- [Imported] skill pathway-enrichment
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pathway-enrichment
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pathway-enrichment
+- [Imported] skill pdf
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pdf
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pdf
+- [Imported] skill peer-review
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/peer-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/peer-review
+- [Imported] skill pennylane
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pennylane
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pennylane
+- [Imported] skill phylogenetics
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/phylogenetics
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/phylogenetics
+- [Imported] skill pi-agent
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pi-agent
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pi-agent
+- [Imported] skill playwright-test-automation
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/playwright-test-automation
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/playwright-test-automation
+- [Imported] skill polars
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/polars
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/polars
+- [Imported] skill polars-bio
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/polars-bio
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/polars-bio
+- [Imported] skill pptx
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pptx
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pptx
+- [Imported] skill pptx-posters
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pptx-posters
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pptx-posters
+- [Imported] skill primekg
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/primekg
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/primekg
+- [Imported] skill protocolsio-integration
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/protocolsio-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/protocolsio-integration
+- [Imported] skill pufferlib
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pufferlib
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pufferlib
+- [Imported] skill pydeseq2
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pydeseq2
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pydeseq2
+- [Imported] skill pydicom
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pydicom
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pydicom
+- [Imported] skill pyhealth
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pyhealth
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pyhealth
+- [Imported] skill pylabrobot
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pylabrobot
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pylabrobot
+- [Imported] skill pymatgen
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pymatgen
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pymatgen
+- [Imported] skill pymc
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pymc
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pymc
+- [Imported] skill pymoo
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pymoo
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pymoo
+- [Imported] skill pyopenms
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pyopenms
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pyopenms
+- [Imported] skill pysam
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pysam
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pysam
+- [Imported] skill pytdc
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pytdc
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pytdc
+- [Imported] skill pytorch-lightning
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pytorch-lightning
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pytorch-lightning
+- [Imported] skill pyzotero
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/pyzotero
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pyzotero
+- [Imported] skill qiskit
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/qiskit
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/qiskit
+- [Imported] skill qutip
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/qutip
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/qutip
+- [Imported] skill rdkit
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/rdkit
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/rdkit
+- [Imported] skill receiving-code-review
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/receiving-code-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/receiving-code-review
+- [Imported] skill requesting-code-review
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/requesting-code-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/requesting-code-review
+- [Imported] skill research-grants
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/research-grants
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/research-grants
+- [Imported] skill research-lookup
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/research-lookup
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/research-lookup
+- [Imported] skill rowan
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/rowan
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/rowan
+- [Imported] skill scanpy
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scanpy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scanpy
+- [Imported] skill scholar-evaluation
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scholar-evaluation
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scholar-evaluation
+- [Imported] skill scientific-brainstorming
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scientific-brainstorming
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-brainstorming
+- [Imported] skill scientific-critical-thinking
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scientific-critical-thinking
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-critical-thinking
+- [Imported] skill scientific-schematics
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scientific-schematics
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-schematics
+- [Imported] skill scientific-slides
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scientific-slides
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-slides
+- [Imported] skill scientific-visualization
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scientific-visualization
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-visualization
+- [Imported] skill scientific-writing
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scientific-writing
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-writing
+- [Imported] skill scikit-bio
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scikit-bio
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scikit-bio
+- [Imported] skill scikit-learn
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scikit-learn
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scikit-learn
+- [Imported] skill scikit-survival
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scikit-survival
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scikit-survival
+- [Imported] skill scvelo
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scvelo
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scvelo
+- [Imported] skill scvi-tools
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/scvi-tools
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scvi-tools
+- [Imported] skill seaborn
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/seaborn
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/seaborn
+- [Imported] skill shap
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/shap
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/shap
+- [Imported] skill simpy
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/simpy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/simpy
+- [Imported] skill skill-creator
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/skill-creator
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/skill-creator
+- [Imported] skill slack-gif-creator
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/slack-gif-creator
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/slack-gif-creator
+- [Imported] skill slides
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/slides
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/slides
+- [Imported] skill slides-generator
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/slides-generator
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/slides-generator
+- [Imported] skill stable-baselines3
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/stable-baselines3
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/stable-baselines3
+- [Imported] skill statistical-analysis
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/statistical-analysis
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/statistical-analysis
+- [Imported] skill statsmodels
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/statsmodels
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/statsmodels
+- [Imported] skill subagent-driven-development
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/subagent-driven-development
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/subagent-driven-development
+- [Imported] skill sympy
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/sympy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/sympy
+- [Imported] skill systematic-debugging
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/systematic-debugging
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/systematic-debugging
+- [Imported] skill test-driven-development
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/test-driven-development
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/test-driven-development
+- [Imported] skill theme-factory
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/theme-factory
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/theme-factory
+- [Imported] skill tiledbvcf
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/tiledbvcf
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/tiledbvcf
+- [Imported] skill timesfm-forecasting
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/timesfm-forecasting
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/timesfm-forecasting
+- [Imported] skill torch-geometric
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/torch-geometric
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/torch-geometric
+- [Imported] skill torchdrug
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/torchdrug
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/torchdrug
+- [Imported] skill transformers
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/transformers
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/transformers
+- [Imported] skill treatment-plans
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/treatment-plans
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/treatment-plans
+- [Imported] skill ui-styling
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/ui-styling
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/ui-styling
+- [Imported] skill ui-ux-pro-max
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/ui-ux-pro-max
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/ui-ux-pro-max
+- [Imported] skill umap-learn
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/umap-learn
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/umap-learn
+- [Imported] skill upgrading-expo
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/upgrading-expo
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/upgrading-expo
+- [Imported] skill use-dom
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/use-dom
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/use-dom
+- [Imported] skill usfiscaldata
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/usfiscaldata
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/usfiscaldata
+- [Imported] skill using-git-worktrees
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/using-git-worktrees
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/using-git-worktrees
+- [Imported] skill using-superpowers
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/using-superpowers
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/using-superpowers
+- [Imported] skill vaex
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/vaex
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/vaex
+- [Imported] skill venue-templates
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/venue-templates
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/venue-templates
+- [Imported] skill verification-before-completion
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/verification-before-completion
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/verification-before-completion
+- [Imported] skill web-artifacts-builder
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/web-artifacts-builder
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/web-artifacts-builder
+- [Imported] skill web-asset-generator
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/web-asset-generator
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/web-asset-generator
+- [Imported] skill webapp-testing
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/webapp-testing
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/webapp-testing
+- [Imported] skill what-if-oracle
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/what-if-oracle
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/what-if-oracle
+- [Imported] skill writing-plans
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/writing-plans
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/writing-plans
+- [Imported] skill writing-skills
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/writing-skills
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/writing-skills
+- [Imported] skill xlsx
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/xlsx
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/xlsx
+- [Imported] skill zarr-python
+  - from: C:\Users\Rohan Raj Singh/.claude/skills/zarr-python
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/zarr-python
+- [Imported] agent a11y-enforcer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/a11y-enforcer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/a11y-enforcer.md
+- [Imported] agent accessibility-tester
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/accessibility-tester.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/accessibility-tester.md
+- [Imported] agent ad-security-reviewer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/ad-security-reviewer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ad-security-reviewer.md
+- [Imported] agent AGENTS-REFERENCE
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/AGENTS-REFERENCE.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/AGENTS-REFERENCE.md
+- [Imported] agent ai-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/ai-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ai-engineer.md
+- [Imported] agent angular-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/angular-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/angular-architect.md
+- [Imported] agent api-designer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/api-designer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/api-designer.md
+- [Imported] agent architect-reviewer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/architect-reviewer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/architect-reviewer.md
+- [Imported] agent azure-infra-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/azure-infra-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/azure-infra-engineer.md
+- [Imported] agent backend-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/backend-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/backend-developer.md
+- [Imported] agent build-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/build-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/build-engineer.md
+- [Imported] agent business-analyst
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/business-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/business-analyst.md
+- [Imported] agent chaos-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/chaos-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/chaos-engineer.md
+- [Imported] agent CLAUDE
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/CLAUDE.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/CLAUDE.md
+- [Imported] agent cli-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/cli-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/cli-developer.md
+- [Imported] agent cloud-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/cloud-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/cloud-architect.md
+- [Imported] agent code-archaeologist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/code-archaeologist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/code-archaeologist.md
+- [Imported] agent code-reviewer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/code-reviewer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/code-reviewer.md
+- [Imported] agent competitive-analyst
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/competitive-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/competitive-analyst.md
+- [Imported] agent compliance-auditor
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/compliance-auditor.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/compliance-auditor.md
+- [Imported] agent content-marketer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/content-marketer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/content-marketer.md
+- [Imported] agent cost-optimizer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/cost-optimizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/cost-optimizer.md
+- [Imported] agent cpp-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/cpp-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/cpp-pro.md
+- [Imported] agent csharp-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/csharp-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/csharp-developer.md
+- [Imported] agent customer-success-manager
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/customer-success-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/customer-success-manager.md
+- [Imported] agent data-analyst
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/data-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/data-analyst.md
+- [Imported] agent data-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/data-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/data-engineer.md
+- [Imported] agent data-researcher
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/data-researcher.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/data-researcher.md
+- [Imported] agent data-scientist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/data-scientist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/data-scientist.md
+- [Imported] agent database-administrator
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/database-administrator.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/database-administrator.md
+- [Imported] agent database-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/database-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/database-architect.md
+- [Imported] agent database-optimizer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/database-optimizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/database-optimizer.md
+- [Imported] agent debugger
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/debugger.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/debugger.md
+- [Imported] agent dependency-manager
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/dependency-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/dependency-manager.md
+- [Imported] agent deployment-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/deployment-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/deployment-engineer.md
+- [Imported] agent design-token-guardian
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/design-token-guardian.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/design-token-guardian.md
+- [Imported] agent devops-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/devops-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/devops-engineer.md
+- [Imported] agent devops-incident-responder
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/devops-incident-responder.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/devops-incident-responder.md
+- [Imported] agent django-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/django-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/django-developer.md
+- [Imported] agent docker-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/docker-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/docker-expert.md
+- [Imported] agent documentation-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/documentation-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/documentation-engineer.md
+- [Imported] agent documentation-specialist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/documentation-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/documentation-specialist.md
+- [Imported] agent dotnet-core-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/dotnet-core-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/dotnet-core-expert.md
+- [Imported] agent dotnet-framework-4.8-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/dotnet-framework-4.8-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/dotnet-framework-4.8-expert.md
+- [Imported] agent dx-optimizer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/dx-optimizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/dx-optimizer.md
+- [Imported] agent electron-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/electron-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/electron-pro.md
+- [Imported] agent elixir-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/elixir-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/elixir-expert.md
+- [Imported] agent error-detective
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/error-detective.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/error-detective.md
+- [Imported] agent fintech-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/fintech-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/fintech-engineer.md
+- [Imported] agent flutter-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/flutter-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/flutter-expert.md
+- [Imported] agent frontend-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/frontend-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/frontend-developer.md
+- [Imported] agent fullstack-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/fullstack-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/fullstack-developer.md
+- [Imported] agent git-workflow-manager
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/git-workflow-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/git-workflow-manager.md
+- [Imported] agent golang-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/golang-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/golang-pro.md
+- [Imported] agent grand-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/grand-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/grand-architect.md
+- [Imported] agent graphql-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/graphql-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/graphql-architect.md
+- [Imported] agent incident-responder
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/incident-responder.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/incident-responder.md
+- [Imported] agent iot-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/iot-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/iot-engineer.md
+- [Imported] agent java-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/java-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/java-architect.md
+- [Imported] agent java-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/java-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/java-pro.md
+- [Imported] agent javascript-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/javascript-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/javascript-pro.md
+- [Imported] agent kotlin-specialist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/kotlin-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/kotlin-specialist.md
+- [Imported] agent kubernetes-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/kubernetes-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/kubernetes-architect.md
+- [Imported] agent kubernetes-specialist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/kubernetes-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/kubernetes-specialist.md
+- [Imported] agent laravel-backend-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/laravel-backend-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/laravel-backend-expert.md
+- [Imported] agent laravel-eloquent-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/laravel-eloquent-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/laravel-eloquent-expert.md
+- [Imported] agent laravel-specialist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/laravel-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/laravel-specialist.md
+- [Imported] agent legacy-modernizer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/legacy-modernizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/legacy-modernizer.md
+- [Imported] agent legal-advisor
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/legal-advisor.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/legal-advisor.md
+- [Imported] agent llm-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/llm-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/llm-architect.md
+- [Imported] agent machine-learning-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/machine-learning-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/machine-learning-engineer.md
+- [Imported] agent market-researcher
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/market-researcher.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/market-researcher.md
+- [Imported] agent mcp-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/mcp-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/mcp-developer.md
+- [Imported] agent microservices-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/microservices-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/microservices-architect.md
+- [Imported] agent ml-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/ml-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ml-engineer.md
+- [Imported] agent mlops-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/mlops-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/mlops-engineer.md
+- [Imported] agent mobile-app-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/mobile-app-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/mobile-app-developer.md
+- [Imported] agent mobile-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/mobile-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/mobile-developer.md
+- [Imported] agent network-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/network-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/network-engineer.md
+- [Imported] agent nextjs-developer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/nextjs-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/nextjs-developer.md
+- [Imported] agent nlp-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/nlp-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/nlp-engineer.md
+- [Imported] agent observability-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/observability-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/observability-engineer.md
+- [Imported] agent penetration-tester
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/penetration-tester.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/penetration-tester.md
+- [Imported] agent performance-enforcer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/performance-enforcer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/performance-enforcer.md
+- [Imported] agent performance-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/performance-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/performance-engineer.md
+- [Imported] agent performance-optimizer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/performance-optimizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/performance-optimizer.md
+- [Imported] agent performance-prophet
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/performance-prophet.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/performance-prophet.md
+- [Imported] agent php-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/php-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/php-pro.md
+- [Imported] agent platform-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/platform-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/platform-engineer.md
+- [Imported] agent postgres-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/postgres-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/postgres-pro.md
+- [Imported] agent powershell-5.1-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/powershell-5.1-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-5.1-expert.md
+- [Imported] agent powershell-7-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/powershell-7-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-7-expert.md
+- [Imported] agent powershell-module-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/powershell-module-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-module-architect.md
+- [Imported] agent powershell-security-hardening
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/powershell-security-hardening.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-security-hardening.md
+- [Imported] agent powershell-ui-architect
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/powershell-ui-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-ui-architect.md
+- [Imported] agent product-manager
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/product-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/product-manager.md
+- [Imported] agent project-analyst
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/project-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/project-analyst.md
+- [Imported] agent project-manager
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/project-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/project-manager.md
+- [Imported] agent prompt-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/prompt-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/prompt-engineer.md
+- [Imported] agent python-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/python-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/python-pro.md
+- [Imported] agent qa-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/qa-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/qa-expert.md
+- [Imported] agent rails-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/rails-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/rails-expert.md
+- [Imported] agent react-coder
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/react-coder.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/react-coder.md
+- [Imported] agent react-specialist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/react-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/react-specialist.md
+- [Imported] agent refactoring-specialist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/refactoring-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/refactoring-specialist.md
+- [Imported] agent research-analyst
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/research-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/research-analyst.md
+- [Imported] agent rust-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/rust-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/rust-engineer.md
+- [Imported] agent sales-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/sales-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/sales-engineer.md
+- [Imported] agent scientific-literature-researcher
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/scientific-literature-researcher.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/scientific-literature-researcher.md
+- [Imported] agent scrum-master
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/scrum-master.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/scrum-master.md
+- [Imported] agent search-specialist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/search-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/search-specialist.md
+- [Imported] agent security-auditor
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/security-auditor.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/security-auditor.md
+- [Imported] agent security-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/security-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/security-engineer.md
+- [Imported] agent security-specialist
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/security-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/security-specialist.md
+- [Imported] agent senior-code-reviewer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/senior-code-reviewer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/senior-code-reviewer.md
+- [Imported] agent slack-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/slack-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/slack-expert.md
+- [Imported] agent spring-boot-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/spring-boot-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/spring-boot-engineer.md
+- [Imported] agent sql-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/sql-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/sql-pro.md
+- [Imported] agent sre-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/sre-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/sre-engineer.md
+- [Imported] agent swift-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/swift-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/swift-expert.md
+- [Imported] agent tech-lead-orchestrator
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/tech-lead-orchestrator.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/tech-lead-orchestrator.md
+- [Imported] agent technical-writer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/technical-writer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/technical-writer.md
+- [Imported] agent terraform-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/terraform-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/terraform-engineer.md
+- [Imported] agent terragrunt-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/terragrunt-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/terragrunt-expert.md
+- [Imported] agent test-automator
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/test-automator.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/test-automator.md
+- [Imported] agent test-generator
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/test-generator.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/test-generator.md
+- [Imported] agent tooling-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/tooling-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/tooling-engineer.md
+- [Imported] agent trend-analyst
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/trend-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/trend-analyst.md
+- [Imported] agent typescript-pro
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/typescript-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/typescript-pro.md
+- [Imported] agent ui-designer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/ui-designer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ui-designer.md
+- [Imported] agent ux-researcher
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/ux-researcher.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ux-researcher.md
+- [Imported] agent vue-expert
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/vue-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/vue-expert.md
+- [Imported] agent websocket-engineer
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/websocket-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/websocket-engineer.md
+- [Imported] agent windows-infra-admin
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/windows-infra-admin.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/windows-infra-admin.md
+- [Imported] agent wordpress-master
+  - from: C:\Users\Rohan Raj Singh/.claude/agents/wordpress-master.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/wordpress-master.md
+- [Imported] memory User memory
+  - from: C:\Users\Rohan Raj Singh/.claude/CLAUDE.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/AGENTS.md
+
+## Codex
+
+- [Already present (kept yours)] memory User memory
+  - from: C:\Users\Rohan Raj Singh/.codex/AGENTS.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/AGENTS.md
+
+## OpenCode
+
+- [Already present (kept yours)] agent a11y-enforcer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/a11y-enforcer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/a11y-enforcer.md
+- [Already present (kept yours)] agent accessibility-tester
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/accessibility-tester.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/accessibility-tester.md
+- [Already present (kept yours)] agent ad-security-reviewer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/ad-security-reviewer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ad-security-reviewer.md
+- [Already present (kept yours)] agent AGENTS-REFERENCE
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/AGENTS-REFERENCE.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/AGENTS-REFERENCE.md
+- [Already present (kept yours)] agent ai-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/ai-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ai-engineer.md
+- [Already present (kept yours)] agent angular-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/angular-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/angular-architect.md
+- [Already present (kept yours)] agent api-designer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/api-designer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/api-designer.md
+- [Already present (kept yours)] agent architect-reviewer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/architect-reviewer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/architect-reviewer.md
+- [Already present (kept yours)] agent azure-infra-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/azure-infra-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/azure-infra-engineer.md
+- [Already present (kept yours)] agent backend-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/backend-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/backend-developer.md
+- [Already present (kept yours)] agent build-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/build-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/build-engineer.md
+- [Already present (kept yours)] agent business-analyst
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/business-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/business-analyst.md
+- [Already present (kept yours)] agent chaos-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/chaos-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/chaos-engineer.md
+- [Already present (kept yours)] agent CLAUDE
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/CLAUDE.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/CLAUDE.md
+- [Already present (kept yours)] agent cli-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/cli-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/cli-developer.md
+- [Already present (kept yours)] agent cloud-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/cloud-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/cloud-architect.md
+- [Already present (kept yours)] agent code-archaeologist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/code-archaeologist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/code-archaeologist.md
+- [Already present (kept yours)] agent code-reviewer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/code-reviewer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/code-reviewer.md
+- [Already present (kept yours)] agent competitive-analyst
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/competitive-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/competitive-analyst.md
+- [Already present (kept yours)] agent compliance-auditor
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/compliance-auditor.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/compliance-auditor.md
+- [Already present (kept yours)] agent content-marketer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/content-marketer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/content-marketer.md
+- [Already present (kept yours)] agent cost-optimizer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/cost-optimizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/cost-optimizer.md
+- [Already present (kept yours)] agent cpp-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/cpp-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/cpp-pro.md
+- [Already present (kept yours)] agent csharp-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/csharp-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/csharp-developer.md
+- [Already present (kept yours)] agent customer-success-manager
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/customer-success-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/customer-success-manager.md
+- [Already present (kept yours)] agent data-analyst
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/data-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/data-analyst.md
+- [Already present (kept yours)] agent data-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/data-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/data-engineer.md
+- [Already present (kept yours)] agent data-researcher
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/data-researcher.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/data-researcher.md
+- [Already present (kept yours)] agent data-scientist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/data-scientist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/data-scientist.md
+- [Already present (kept yours)] agent database-administrator
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/database-administrator.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/database-administrator.md
+- [Already present (kept yours)] agent database-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/database-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/database-architect.md
+- [Already present (kept yours)] agent database-optimizer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/database-optimizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/database-optimizer.md
+- [Already present (kept yours)] agent debugger
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/debugger.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/debugger.md
+- [Already present (kept yours)] agent dependency-manager
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/dependency-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/dependency-manager.md
+- [Already present (kept yours)] agent deployment-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/deployment-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/deployment-engineer.md
+- [Already present (kept yours)] agent design-token-guardian
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/design-token-guardian.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/design-token-guardian.md
+- [Already present (kept yours)] agent devops-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/devops-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/devops-engineer.md
+- [Already present (kept yours)] agent devops-incident-responder
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/devops-incident-responder.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/devops-incident-responder.md
+- [Already present (kept yours)] agent django-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/django-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/django-developer.md
+- [Already present (kept yours)] agent docker-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/docker-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/docker-expert.md
+- [Already present (kept yours)] agent documentation-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/documentation-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/documentation-engineer.md
+- [Already present (kept yours)] agent documentation-specialist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/documentation-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/documentation-specialist.md
+- [Already present (kept yours)] agent dotnet-core-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/dotnet-core-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/dotnet-core-expert.md
+- [Already present (kept yours)] agent dotnet-framework-4.8-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/dotnet-framework-4.8-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/dotnet-framework-4.8-expert.md
+- [Already present (kept yours)] agent dx-optimizer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/dx-optimizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/dx-optimizer.md
+- [Already present (kept yours)] agent electron-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/electron-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/electron-pro.md
+- [Already present (kept yours)] agent elixir-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/elixir-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/elixir-expert.md
+- [Already present (kept yours)] agent error-detective
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/error-detective.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/error-detective.md
+- [Already present (kept yours)] agent fintech-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/fintech-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/fintech-engineer.md
+- [Already present (kept yours)] agent flutter-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/flutter-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/flutter-expert.md
+- [Already present (kept yours)] agent frontend-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/frontend-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/frontend-developer.md
+- [Already present (kept yours)] agent fullstack-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/fullstack-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/fullstack-developer.md
+- [Already present (kept yours)] agent git-workflow-manager
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/git-workflow-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/git-workflow-manager.md
+- [Already present (kept yours)] agent golang-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/golang-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/golang-pro.md
+- [Already present (kept yours)] agent grand-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/grand-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/grand-architect.md
+- [Already present (kept yours)] agent graphql-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/graphql-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/graphql-architect.md
+- [Already present (kept yours)] agent incident-responder
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/incident-responder.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/incident-responder.md
+- [Already present (kept yours)] agent iot-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/iot-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/iot-engineer.md
+- [Already present (kept yours)] agent java-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/java-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/java-architect.md
+- [Already present (kept yours)] agent java-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/java-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/java-pro.md
+- [Already present (kept yours)] agent javascript-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/javascript-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/javascript-pro.md
+- [Already present (kept yours)] agent kotlin-specialist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/kotlin-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/kotlin-specialist.md
+- [Already present (kept yours)] agent kubernetes-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/kubernetes-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/kubernetes-architect.md
+- [Already present (kept yours)] agent kubernetes-specialist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/kubernetes-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/kubernetes-specialist.md
+- [Already present (kept yours)] agent laravel-backend-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/laravel-backend-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/laravel-backend-expert.md
+- [Already present (kept yours)] agent laravel-eloquent-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/laravel-eloquent-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/laravel-eloquent-expert.md
+- [Already present (kept yours)] agent laravel-specialist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/laravel-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/laravel-specialist.md
+- [Already present (kept yours)] agent legacy-modernizer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/legacy-modernizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/legacy-modernizer.md
+- [Already present (kept yours)] agent legal-advisor
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/legal-advisor.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/legal-advisor.md
+- [Already present (kept yours)] agent llm-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/llm-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/llm-architect.md
+- [Already present (kept yours)] agent machine-learning-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/machine-learning-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/machine-learning-engineer.md
+- [Already present (kept yours)] agent market-researcher
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/market-researcher.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/market-researcher.md
+- [Already present (kept yours)] agent mcp-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/mcp-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/mcp-developer.md
+- [Already present (kept yours)] agent microservices-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/microservices-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/microservices-architect.md
+- [Already present (kept yours)] agent ml-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/ml-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ml-engineer.md
+- [Already present (kept yours)] agent mlops-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/mlops-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/mlops-engineer.md
+- [Already present (kept yours)] agent mobile-app-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/mobile-app-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/mobile-app-developer.md
+- [Already present (kept yours)] agent mobile-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/mobile-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/mobile-developer.md
+- [Already present (kept yours)] agent network-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/network-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/network-engineer.md
+- [Already present (kept yours)] agent nextjs-developer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/nextjs-developer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/nextjs-developer.md
+- [Already present (kept yours)] agent nlp-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/nlp-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/nlp-engineer.md
+- [Already present (kept yours)] agent observability-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/observability-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/observability-engineer.md
+- [Already present (kept yours)] agent penetration-tester
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/penetration-tester.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/penetration-tester.md
+- [Already present (kept yours)] agent performance-enforcer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/performance-enforcer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/performance-enforcer.md
+- [Already present (kept yours)] agent performance-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/performance-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/performance-engineer.md
+- [Already present (kept yours)] agent performance-optimizer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/performance-optimizer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/performance-optimizer.md
+- [Already present (kept yours)] agent performance-prophet
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/performance-prophet.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/performance-prophet.md
+- [Already present (kept yours)] agent php-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/php-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/php-pro.md
+- [Already present (kept yours)] agent platform-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/platform-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/platform-engineer.md
+- [Already present (kept yours)] agent postgres-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/postgres-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/postgres-pro.md
+- [Already present (kept yours)] agent powershell-5.1-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/powershell-5.1-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-5.1-expert.md
+- [Already present (kept yours)] agent powershell-7-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/powershell-7-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-7-expert.md
+- [Already present (kept yours)] agent powershell-module-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/powershell-module-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-module-architect.md
+- [Already present (kept yours)] agent powershell-security-hardening
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/powershell-security-hardening.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-security-hardening.md
+- [Already present (kept yours)] agent powershell-ui-architect
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/powershell-ui-architect.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/powershell-ui-architect.md
+- [Already present (kept yours)] agent product-manager
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/product-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/product-manager.md
+- [Already present (kept yours)] agent project-analyst
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/project-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/project-analyst.md
+- [Already present (kept yours)] agent project-manager
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/project-manager.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/project-manager.md
+- [Already present (kept yours)] agent prompt-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/prompt-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/prompt-engineer.md
+- [Already present (kept yours)] agent python-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/python-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/python-pro.md
+- [Already present (kept yours)] agent qa-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/qa-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/qa-expert.md
+- [Already present (kept yours)] agent rails-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/rails-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/rails-expert.md
+- [Already present (kept yours)] agent react-coder
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/react-coder.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/react-coder.md
+- [Already present (kept yours)] agent react-specialist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/react-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/react-specialist.md
+- [Already present (kept yours)] agent refactoring-specialist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/refactoring-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/refactoring-specialist.md
+- [Already present (kept yours)] agent research-analyst
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/research-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/research-analyst.md
+- [Already present (kept yours)] agent rust-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/rust-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/rust-engineer.md
+- [Already present (kept yours)] agent sales-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/sales-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/sales-engineer.md
+- [Already present (kept yours)] agent scientific-literature-researcher
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/scientific-literature-researcher.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/scientific-literature-researcher.md
+- [Already present (kept yours)] agent scrum-master
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/scrum-master.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/scrum-master.md
+- [Already present (kept yours)] agent search-specialist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/search-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/search-specialist.md
+- [Already present (kept yours)] agent security-auditor
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/security-auditor.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/security-auditor.md
+- [Already present (kept yours)] agent security-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/security-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/security-engineer.md
+- [Already present (kept yours)] agent security-specialist
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/security-specialist.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/security-specialist.md
+- [Already present (kept yours)] agent senior-code-reviewer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/senior-code-reviewer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/senior-code-reviewer.md
+- [Already present (kept yours)] agent slack-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/slack-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/slack-expert.md
+- [Already present (kept yours)] agent spring-boot-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/spring-boot-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/spring-boot-engineer.md
+- [Already present (kept yours)] agent sql-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/sql-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/sql-pro.md
+- [Already present (kept yours)] agent sre-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/sre-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/sre-engineer.md
+- [Already present (kept yours)] agent swift-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/swift-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/swift-expert.md
+- [Already present (kept yours)] agent tech-lead-orchestrator
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/tech-lead-orchestrator.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/tech-lead-orchestrator.md
+- [Already present (kept yours)] agent technical-writer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/technical-writer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/technical-writer.md
+- [Already present (kept yours)] agent terraform-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/terraform-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/terraform-engineer.md
+- [Already present (kept yours)] agent terragrunt-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/terragrunt-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/terragrunt-expert.md
+- [Already present (kept yours)] agent test-automator
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/test-automator.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/test-automator.md
+- [Already present (kept yours)] agent test-generator
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/test-generator.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/test-generator.md
+- [Already present (kept yours)] agent tooling-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/tooling-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/tooling-engineer.md
+- [Already present (kept yours)] agent trend-analyst
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/trend-analyst.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/trend-analyst.md
+- [Already present (kept yours)] agent typescript-pro
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/typescript-pro.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/typescript-pro.md
+- [Already present (kept yours)] agent ui-designer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/ui-designer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ui-designer.md
+- [Already present (kept yours)] agent ux-researcher
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/ux-researcher.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/ux-researcher.md
+- [Already present (kept yours)] agent vue-expert
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/vue-expert.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/vue-expert.md
+- [Already present (kept yours)] agent websocket-engineer
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/websocket-engineer.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/websocket-engineer.md
+- [Already present (kept yours)] agent windows-infra-admin
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/windows-infra-admin.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/windows-infra-admin.md
+- [Already present (kept yours)] agent wordpress-master
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/agents/wordpress-master.md
+  - to: C:\Users\Rohan Raj Singh/.commandcode/agents/wordpress-master.md
+- [Already present (kept yours)] skill adaptyv
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/adaptyv
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/adaptyv
+- [Already present (kept yours)] skill add-app-clip
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/add-app-clip
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/add-app-clip
+- [Already present (kept yours)] skill aeon
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/aeon
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/aeon
+- [Already present (kept yours)] skill algorithmic-art
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/algorithmic-art
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/algorithmic-art
+- [Already present (kept yours)] skill anndata
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/anndata
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/anndata
+- [Already present (kept yours)] skill arboreto
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/arboreto
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/arboreto
+- [Already present (kept yours)] skill astropy
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/astropy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/astropy
+- [Already present (kept yours)] skill autoskill
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/autoskill
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/autoskill
+- [Already present (kept yours)] skill benchling-integration
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/benchling-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/benchling-integration
+- [Already present (kept yours)] skill bgpt-paper-search
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/bgpt-paper-search
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/bgpt-paper-search
+- [Already present (kept yours)] skill bids
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/bids
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/bids
+- [Already present (kept yours)] skill biopython
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/biopython
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/biopython
+- [Already present (kept yours)] skill bioservices
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/bioservices
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/bioservices
+- [Already present (kept yours)] skill brainstorming
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/brainstorming
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/brainstorming
+- [Already present (kept yours)] skill brand-guidelines
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/brand-guidelines
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/brand-guidelines
+- [Already present (kept yours)] skill building-native-ui
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/building-native-ui
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/building-native-ui
+- [Already present (kept yours)] skill bulk-rnaseq
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/bulk-rnaseq
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/bulk-rnaseq
+- [Already present (kept yours)] skill canvas-design
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/canvas-design
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/canvas-design
+- [Already present (kept yours)] skill cavecrew
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/cavecrew
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/cavecrew
+- [Already present (kept yours)] skill caveman
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/caveman
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman
+- [Already present (kept yours)] skill caveman-commit
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/caveman-commit
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-commit
+- [Already present (kept yours)] skill caveman-compress
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/caveman-compress
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-compress
+- [Already present (kept yours)] skill caveman-help
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/caveman-help
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-help
+- [Already present (kept yours)] skill caveman-review
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/caveman-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-review
+- [Already present (kept yours)] skill caveman-stats
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/caveman-stats
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/caveman-stats
+- [Already present (kept yours)] skill cellxgene-census
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/cellxgene-census
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/cellxgene-census
+- [Already present (kept yours)] skill cirq
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/cirq
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/cirq
+- [Already present (kept yours)] skill citation-management
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/citation-management
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/citation-management
+- [Already present (kept yours)] skill claude-api
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/claude-api
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/claude-api
+- [Already present (kept yours)] skill clinical-decision-support
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/clinical-decision-support
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/clinical-decision-support
+- [Already present (kept yours)] skill clinical-reports
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/clinical-reports
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/clinical-reports
+- [Already present (kept yours)] skill cobrapy
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/cobrapy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/cobrapy
+- [Already present (kept yours)] skill consciousness-council
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/consciousness-council
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/consciousness-council
+- [Already present (kept yours)] skill dask
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/dask
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/dask
+- [Already present (kept yours)] skill database-lookup
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/database-lookup
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/database-lookup
+- [Already present (kept yours)] skill datamol
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/datamol
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/datamol
+- [Already present (kept yours)] skill deepchem
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/deepchem
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/deepchem
+- [Already present (kept yours)] skill deeptools
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/deeptools
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/deeptools
+- [Already present (kept yours)] skill depmap
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/depmap
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/depmap
+- [Already present (kept yours)] skill dhdna-profiler
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/dhdna-profiler
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/dhdna-profiler
+- [Already present (kept yours)] skill diffdock
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/diffdock
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/diffdock
+- [Already present (kept yours)] skill dispatching-parallel-agents
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/dispatching-parallel-agents
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/dispatching-parallel-agents
+- [Already present (kept yours)] skill dnanexus-integration
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/dnanexus-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/dnanexus-integration
+- [Already present (kept yours)] skill doc-coauthoring
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/doc-coauthoring
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/doc-coauthoring
+- [Already present (kept yours)] skill docx
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/docx
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/docx
+- [Already present (kept yours)] skill eas-update-insights
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/eas-update-insights
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/eas-update-insights
+- [Already present (kept yours)] skill esm
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/esm
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/esm
+- [Already present (kept yours)] skill etetoolkit
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/etetoolkit
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/etetoolkit
+- [Already present (kept yours)] skill exa-search
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/exa-search
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/exa-search
+- [Already present (kept yours)] skill executing-plans
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/executing-plans
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/executing-plans
+- [Already present (kept yours)] skill exploratory-data-analysis
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/exploratory-data-analysis
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/exploratory-data-analysis
+- [Already present (kept yours)] skill expo-api-routes
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-api-routes
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-api-routes
+- [Already present (kept yours)] skill expo-brownfield
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-brownfield
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-brownfield
+- [Already present (kept yours)] skill expo-cicd-workflows
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-cicd-workflows
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-cicd-workflows
+- [Already present (kept yours)] skill expo-deployment
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-deployment
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-deployment
+- [Already present (kept yours)] skill expo-dev-client
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-dev-client
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-dev-client
+- [Already present (kept yours)] skill expo-module
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-module
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-module
+- [Already present (kept yours)] skill expo-observe
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-observe
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-observe
+- [Already present (kept yours)] skill expo-tailwind-setup
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-tailwind-setup
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-tailwind-setup
+- [Already present (kept yours)] skill expo-ui-jetpack-compose
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-ui-jetpack-compose
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-ui-jetpack-compose
+- [Already present (kept yours)] skill expo-ui-swift-ui
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/expo-ui-swift-ui
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/expo-ui-swift-ui
+- [Already present (kept yours)] skill finishing-a-development-branch
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/finishing-a-development-branch
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/finishing-a-development-branch
+- [Already present (kept yours)] skill flowio
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/flowio
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/flowio
+- [Already present (kept yours)] skill fluidsim
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/fluidsim
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/fluidsim
+- [Already present (kept yours)] skill frontend-design
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/frontend-design
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/frontend-design
+- [Already present (kept yours)] skill generate-image
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/generate-image
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/generate-image
+- [Already present (kept yours)] skill geniml
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/geniml
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/geniml
+- [Already present (kept yours)] skill geomaster
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/geomaster
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/geomaster
+- [Already present (kept yours)] skill geopandas
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/geopandas
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/geopandas
+- [Already present (kept yours)] skill get-available-resources
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/get-available-resources
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/get-available-resources
+- [Already present (kept yours)] skill gget
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/gget
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/gget
+- [Already present (kept yours)] skill ginkgo-cloud-lab
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/ginkgo-cloud-lab
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/ginkgo-cloud-lab
+- [Already present (kept yours)] skill glycoengineering
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/glycoengineering
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/glycoengineering
+- [Already present (kept yours)] skill graphify
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/graphify
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/graphify
+- [Already present (kept yours)] skill gtars
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/gtars
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/gtars
+- [Already present (kept yours)] skill histolab
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/histolab
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/histolab
+- [Already present (kept yours)] skill hugging-science
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/hugging-science
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/hugging-science
+- [Already present (kept yours)] skill hypogenic
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/hypogenic
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/hypogenic
+- [Already present (kept yours)] skill hypothesis-generation
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/hypothesis-generation
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/hypothesis-generation
+- [Already present (kept yours)] skill imaging-data-commons
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/imaging-data-commons
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/imaging-data-commons
+- [Already present (kept yours)] skill infographics
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/infographics
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/infographics
+- [Already present (kept yours)] skill internal-comms
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/internal-comms
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/internal-comms
+- [Already present (kept yours)] skill iso-13485-certification
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/iso-13485-certification
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/iso-13485-certification
+- [Already present (kept yours)] skill labarchive-integration
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/labarchive-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/labarchive-integration
+- [Already present (kept yours)] skill lamindb
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/lamindb
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/lamindb
+- [Already present (kept yours)] skill latchbio-integration
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/latchbio-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/latchbio-integration
+- [Already present (kept yours)] skill latex-posters
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/latex-posters
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/latex-posters
+- [Already present (kept yours)] skill liteparse
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/liteparse
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/liteparse
+- [Already present (kept yours)] skill literature-review
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/literature-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/literature-review
+- [Already present (kept yours)] skill markdown-mermaid-writing
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/markdown-mermaid-writing
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/markdown-mermaid-writing
+- [Already present (kept yours)] skill market-research-reports
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/market-research-reports
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/market-research-reports
+- [Already present (kept yours)] skill markitdown
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/markitdown
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/markitdown
+- [Already present (kept yours)] skill matchms
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/matchms
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/matchms
+- [Already present (kept yours)] skill matlab
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/matlab
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/matlab
+- [Already present (kept yours)] skill matplotlib
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/matplotlib
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/matplotlib
+- [Already present (kept yours)] skill mcp-builder
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/mcp-builder
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/mcp-builder
+- [Already present (kept yours)] skill medchem
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/medchem
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/medchem
+- [Already present (kept yours)] skill modal
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/modal
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/modal
+- [Already present (kept yours)] skill molecular-dynamics
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/molecular-dynamics
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/molecular-dynamics
+- [Already present (kept yours)] skill molfeat
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/molfeat
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/molfeat
+- [Already present (kept yours)] skill native-data-fetching
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/native-data-fetching
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/native-data-fetching
+- [Already present (kept yours)] skill networkx
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/networkx
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/networkx
+- [Already present (kept yours)] skill neurokit2
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/neurokit2
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/neurokit2
+- [Already present (kept yours)] skill neuropixels-analysis
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/neuropixels-analysis
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/neuropixels-analysis
+- [Already present (kept yours)] skill nextflow
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/nextflow
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/nextflow
+- [Already present (kept yours)] skill omero-integration
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/omero-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/omero-integration
+- [Already present (kept yours)] skill open-notebook
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/open-notebook
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/open-notebook
+- [Already present (kept yours)] skill opentrons-integration
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/opentrons-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/opentrons-integration
+- [Already present (kept yours)] skill optimize-for-gpu
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/optimize-for-gpu
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/optimize-for-gpu
+- [Already present (kept yours)] skill pacsomatic
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pacsomatic
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pacsomatic
+- [Already present (kept yours)] skill paper-lookup
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/paper-lookup
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/paper-lookup
+- [Already present (kept yours)] skill paperzilla
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/paperzilla
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/paperzilla
+- [Already present (kept yours)] skill parallel-web
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/parallel-web
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/parallel-web
+- [Already present (kept yours)] skill pathml
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pathml
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pathml
+- [Already present (kept yours)] skill pathway-enrichment
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pathway-enrichment
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pathway-enrichment
+- [Already present (kept yours)] skill pdf
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pdf
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pdf
+- [Already present (kept yours)] skill peer-review
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/peer-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/peer-review
+- [Already present (kept yours)] skill pennylane
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pennylane
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pennylane
+- [Already present (kept yours)] skill phylogenetics
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/phylogenetics
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/phylogenetics
+- [Already present (kept yours)] skill pi-agent
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pi-agent
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pi-agent
+- [Already present (kept yours)] skill playwright-test-automation
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/playwright-test-automation
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/playwright-test-automation
+- [Already present (kept yours)] skill polars
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/polars
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/polars
+- [Already present (kept yours)] skill polars-bio
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/polars-bio
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/polars-bio
+- [Already present (kept yours)] skill pptx
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pptx
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pptx
+- [Already present (kept yours)] skill pptx-posters
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pptx-posters
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pptx-posters
+- [Already present (kept yours)] skill primekg
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/primekg
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/primekg
+- [Already present (kept yours)] skill protocolsio-integration
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/protocolsio-integration
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/protocolsio-integration
+- [Already present (kept yours)] skill pufferlib
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pufferlib
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pufferlib
+- [Already present (kept yours)] skill pydeseq2
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pydeseq2
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pydeseq2
+- [Already present (kept yours)] skill pydicom
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pydicom
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pydicom
+- [Already present (kept yours)] skill pyhealth
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pyhealth
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pyhealth
+- [Already present (kept yours)] skill pylabrobot
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pylabrobot
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pylabrobot
+- [Already present (kept yours)] skill pymatgen
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pymatgen
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pymatgen
+- [Already present (kept yours)] skill pymc
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pymc
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pymc
+- [Already present (kept yours)] skill pymoo
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pymoo
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pymoo
+- [Already present (kept yours)] skill pyopenms
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pyopenms
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pyopenms
+- [Already present (kept yours)] skill pysam
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pysam
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pysam
+- [Already present (kept yours)] skill pytdc
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pytdc
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pytdc
+- [Already present (kept yours)] skill pytorch-lightning
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pytorch-lightning
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pytorch-lightning
+- [Already present (kept yours)] skill pyzotero
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/pyzotero
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/pyzotero
+- [Already present (kept yours)] skill qiskit
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/qiskit
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/qiskit
+- [Already present (kept yours)] skill qutip
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/qutip
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/qutip
+- [Already present (kept yours)] skill rdkit
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/rdkit
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/rdkit
+- [Already present (kept yours)] skill receiving-code-review
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/receiving-code-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/receiving-code-review
+- [Already present (kept yours)] skill requesting-code-review
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/requesting-code-review
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/requesting-code-review
+- [Already present (kept yours)] skill research-grants
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/research-grants
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/research-grants
+- [Already present (kept yours)] skill research-lookup
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/research-lookup
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/research-lookup
+- [Already present (kept yours)] skill rowan
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/rowan
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/rowan
+- [Already present (kept yours)] skill scanpy
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scanpy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scanpy
+- [Already present (kept yours)] skill scholar-evaluation
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scholar-evaluation
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scholar-evaluation
+- [Already present (kept yours)] skill scientific-brainstorming
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scientific-brainstorming
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-brainstorming
+- [Already present (kept yours)] skill scientific-critical-thinking
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scientific-critical-thinking
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-critical-thinking
+- [Already present (kept yours)] skill scientific-schematics
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scientific-schematics
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-schematics
+- [Already present (kept yours)] skill scientific-slides
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scientific-slides
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-slides
+- [Already present (kept yours)] skill scientific-visualization
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scientific-visualization
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-visualization
+- [Already present (kept yours)] skill scientific-writing
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scientific-writing
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scientific-writing
+- [Already present (kept yours)] skill scikit-bio
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scikit-bio
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scikit-bio
+- [Already present (kept yours)] skill scikit-learn
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scikit-learn
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scikit-learn
+- [Already present (kept yours)] skill scikit-survival
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scikit-survival
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scikit-survival
+- [Already present (kept yours)] skill scvelo
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scvelo
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scvelo
+- [Already present (kept yours)] skill scvi-tools
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/scvi-tools
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/scvi-tools
+- [Already present (kept yours)] skill seaborn
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/seaborn
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/seaborn
+- [Already present (kept yours)] skill shap
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/shap
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/shap
+- [Already present (kept yours)] skill simpy
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/simpy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/simpy
+- [Already present (kept yours)] skill skill-creator
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/skill-creator
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/skill-creator
+- [Already present (kept yours)] skill slack-gif-creator
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/slack-gif-creator
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/slack-gif-creator
+- [Already present (kept yours)] skill slides-generator
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/slides-generator
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/slides-generator
+- [Already present (kept yours)] skill stable-baselines3
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/stable-baselines3
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/stable-baselines3
+- [Already present (kept yours)] skill statistical-analysis
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/statistical-analysis
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/statistical-analysis
+- [Already present (kept yours)] skill statsmodels
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/statsmodels
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/statsmodels
+- [Already present (kept yours)] skill subagent-driven-development
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/subagent-driven-development
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/subagent-driven-development
+- [Already present (kept yours)] skill sympy
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/sympy
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/sympy
+- [Already present (kept yours)] skill systematic-debugging
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/systematic-debugging
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/systematic-debugging
+- [Already present (kept yours)] skill test-driven-development
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/test-driven-development
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/test-driven-development
+- [Already present (kept yours)] skill theme-factory
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/theme-factory
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/theme-factory
+- [Already present (kept yours)] skill tiledbvcf
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/tiledbvcf
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/tiledbvcf
+- [Already present (kept yours)] skill timesfm-forecasting
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/timesfm-forecasting
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/timesfm-forecasting
+- [Already present (kept yours)] skill torch-geometric
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/torch-geometric
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/torch-geometric
+- [Already present (kept yours)] skill torchdrug
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/torchdrug
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/torchdrug
+- [Already present (kept yours)] skill transformers
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/transformers
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/transformers
+- [Already present (kept yours)] skill treatment-plans
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/treatment-plans
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/treatment-plans
+- [Already present (kept yours)] skill umap-learn
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/umap-learn
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/umap-learn
+- [Already present (kept yours)] skill upgrading-expo
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/upgrading-expo
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/upgrading-expo
+- [Already present (kept yours)] skill use-dom
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/use-dom
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/use-dom
+- [Already present (kept yours)] skill usfiscaldata
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/usfiscaldata
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/usfiscaldata
+- [Already present (kept yours)] skill using-git-worktrees
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/using-git-worktrees
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/using-git-worktrees
+- [Already present (kept yours)] skill using-superpowers
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/using-superpowers
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/using-superpowers
+- [Already present (kept yours)] skill vaex
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/vaex
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/vaex
+- [Already present (kept yours)] skill venue-templates
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/venue-templates
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/venue-templates
+- [Already present (kept yours)] skill verification-before-completion
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/verification-before-completion
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/verification-before-completion
+- [Already present (kept yours)] skill web-artifacts-builder
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/web-artifacts-builder
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/web-artifacts-builder
+- [Already present (kept yours)] skill web-asset-generator
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/web-asset-generator
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/web-asset-generator
+- [Already present (kept yours)] skill webapp-testing
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/webapp-testing
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/webapp-testing
+- [Already present (kept yours)] skill what-if-oracle
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/what-if-oracle
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/what-if-oracle
+- [Already present (kept yours)] skill writing-plans
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/writing-plans
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/writing-plans
+- [Already present (kept yours)] skill writing-skills
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/writing-skills
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/writing-skills
+- [Already present (kept yours)] skill xlsx
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/xlsx
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/xlsx
+- [Already present (kept yours)] skill zarr-python
+  - from: C:\Users\Rohan Raj Singh/.config/opencode/skills/zarr-python
+  - to: C:\Users\Rohan Raj Singh/.commandcode/skills/zarr-python
